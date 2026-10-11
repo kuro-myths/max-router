@@ -1355,10 +1355,12 @@ export default function APIPageClient({ machineId }) {
       <Modal
         isOpen={showEnableTunnelModal}
         title="Aktifkan Terowongan"
+        size="lg"
+        className="mr-tunnel-modal"
         onClose={() => setShowEnableTunnelModal(false)}
       >
         <div className="flex flex-col gap-4">
-          <div className="bg-surface-2 border border-border-subtle rounded-lg p-4">
+          <div className="mr-comic-modal-info bg-surface-2 border border-border-subtle rounded-lg p-4">
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-primary">cloud_upload</span>
               <div>
@@ -1366,7 +1368,7 @@ export default function APIPageClient({ machineId }) {
                   Cloudflare Tunnel
                 </p>
                 <p className="text-sm text-text-muted">
-                  Expose your local 9Router V3 to the internet. No port forwarding, no static IP needed. Share endpoint URL with your team or use it in Cursor, Cline, and other AI tools from anywhere.
+                  Buka akses 9Router V3 melalui internet tanpa meneruskan port atau alamat IP statis. Bagikan URL endpoint kepada tim, atau gunakan dari Cursor, Cline, dan alat AI lainnya.
                 </p>
               </div>
             </div>
@@ -1374,7 +1376,7 @@ export default function APIPageClient({ machineId }) {
 
           <div className="grid grid-cols-2 gap-3">
             {TUNNEL_BENEFITS.map((benefit) => (
-              <div key={benefit.title} className="flex flex-col items-center text-center p-3 rounded-lg bg-sidebar/50">
+              <div key={benefit.title} className="mr-comic-modal-benefit flex flex-col items-center text-center p-3 rounded-lg bg-sidebar/50">
                 <span className="material-symbols-outlined text-xl text-primary mb-1">{benefit.icon}</span>
                 <p className="text-xs font-semibold">{benefit.title}</p>
                 <p className="text-xs text-text-muted">{benefit.desc}</p>
@@ -1383,12 +1385,12 @@ export default function APIPageClient({ machineId }) {
           </div>
 
           <p className="text-xs text-text-muted">
-            Requires outbound port 7844 (TCP/UDP). Connection may take 10-30s.
+            Membutuhkan port keluar 7844 (TCP/UDP). Koneksi dapat memerlukan waktu 10–30 detik.
           </p>
 
           <div className="flex gap-2">
             <Button onClick={handleEnableTunnel} fullWidth>
-              Start Tunnel
+              Mulai Terowongan
             </Button>
             <Button onClick={() => setShowEnableTunnelModal(false)} variant="ghost" fullWidth>Batalkan</Button>
           </div>
