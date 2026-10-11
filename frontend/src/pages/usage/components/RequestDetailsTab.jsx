@@ -5,7 +5,7 @@ import Button from "@/shared/components/Button";
 import Drawer from "@/shared/components/Drawer";
 import Pagination from "@/shared/components/Pagination";
 import { cn } from "@/shared/utils/cn";
-import { AI_PROVIDERS, getPenyediaByAlias } from "@/shared/constants/providers";
+import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
 
 let providerNameCache = null;
 let providerNodesCache = null;
