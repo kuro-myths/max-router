@@ -65,7 +65,6 @@ export default function ComboDetailPage() {
     try {
       const [comboRes, settingsRes, logsRes, keysRes, connsRes, aliasesRes] = await Promise.all([
         fetch(`/api/combos/${id}`, { cache: "no-store" }),
-        fetch("/api/settings", { cache: "no-store" }),
         fetch("/api/usage/logs", { cache: "no-store" }),
         fetch("/api/keys", { cache: "no-store" }),
         fetch("/api/providers", { cache: "no-store" }),
@@ -82,7 +81,6 @@ export default function ComboDetailPage() {
       setCombo(c);
       setName(c.name);
       setProviders(c.models || []);
-      const s = settingsRes.ok ? await settingsRes.json() : {};
       const allLogs = logsRes.ok ? await logsRes.json() : [];
       setLogs(allLogs.filter((l) => typeof l === "string" && l.includes(c.name)).slice(0, 50));
     } catch { /* noop */ }
@@ -145,20 +143,6 @@ export default function ComboDetailPage() {
     [next[idx], next[swap]] = [next[swap], next[idx]];
     setProviders(next);
     await saveCombo({ models: next });
-  };
-
-  const handleToggleRoundRobin = async (enabled) => {
-    setRoundRobin(enabled);
-    const settingsRes = await fetch("/api/settings", { cache: "no-store" });
-    const s = settingsRes.ok ? await settingsRes.json() : {};
-    const updated = { ...(s.comboStrategies || {}) };
-    if (enabled) updated[combo.name] = { fallbackStrategy: "round-robin" };
-    else delete updated[combo.name];
-    await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comboStrategies: updated }),
-    });
   };
 
   const handleDelete = async () => {
