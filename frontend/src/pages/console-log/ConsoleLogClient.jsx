@@ -86,7 +86,7 @@ export default function ConsoleLogClient() {
       setTestResults(data.results || []);
       setView("table");
       setOutput("Pengujian selesai: " + (data.summary?.passed || 0) + " berhasil, " + (data.summary?.failed || 0) + " gagal, dari " + (data.summary?.total || 0) + " koneksi.");
-      (data.results || []).forEach((result) => console[result.valid ? "info" : "error"]("[TEST] provider=" + result.provider + " service=" + result.connectionName + " status=" + (result.valid ? "BERHASIL" : "GAGAL") + (result.error ? " error=" + result.error : ""));
+      (data.results || []).forEach((result) => console[result.valid ? "info" : "error"]("[TEST] provider=" + result.provider + " service=" + result.connectionName + " status=" + (result.valid ? "BERHASIL" : "GAGAL") + (result.error ? " error=" + result.error : "")));
     } catch (error) {
       setOutput("Gagal menguji layanan: " + (error?.message || "Kesalahan tidak diketahui"));
       console.error("[TEST] Gagal menguji semua layanan:", error);
