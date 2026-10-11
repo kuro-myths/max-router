@@ -142,12 +142,18 @@ export default function CombosPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold">Combos</h1>
           <p className="text-sm text-text-muted mt-1">
-            Buat gabungan model dengan dukungan cadangan
+            Gabungkan beberapa model dalam satu nama endpoint. Model dipakai sesuai urutan daftar sebagai cadangan saat model sebelumnya gagal, kecuali Putaran Bergilir diaktifkan.
           </p>
         </div>
         <Button icon="add" onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
           Buat Gabungan
         </Button>
+      </div>
+
+      <div className="grid gap-2 rounded-xl border border-violet-200 bg-violet-50/70 p-3 text-xs text-violet-950 sm:grid-cols-3">
+        <div><strong className="block mb-1">Cara kerja gabungan</strong>Gunakan satu nama combo sebagai endpoint; router meneruskan permintaan ke model yang terdaftar.</div>
+        <div><strong className="block mb-1">Putaran Bergilir mati</strong>Model mengikuti urutan prioritas. Model berikutnya menjadi cadangan jika model sebelumnya gagal, sesuai perilaku router.</div>
+        <div><strong className="block mb-1">Putaran Bergilir aktif</strong>Permintaan dibagi bergantian ke model-model dalam combo. Biaya dan batas penggunaan tetap mengikuti penyedia serta akun masing-masing.</div>
       </div>
 
       {/* Combos List */}
@@ -223,6 +229,7 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, roundRobinEnabled,
           </div>
           <div className="min-w-0 flex-1">
             <code className="block truncate font-mono text-sm font-medium">{combo.name}</code>
+            <p className="mt-1 text-[10px] text-text-muted">{roundRobinEnabled ? "Mode: putaran bergilir antar-model." : "Mode: urutan prioritas dengan model cadangan."} Biaya bergantung pada tarif dan kuota penyedia.</p>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
               {combo.models.length === 0 ? (
                 <span className="text-xs text-text-muted italic">Belum ada model</span>
@@ -244,7 +251,7 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, roundRobinEnabled,
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:shrink-0">
           {/* Putaran Bergilir Toggle — always visible */}
           <div className="flex items-center justify-between gap-1.5 rounded-lg bg-black/[0.02] px-2 py-1.5 dark:bg-white/[0.02] sm:justify-start sm:bg-transparent sm:px-0 sm:py-0 sm:dark:bg-transparent">
-            <span className="text-xs text-text-muted font-medium">Putaran Bergilir</span>
+            <span className="text-xs text-text-muted font-medium" title="Aktif: permintaan bergiliran antar-model. Nonaktif: urutan prioritas/cadangan.">Putaran Bergilir</span>
             <Toggle
               size="sm"
               checked={roundRobinEnabled}
