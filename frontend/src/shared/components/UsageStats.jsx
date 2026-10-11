@@ -149,7 +149,7 @@ function sortData(dataMap, pendingMap = {}, sortBy, sortOrder) {
 function getGroupKey(item, keyField) {
   switch (keyField) {
     case "rawModel": return item.rawModel || "Model Tidak Diketahui";
-    case "accountName": return item.accountName || `Account ${item.connectionId?.slice(0, 8)}...` || "Akun Tidak Diketahui";
+    case "accountName": return item.accountName || `Akun ${item.connectionId?.slice(0, 8)}...` || "Akun Tidak Diketahui";
     case "keyName": return item.keyName || "Kunci Tidak Diketahui";
     case "endpoint": return item.endpoint || "Endpoint Tidak Diketahui";
     default: return item[keyField] || "Unknown";
@@ -441,7 +441,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           ),
           renderDetailCells: (item) => (
             <>
-              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.accountName || `Account ${item.connectionId?.slice(0, 8)}...`}</td>
+              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.accountName || `Akun ${item.connectionId?.slice(0, 8)}...`}</td>
               <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.rawModel}</td>
               <td className="px-6 py-3"><Badge variant={item.pending > 0 ? "primary" : "neutral"} size="sm">{item.provider}</Badge></td>
               <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
@@ -455,7 +455,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           columns: API_KEY_COLUMNS,
           groupedData: groupDataByKey(sortData(stats.byApiKey, {}, sortBy, sortOrder), "keyName"),
           storageKey: "usage-stats:expanded-apikeys",
-          emptyMessage: "No API key usage recorded yet.",
+          emptyMessage: "Belum ada data penggunaan kunci API.",
           renderSummaryCells: (group) => (
             <>
               <td className="px-6 py-3 text-text-muted">—</td>
@@ -504,7 +504,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
     }
   }, [stats, tableView, sortBy, sortOrder]);
 
-  if (!stats && !loading) return <div className="text-text-muted">Failed to load usage statistics.</div>;
+  if (!stats && !loading) return <div className="text-text-muted">Gagal memuat statistik penggunaan.</div>;
 
   const spinner = (
     <div className="flex items-center justify-center py-12 text-text-muted">
