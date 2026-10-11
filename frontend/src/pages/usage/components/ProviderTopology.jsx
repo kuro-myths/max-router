@@ -118,7 +118,7 @@ export default function ProviderTopology({ providers = [], activeRequests = [] }
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="provider-status-filter" className="text-xs text-text-muted">Filter:</label>
+          <label htmlFor="provider-status-filter" className="text-xs text-text-muted">Saring:</label>
           <select
             id="provider-status-filter"
             value={filter}
@@ -166,7 +166,7 @@ export default function ProviderTopology({ providers = [], activeRequests = [] }
           </ul>
         </div>
         <div className="mt-1.5 flex items-center justify-end gap-2">
-          <span className="sr-only">Geser untuk melihat provider lainnya</span>
+          <span className="sr-only">Geser untuk melihat penyedia lainnya</span>
           <div className="flex gap-1.5">
             <button
               type="button"
