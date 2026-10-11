@@ -42,7 +42,7 @@ export default function ModelDetectionPage() {
   const load = async () => {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/v1/models");
+      const res = await fetch("/api/v1/models", { cache: "no-store" });
       if (!res.ok) throw new Error("Gagal mengambil daftar model.");
       const data = await res.json();
       setModels((data.data || []).map(enrich));
@@ -68,15 +68,15 @@ export default function ModelDetectionPage() {
     <div className="mb-5"><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari model..." /></div>
     {error && <Card className="mb-5 p-4"><span className="text-red-500">{error}</span></Card>}
     {!loading && !error && filtered.length === 0 && <Card className="p-6"><span className="text-text-muted">Belum ada model kompatibel yang terdeteksi.</span></Card>}
-    <div className="grid gap-4">
-      {filtered.map((model) => <Card key={model.id} className="p-5">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      {filtered.map((model) => <Card key={model.id} className="min-w-0 p-3">
         <button className="w-full text-left" onClick={() => setSelected(selected?.id === model.id ? null : model)}>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><h2 className="font-semibold">{model.id}</h2><div className="mt-1 flex flex-wrap gap-1.5 text-xs text-text-muted"><span>{model.owned_by || "provider kompatibel"}</span>{model.priceClass && <span className="rounded bg-surface-2 px-1.5 py-0.5">{model.priceClass === "free" ? "Gratis" : model.priceClass === "paid" ? "Berbayar" : "Harga tidak diketahui"}</span>}</div></div>
+            <div className="min-w-0"><h2 className="break-all text-sm font-semibold leading-snug">{model.id}</h2><div className="mt-1 flex flex-wrap gap-1.5 text-xs text-text-muted"><span>{model.owned_by || "provider kompatibel"}</span>{model.priceClass && <span className="rounded bg-surface-2 px-1.5 py-0.5">{model.priceClass === "free" ? "Gratis" : model.priceClass === "paid" ? "Berbayar" : model.priceClass === "both" ? "Gratis & berbayar" : "Harga belum diketahui"}</span>}</div></div>
             <div className="flex flex-wrap gap-1.5">{model.capabilities.map((cap) => <Badge key={cap} size="sm" variant="success">{cap}</Badge>)}</div>
           </div>
         </button>
-        {selected?.id === model.id && <div className="mt-5 grid gap-4 border-t border-border-subtle pt-4 md:grid-cols-2">
+        {selected?.id === model.id && <div className="mt-3 grid gap-2 border-t border-border-subtle pt-3 md:grid-cols-2">
           <Info label="Deskripsi" value={model.description || "Tidak diberikan provider"} wide />
           <Info label="Jendela konteks" value={model.contextWindow ?? "Tidak diberikan provider"} />
           <Info label="Keluaran maksimum" value={model.maxOutput ?? "Tidak diberikan provider"} />
