@@ -949,7 +949,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
                 {validation.detectedType ? " · " + (validation.detectedType === "anthropic-compatible" ? "Anthropic Messages" : "OpenAI-compatible") : ""}
               </span>
             </div>
-            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
               <div className="rounded-lg bg-emerald-500/10 px-3 py-2">
                 <div className="text-[11px] text-text-muted">Model terdeteksi</div>
                 <div className="text-lg font-semibold text-text-main">{validation.modelCount ?? validation.models?.length ?? 0}</div>
@@ -959,8 +959,12 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
                 <div className="text-lg font-semibold text-emerald-500">{validation.freeModelCount ?? 0}</div>
               </div>
               <div className="rounded-lg bg-amber-500/10 px-3 py-2">
-                <div className="text-[11px] text-text-muted">Berbayar</div>
+                <div className="text-[11px] text-text-muted">Paket berbayar tersedia</div>
                 <div className="text-lg font-semibold text-amber-500">{validation.paidModelCount ?? 0}</div>
+              </div>
+              <div className="rounded-lg bg-violet-500/10 px-3 py-2">
+                <div className="text-[11px] text-text-muted">Gratis & berbayar</div>
+                <div className="text-lg font-semibold text-violet-500">{validation.bothPricingModelCount ?? 0}</div>
               </div>
               <div className="rounded-lg bg-surface-2 px-3 py-2">
                 <div className="text-[11px] text-text-muted">Harga tidak diketahui</div>
@@ -991,7 +995,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
                             ? "shrink-0 text-amber-500"
                             : "shrink-0 text-text-muted"
                       }>
-                        {model.priceClass === "free" ? "Gratis" : model.priceClass === "paid" ? "Berbayar" : "Harga tidak diketahui"}
+                        {model.priceClass === "free" ? "Paket gratis" : model.priceClass === "paid" ? "Berbayar saja" : model.priceClass === "both" ? "Gratis & berbayar" : "Harga belum diketahui"}
                       </span>
                     </div>
                   ))}
