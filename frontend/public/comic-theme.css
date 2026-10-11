@@ -417,3 +417,100 @@ aside.mr-comic-sidebar .mr-comic-sidebar-toggle:hover {
 @media (max-width: 1023px) {
   aside.mr-comic-sidebar { width: 232px !important; min-width: 232px !important; }
 }
+
+
+/* Modal refresh — solid, readable surfaces; isolate from legacy utility styles */
+.mr-comic-modal-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(31, 20, 43, .72) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.mr-comic-modal-panel {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(100%, 620px) !important;
+  max-width: min(620px, calc(100vw - 32px)) !important;
+  max-height: calc(100dvh - 32px) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  color: #302344 !important;
+  background: #fff9f2 !important;
+  border: 2px solid #302344 !important;
+  border-radius: 16px !important;
+  box-shadow: 8px 8px 0 rgba(27, 17, 38, .38) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+.mr-comic-modal-header {
+  flex: 0 0 auto !important;
+  min-height: 52px !important;
+  padding: 12px 16px !important;
+  background: #ffe0ef !important;
+  color: #302344 !important;
+  border-bottom: 2px solid #302344 !important;
+}
+.mr-comic-modal-header h2 {
+  margin: 0 !important;
+  color: #302344 !important;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+}
+.mr-comic-modal-body {
+  min-height: 0 !important;
+  max-height: calc(100dvh - 112px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  padding: 18px !important;
+  background: #fff9f2 !important;
+  color: #302344 !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #a36bd8 #f4e7f0 !important;
+}
+.mr-comic-modal-body :is(p, span, label, li, h3, h4, strong) {
+  overflow-wrap: anywhere;
+}
+.mr-comic-modal-body .mr-comic-modal-info {
+  background: #ffe0ef !important;
+  border: 1px solid #d98caf !important;
+  border-radius: 12px !important;
+  color: #302344 !important;
+}
+.mr-comic-modal-body .mr-comic-modal-benefit {
+  min-width: 0 !important;
+  height: 100% !important;
+  background: #f0e8ff !important;
+  border: 1px solid #c9b4ed !important;
+  border-radius: 10px !important;
+  color: #302344 !important;
+}
+.mr-comic-modal-body .mr-comic-modal-benefit :is(p, span) {
+  color: #302344 !important;
+  opacity: 1 !important;
+}
+.mr-comic-modal-body :is(.text-text-muted, .text-text-main) {
+  color: #51415e !important;
+  opacity: 1 !important;
+}
+.mr-comic-modal-body .text-primary { color: #c94773 !important; }
+.mr-comic-modal-body button {
+  min-height: 40px;
+  white-space: normal !important;
+}
+@media (max-width: 640px) {
+  .mr-comic-modal-panel {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 20px) !important;
+    border-radius: 12px !important;
+  }
+  .mr-comic-modal-header { padding: 10px 12px !important; }
+  .mr-comic-modal-body {
+    max-height: calc(100dvh - 90px) !important;
+    padding: 12px !important;
+  }
+  .mr-comic-modal-body .grid { gap: 8px !important; }
+}
