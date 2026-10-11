@@ -122,13 +122,21 @@ export async function POST_handler(req, res) {
 
     const existing = await getProviderConnections({ provider });
     const created = [];
+    const skippedDuplicates = [];
+    const seenIncomingKeys = new Set();
 
     for (let index = 0; index < validBatch.length; index += 1) {
       const item = validBatch[index];
+      // Ignore duplicate lines in this request and keys already stored for this provider.
+      if (seenIncomingKeys.has(item.apiKey) || existing.some((connection) => connection.apiKey === item.apiKey)) {
+        skippedDuplicates.push(item.name || "Key " + (index + 1));
+        continue;
+      }
+      seenIncomingKeys.add(item.apiKey);
+
       const connectionName =
         item.name ||
-        node.name ||
-        `${node.name || "Provider Kompatibel"} #${existing.length + index + 1}`;
+        `${node.name || "Provider Kompatibel"} Key ${existing.length + created.length + 1}`;
 
       let providerSpecificData = {
         prefix: node.prefix,
@@ -161,10 +169,24 @@ export async function POST_handler(req, res) {
       created.push(safe);
     }
 
+    if (created.length === 0 && skippedDuplicates.length > 0) {
+      return res.status(200).json({
+        connections: [],
+        connection: null,
+        createdCount: 0,
+        skippedDuplicateCount: skippedDuplicates.length,
+        message: "Semua API key sudah tersimpan untuk penyedia ini.",
+      });
+    }
+
     return res.status(201).json({
       connections: created,
       connection: created[0] || null,
       createdCount: created.length,
+      skippedDuplicateCount: skippedDuplicates.length,
+      message: skippedDuplicates.length
+        ? created.length + " key baru disimpan; " + skippedDuplicates.length + " key duplikat dilewati."
+        : created.length + " key berhasil disimpan.",
     });
   } catch (error) {
     console.log("Error creating compatible provider:", error);
