@@ -955,7 +955,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
                 <div className="text-lg font-semibold text-text-main">{validation.modelCount ?? validation.models?.length ?? 0}</div>
               </div>
               <div className="rounded-lg bg-sky-500/10 px-3 py-2">
-                <div className="text-[11px] text-text-muted">Gratis</div>
+                <div className="text-[11px] text-text-muted">Paket gratis tersedia</div>
                 <div className="text-lg font-semibold text-emerald-500">{validation.freeModelCount ?? 0}</div>
               </div>
               <div className="rounded-lg bg-amber-500/10 px-3 py-2">
@@ -983,7 +983,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
             )}
             {validation.models?.length > 0 && (
               <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-border bg-surface-2/50 p-2">
-                <div className="mb-2 text-xs font-medium text-text-muted">Model yang terdeteksi</div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="font-medium text-text-muted">Model yang terdeteksi</span>
+                  {validation.pricingSource && <a href={validation.pricingSource} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">Sumber harga resmi</a>}
+                </div>
                 <div className="grid gap-1 sm:grid-cols-2">
                   {validation.models.map((model) => (
                     <div key={model.id} className="flex items-center justify-between gap-2 rounded px-2 py-1.5 text-xs">
