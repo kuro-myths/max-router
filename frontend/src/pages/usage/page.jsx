@@ -5,7 +5,7 @@ import { UsageStats, RequestLogger, CardSkeleton, SegmentedControl } from "@/sha
 import RequestDetailsTab from "./components/RequestDetailsTab";
 
 const PERIODS = [
-  { value: "today", label: "Today" },
+  { value: "today", label: "Hari Ini" },
   { value: "24h", label: "24h" },
   { value: "7d", label: "7D" },
   { value: "30d", label: "30D" },
@@ -44,8 +44,8 @@ function UsageContent() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <SegmentedControl
           options={[
-            { value: "overview", label: "Overview" },
-            { value: "details", label: "Details" },
+            { value: "overview", label: "Ringkasan" },
+            { value: "details", label: "Rincian" },
           ]}
           value={activeTab}
           onChange={handleTabChange}
