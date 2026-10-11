@@ -173,9 +173,9 @@ export async function POST_handler(req, res) {
           // family catalog based on Google’s published pricing page; never guess for unknown IDs.
           const models = classifyModels(data).map((model) => {
             if (model.priceClass !== "unknown") return model;
-            const id = model.id.replace(/^models\\//i, "").toLowerCase();
-            const hasFreeAndPaidTier = /^gemini-(?:3\\.8-flash|3\\.6-flash|3\\.5-flash-lite|3\\.1-flash-lite|2\\.5-flash(?:-lite)?|2\\.0-flash(?:-lite)?)(?:-|$)/i.test(id);
-            const paidOnly = /^gemini-(?:3\\.1-pro|3\\.1-pro-preview|3\\.8-pro|3\\.6-pro|omni|veo)(?:-|$)/i.test(id);
+            const id = model.id.replace(/^models\//i, "").toLowerCase();
+            const hasFreeAndPaidTier = /^gemini-(?:3\.8-flash|3\.6-flash|3\.5-flash-lite|3\.1-flash-lite|2\.5-flash(?:-lite)?|2\.0-flash(?:-lite)?)(?:-|$)/i.test(id);
+            const paidOnly = /^gemini-(?:3\.1-pro|3\.1-pro-preview|3\.8-pro|3\.6-pro|omni|veo)(?:-|$)/i.test(id);
             const priceClass = hasFreeAndPaidTier ? "both" : paidOnly ? "paid" : "unknown";
             return {
               ...model,
