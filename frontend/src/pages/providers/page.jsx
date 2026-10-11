@@ -933,7 +933,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
             onKeyDownCapture={(e) => { if (e.key === "Enter") e.stopPropagation(); }}
             rows={7}
             className="w-full rounded-lg border border-border bg-bg px-3 py-2 font-mono text-xs"
-            placeholder={"key-pertama\\nkey-kedua\\nkey-ketiga"}
+            placeholder={"key-pertama\nkey-kedua\nkey-ketiga"}
             spellCheck={false}
           />
           <p className="text-xs text-text-muted">Tempel banyak kunci sekaligus, satu kunci per baris. Baris kosong dan kunci duplikat diabaikan; kunci yang gagal validasi tidak disimpan.</p>
