@@ -81,7 +81,7 @@ export default function DashboardLayout() {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+          className="mr-sidebar-scrim fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
