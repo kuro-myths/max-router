@@ -855,3 +855,141 @@ aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) img {
   .mr-dashboard-home > section:nth-of-type(2) .grid > button { min-height: 82px !important; padding: 7px 9px !important; }
   .mr-dashboard-home > section:nth-of-type(2) > div.mt-3 button:nth-child(2) { display: none !important; }
 }
+
+
+/* Sidebar alignment v3 — fix the actual flex shell as well as the aside */
+.mr-sidebar-desktop-shell {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  transition: width 340ms cubic-bezier(.22,.8,.25,1) !important;
+}
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar {
+  flex: 0 0 auto !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  box-sizing: border-box !important;
+  transition: width 340ms cubic-bezier(.22,.8,.25,1), min-width 340ms cubic-bezier(.22,.8,.25,1) !important;
+}
+@media (min-width: 1024px) {
+  .mr-sidebar-desktop-shell:has(aside.mr-comic-sidebar:not(.mr-comic-sidebar-collapsed)) {
+    width: 232px !important;
+  }
+  .mr-sidebar-desktop-shell:has(aside.mr-comic-sidebar.mr-comic-sidebar-collapsed) {
+    width: 64px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar:not(.mr-comic-sidebar-collapsed) {
+    width: 232px !important;
+    min-width: 232px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed {
+    width: 64px !important;
+    min-width: 64px !important;
+    padding: 0 6px 8px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child {
+    width: 100% !important;
+    min-height: 52px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    padding: 8px 0 !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child > div {
+    display: none !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) {
+    padding: 10px 0 12px !important;
+    align-items: center !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) a {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) a > div {
+    display: none !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > nav {
+    padding: 6px 0 8px !important;
+    gap: 5px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > nav::-webkit-scrollbar {
+    display: none !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed .mr-comic-nav-item {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    flex: 0 0 40px !important;
+    align-self: center !important;
+    justify-content: center !important;
+    padding: 4px !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed .mr-comic-nav-item > span:not(.mr-comic-icon-tile) {
+    display: none !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed .mr-comic-icon-tile {
+    margin: 0 auto !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > nav > div.pt-3 {
+    width: 100% !important;
+    margin-top: 7px !important;
+    padding-top: 7px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > nav > div.pt-3 > p {
+    display: none !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed .mr-comic-sidebar-toggle {
+    margin: 0 auto !important;
+    transform: rotate(180deg);
+  }
+  .mr-dashboard-main {
+    width: calc(100% - 232px);
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+  }
+}
+.mr-dashboard-main { min-width: 0 !important; }
+.mr-dashboard-main > .mr-comic-header { flex: 0 0 auto !important; }
+.mr-comic-page-scroll {
+  overscroll-behavior-y: contain !important;
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+}
+.mr-dashboard-comic-content {
+  max-width: 1440px !important;
+  margin-inline: auto !important;
+}
+@media (max-height: 800px) and (min-width: 1024px) {
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar > nav {
+    gap: 2px !important;
+    padding-top: 2px !important;
+    padding-bottom: 4px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar .mr-comic-nav-item {
+    min-height: 34px !important;
+    height: 34px !important;
+    flex: 0 0 34px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar .mr-comic-icon-tile {
+    width: 25px !important;
+    height: 25px !important;
+    min-width: 25px !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar > div:nth-child(2) {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+}
