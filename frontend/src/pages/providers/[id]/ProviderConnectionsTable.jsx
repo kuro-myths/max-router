@@ -34,19 +34,27 @@ function QuotaMeter({usage}){
  const total=input+output;
  const requests=Number(local.requests)||0;
  const cache=Number(local.cacheReadTokens)||0;
- return <div className="min-w-0 space-y-2">
-   {q ? <div>
-     <div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-text-muted">{q.kind==="token"?"Token tersisa":"Permintaan tersisa"}</span><b>{n(q.remaining)} / {n(q.limit)}</b></div>
-     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-border/50"><div className={"h-full rounded-full "+(q.pct<=10?"bg-red-500":q.pct<50?"bg-amber-400":"bg-emerald-500")} style={{width:q.pct+"%"}}/></div>
-   </div> : null}
-   <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px]">
-     <span className="text-text-muted">Token dipakai</span><b>{n(total)}</b>
-     <span className="text-text-muted">Input</span><span>{n(input)}</span>
-     <span className="text-text-muted">Output</span><span>{n(output)}</span>
-     <span className="text-text-muted">Request</span><span>{n(requests)}</span>
-     {cache>0&&<><span className="text-text-muted">Cache read</span><span>{n(cache)}</span></>}
+ return <div className="min-w-0 space-y-1.5">
+   <div className="rounded-lg border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-pink-50 p-2 shadow-sm">
+     <div className="flex items-center gap-2">
+       <div className="relative flex size-9 shrink-0 items-center justify-center rounded-full" style={{background:q?`conic-gradient(${q.pct<=10?"#ef4444":q.pct<50?"#f59e0b":"#10b981"} ${q.pct}%, #e9e5f5 0)`:"conic-gradient(#c4b5fd 0%, #eee9f8 0)"}}>
+         <div className="flex size-6 items-center justify-center rounded-full bg-white text-[8px] font-bold text-violet-700">{q?Math.round(q.pct)+"%":"—"}</div>
+       </div>
+       <div className="min-w-0 flex-1">
+         <div className="text-[9px] font-semibold text-slate-700">Pemakaian token</div>
+         <div className="truncate text-[11px] font-bold text-slate-900">{n(total)} <span className="font-normal text-slate-500">token</span></div>
+         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-violet-100"><div className={"h-full rounded-full transition-all "+(q&&q.pct<=10?"bg-red-500":q&&q.pct<50?"bg-amber-400":"bg-gradient-to-r from-violet-500 to-pink-500")} style={{width:(q?q.pct:Math.min(100,total?35:0))+"%"}}/></div>
+       </div>
+     </div>
+     {q&&<div className="mt-1 text-[9px] text-slate-500">{q.kind==="token"?"Sisa kuota":"Permintaan tersisa"}: <b className="text-slate-700">{n(q.remaining)} / {n(q.limit)}</b></div>}
+     <div className="mt-2 grid grid-cols-2 gap-1">
+       <div className="rounded-md bg-white/80 px-1.5 py-1"><div className="text-[8px] text-slate-500">Masuk</div><div className="text-[10px] font-semibold text-slate-800">{n(input)}</div></div>
+       <div className="rounded-md bg-white/80 px-1.5 py-1"><div className="text-[8px] text-slate-500">Keluar</div><div className="text-[10px] font-semibold text-slate-800">{n(output)}</div></div>
+       <div className="rounded-md bg-white/80 px-1.5 py-1"><div className="text-[8px] text-slate-500">Permintaan</div><div className="text-[10px] font-semibold text-slate-800">{n(requests)}</div></div>
+       <div className="rounded-md bg-white/80 px-1.5 py-1"><div className="text-[8px] text-slate-500">Cache</div><div className="text-[10px] font-semibold text-slate-800">{n(cache)}</div></div>
+     </div>
    </div>
-   {!q&&<div className="text-[9px] text-text-muted">Sisa token akun: tidak disediakan provider</div>}
+   <div className="rounded-md border border-dashed border-violet-200 bg-white/70 px-2 py-1.5"><div className="mb-1 flex items-center gap-1 text-[9px] font-semibold text-violet-700"><span className="material-symbols-outlined text-[12px]">autorenew</span>Reset kuota</div><Reset usage={usage}/></div>
  </div>
 }
 QuotaMeter.propTypes={usage:PropTypes.object};
