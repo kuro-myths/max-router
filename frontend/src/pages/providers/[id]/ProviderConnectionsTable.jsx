@@ -73,6 +73,7 @@ function Row({c,index,total,usage,proxyPools=[],selected,onSelect,onUp,onDown,on
  const handleChatImage=(e)=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setChatMessages(cur=>[...cur,{role:"error",content:"Lampiran harus berupa gambar.",displayText:"Lampiran harus berupa gambar."}]);return;}const reader=new FileReader();reader.onload=()=>setChatImage({name:file.name,data:String(reader.result)});reader.readAsDataURL(file);e.target.value="";};
  const [detailsClosing,setDetailsClosing]=useState(false);
  const openDetails=()=>{setDetailsClosing(false);setDetailsOpen(true);};
+ useEffect(()=>{if(chatOpen&&modelsState?.models?.length&&!chatModel){const first=modelsState.models[0];setChatModel(typeof first==="string"?first:(first?.id||first?.name||first?.model||""));}},[chatOpen,modelsState?.models,chatModel]);
  const closeDetails=()=>{if(detailsClosing)return;setDetailsClosing(true);window.setTimeout(()=>{setDetailsOpen(false);setDetailsClosing(false);},180);};
  const status=c.isActive===false?"Nonaktif":["active","success"].includes(c.testStatus)?"Aktif":["error","unavailable","expired"].includes(c.testStatus)?"Error":"Belum diuji";
  const proxy=proxyPools.find(p=>p.id===c.providerSpecificData?.proxyPoolId);
