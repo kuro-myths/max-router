@@ -28,7 +28,7 @@ const STATUS_STYLES = {
   },
 };
 
-function resolveStatus(provider, isRunning) {
+function resolveStatus(provider, isRunning, isLastProvider, isErrorProvider) {
   const message = [
     provider?.status, provider?.state, provider?.error,
     provider?.errorMessage, provider?.lastError, provider?.errorCode,
@@ -39,9 +39,9 @@ function resolveStatus(provider, isRunning) {
   const waitingInFuture = waitingUntil && Number.isFinite(new Date(waitingUntil).getTime())
     && new Date(waitingUntil).getTime() > Date.now();
 
-  if (code === 429 || /exhaust(ed|ion)|quota.{0,20}(exceed|limit|empty|habis)|limit.{0,20}(reached|exceed)|insufficient quota|credits? (depleted|exhausted)/i.test(message)) return "exhausted";
+  if (isErrorProvider || code === 429 || /exhaust(ed|ion)|quota.{0,20}(exceed|limit|empty|habis)|limit.{0,20}(reached|exceed)|insufficient quota|credits? (depleted|exhausted)/i.test(message)) return "exhausted";
   if (waitingInFuture || /cooldown|backoff|rate.?limit|retry.?after|waiting|queued|menunggu|pending/i.test(message)) return "waiting";
-  if (isRunning) return "running";
+  if (isRunning || isLastProvider) return "running";
   if (provider?.isActive === false || provider?.enabled === false || provider?.disabled === true) return "inactive";
   return "inactive";
 }
@@ -68,17 +68,23 @@ function EmptySlot({ tip, onAdd }) {
   );
 }
 
-export default function ProviderTopology({ providers = [], activeRequests = [] }) {
+export default function ProviderTopology({ providers = [], activeRequests = [], lastProvider = "", errorProvider = "" }) {
   const [filter, setFilter] = useState("all");
   const scrollRef = useRef(null);
   const requests = Array.isArray(activeRequests) ? activeRequests : [];
   const runningIds = new Set(requests.map((request) => String(request?.provider || "").toLowerCase()).filter(Boolean));
+  const normalizeProvider = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const lastProviderKey = normalizeProvider(lastProvider);
+  const errorProviderKey = normalizeProvider(errorProvider);
 
   const entries = providers.map((provider, index) => {
     const id = String(provider?.provider || provider?.id || "");
     const name = provider?.name || id || "Penyedia tidak dikenal";
+    const providerKeys = [id, name, provider?.name, provider?.provider, provider?.baseUrl, provider?.providerSpecificData?.nodeName].map(normalizeProvider).filter(Boolean);
     const isRunning = runningIds.has(id.toLowerCase()) || (id.toLowerCase() === "codebuddy" && runningIds.has("cb"));
-    const status = resolveStatus(provider, isRunning);
+    const isLastProvider = Boolean(lastProviderKey && providerKeys.some((key) => key === lastProviderKey || lastProviderKey.includes(key) || key.includes(lastProviderKey)));
+    const isErrorProvider = Boolean(errorProviderKey && providerKeys.some((key) => key === errorProviderKey || errorProviderKey.includes(key) || key.includes(errorProviderKey)));
+    const status = resolveStatus(provider, isRunning, isLastProvider, isErrorProvider);
     return { provider, id, name, status, key: provider?.id || id || name + index };
   });
 
@@ -152,7 +158,7 @@ export default function ProviderTopology({ providers = [], activeRequests = [] }
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span
-                      className={`h-3 w-3 shrink-0 rounded-full ring-2 ring-offset-2 ring-offset-surface ${style.light} ${status === "exhausted" ? "ring-red-500/20" : status === "waiting" ? "ring-amber-400/20" : status === "running" ? "ring-emerald-500/20" : "ring-gray-400/20"}`}
+                      className={`h-3 w-3 shrink-0 rounded-full ring-2 ring-offset-2 ring-offset-surface ${style.light} ${status === "running" ? "animate-pulse" : status === "waiting" ? "animate-[pulse_1.5s_ease-in-out_infinite]" : ""} ${status === "exhausted" ? "ring-red-500/20" : status === "waiting" ? "ring-amber-400/20" : status === "running" ? "ring-emerald-500/20" : "ring-gray-400/20"}`}
                       role="img"
                       aria-label={style.label}
                     />
