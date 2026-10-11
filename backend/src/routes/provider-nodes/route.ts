@@ -53,6 +53,17 @@ export async function POST_handler(req, res) {
     // Determine type automatically when the validator has detected it.
     const nodeType = type || "openai-compatible";
 
+    // Reuse a compatible node for the same endpoint to avoid duplicate/orphan definitions.
+    if (nodeType === "openai-compatible" || nodeType === "anthropic-compatible") {
+      const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\\/+$/, "").toLowerCase();
+      const existingNodes = await getProviderNodes({ type: nodeType });
+      const existingNode = existingNodes.find((item) =>
+        String(item.baseUrl || "").trim().replace(/\\/+$/, "").toLowerCase() === normalizedBaseUrl &&
+        (nodeType !== "openai-compatible" || (item.apiType || "chat") === (apiType || "chat"))
+      );
+      if (existingNode) return res.status(200).json({ node: existingNode, alreadyExists: true });
+    }
+
     if (nodeType === "openai-compatible") {
       if (!apiType || !["chat", "responses"].includes(apiType)) {
         return res.status(400).json({ error: "Invalid OpenAI compatible API type" });
