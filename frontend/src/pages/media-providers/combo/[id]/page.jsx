@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
-import { Card, Button, Input, Toggle, ModelSelectModal } from "@/shared/components";
+import { Card, Button, Input, ModelSelectModal } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { AI_PROVIDERS, MEDIA_PROVIDER_KINDS } from "@/shared/constants/providers";
 import { getServerBaseUrl } from "@/shared/constants/config";
@@ -52,7 +52,6 @@ export default function ComboDetailPage() {
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState("");
   const [providers, setProviders] = useState([]);
-  const [roundRobin, setRoundRobin] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [logs, setLogs] = useState([]);
   const [testing, setTesting] = useState(false);
@@ -84,7 +83,6 @@ export default function ComboDetailPage() {
       setName(c.name);
       setProviders(c.models || []);
       const s = settingsRes.ok ? await settingsRes.json() : {};
-      setRoundRobin(s.comboStrategies?.[c.name]?.fallbackStrategy === "round-robin");
       const allLogs = logsRes.ok ? await logsRes.json() : [];
       setLogs(allLogs.filter((l) => typeof l === "string" && l.includes(c.name)).slice(0, 50));
     } catch { /* noop */ }
@@ -268,14 +266,7 @@ export default function ComboDetailPage() {
             <Input label="Combo Name" value={name} onChange={(e) => { setName(e.target.value); validateName(e.target.value); }} onBlur={handleSaveName} error={nameError} />
             <p className="text-[10px] text-text-muted mt-0.5">Only letters, numbers, -, _ and .</p>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Round Robin</p>
-              <p className="text-xs text-text-muted">Rotate providers across requests instead of strict fallback order.</p>
-            </div>
-            <Toggle checked={roundRobin} onChange={handleToggleRoundRobin} />
-          </div>
-        </div>
+</div>
       </Card>
 
       {/* Providers Card */}
