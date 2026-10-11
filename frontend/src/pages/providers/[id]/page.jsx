@@ -1665,8 +1665,9 @@ export default function ProviderDetailPage() {
       )}
 
 
-      {/* Models */}
-      <Card>
+      {/* Compatible provider models are managed from Deteksi Model and Parameter to avoid
+          a long one-model-per-row section on every provider detail page. */}
+      {!isCompatible && <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">
             {"Model Tersedia"}
@@ -1703,7 +1704,7 @@ export default function ProviderDetailPage() {
           <p className="text-xs text-red-500 mb-3 break-words">{modelsTestError}</p>
         )}
         {renderModelsSection()}
-      </Card>
+      </Card>}
 
       {bulkActionModal}
       </>
