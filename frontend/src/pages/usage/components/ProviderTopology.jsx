@@ -82,9 +82,9 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
     const id = String(provider?.provider || provider?.id || "");
     const rawName = String(provider?.name || "").trim();
     const baseUrl = String(provider?.baseUrl || provider?.baseURL || provider?.url || provider?.providerSpecificData?.baseUrl || "").trim();
-    const host = (() => { try { return new URL(baseUrl).hostname.toLowerCase().replace(/^www\\./, ""); } catch { return ""; } })();
+    const host = (() => { try { return new URL(baseUrl).hostname.toLowerCase().replace(/^www\./, ""); } catch { return ""; } })();
     const hostLabel = host.includes("atria") ? "Atria" : host.includes("xkiro") ? "xKiro" : host.includes("google") || host.includes("generativelanguage") ? "Google AI Studio" : host.includes("openrouter") ? "OpenRouter" : host.includes("openai") ? "OpenAI" : host.includes("anthropic") ? "Anthropic" : "";
-    const genericName = !rawName || /^(key|api key|kunci)(\\s*#?\\s*\\d+)?$/i.test(rawName);
+    const genericName = !rawName || /^(key|api key|kunci)(\s*#?\s*\d+)?$/i.test(rawName);
     const name = (genericName && hostLabel ? hostLabel : rawName) || hostLabel || id || "Penyedia tidak dikenal";
     const providerKeys = [id, name, provider?.name, provider?.provider, provider?.baseUrl, provider?.providerSpecificData?.nodeName].map(normalizeProvider).filter(Boolean);
     const isRunning = runningIds.has(id.toLowerCase()) || (id.toLowerCase() === "codebuddy" && runningIds.has("cb"));
