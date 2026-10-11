@@ -591,3 +591,48 @@ button[aria-disabled="true"] {
   color: #292343 !important;
   -webkit-text-fill-color: #292343 !important;
 }
+
+
+/* Smooth comic UI motion: popup open/close and responsive sidebar */
+@keyframes mrModalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mrModalBackdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes mrModalPanelIn {
+  from { opacity: 0; transform: translateY(14px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mrModalPanelOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(.97); }
+}
+@keyframes mrSidebarScrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.mr-modal-backdrop-in { animation: mrModalBackdropIn 180ms ease-out both; }
+.mr-modal-backdrop-out { animation: mrModalBackdropOut 180ms ease-in both; }
+.mr-modal-panel-in { animation: mrModalPanelIn 220ms cubic-bezier(.2,.8,.2,1) both; transform-origin: center; }
+.mr-modal-panel-out { animation: mrModalPanelOut 180ms ease-in both; transform-origin: center; }
+.mr-sidebar-scrim { animation: mrSidebarScrimIn 220ms ease-out both; }
+.mr-comic-sidebar {
+  transition: width 320ms cubic-bezier(.22,.8,.25,1), box-shadow 240ms ease, background-color 240ms ease !important;
+  will-change: width;
+}
+.mr-comic-sidebar-toggle {
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), background-color 180ms ease, box-shadow 180ms ease !important;
+}
+.mr-comic-sidebar-toggle:active { transform: scale(.92); }
+.mr-comic-nav-item { transition: background-color 200ms ease, color 200ms ease, transform 220ms cubic-bezier(.2,.8,.2,1) !important; }
+.mr-comic-nav-item:hover { transform: translateX(2px); }
+@media (prefers-reduced-motion: reduce) {
+  .mr-modal-backdrop-in, .mr-modal-backdrop-out, .mr-modal-panel-in, .mr-modal-panel-out,
+  .mr-sidebar-scrim, .mr-comic-sidebar, .mr-comic-sidebar-toggle, .mr-comic-nav-item {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
