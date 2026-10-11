@@ -169,7 +169,22 @@ export async function POST_handler(req, res) {
             };
           }
           const data = await response.json().catch(() => null);
-          const models = classifyModels(data);
+          // Google’s /models endpoint does not include prices. Use a conservative
+          // family catalog based on Google’s published pricing page; never guess for unknown IDs.
+          const models = classifyModels(data).map((model) => {
+            if (model.priceClass !== "unknown") return model;
+            const id = model.id.replace(/^models\\//i, "").toLowerCase();
+            const hasFreeAndPaidTier = /^gemini-(?:3\\.8-flash|3\\.6-flash|3\\.5-flash-lite|3\\.1-flash-lite|2\\.5-flash(?:-lite)?|2\\.0-flash(?:-lite)?)(?:-|$)/i.test(id);
+            const paidOnly = /^gemini-(?:3\\.1-pro|3\\.1-pro-preview|3\\.8-pro|3\\.6-pro|omni|veo)(?:-|$)/i.test(id);
+            const priceClass = hasFreeAndPaidTier ? "both" : paidOnly ? "paid" : "unknown";
+            return {
+              ...model,
+              priceClass,
+              free: priceClass === "both",
+              paid: priceClass === "paid" || priceClass === "both",
+              pricingSource: priceClass === "unknown" ? null : "Google Gemini API pricing",
+            };
+          });
           return {
             valid: true,
             detectedVersion: "v1beta/openai",
@@ -177,9 +192,11 @@ export async function POST_handler(req, res) {
             baseUrl: googleBase,
             models,
             modelCount: models.length,
-            freeModelCount: models.filter((m) => m.priceClass === "free").length,
-            paidModelCount: models.filter((m) => m.priceClass === "paid").length,
+            freeModelCount: models.filter((m) => m.priceClass === "free" || m.priceClass === "both").length,
+            paidModelCount: models.filter((m) => m.priceClass === "paid" || m.priceClass === "both").length,
+            bothPricingModelCount: models.filter((m) => m.priceClass === "both").length,
             unknownPricingModelCount: models.filter((m) => m.priceClass === "unknown").length,
+            pricingSource: "https://ai.google.dev/gemini-api/docs/pricing",
             method: "google-openai-compatible",
           };
         } catch (error) {
@@ -300,8 +317,9 @@ export async function POST_handler(req, res) {
       baseUrl: detected?.baseUrl || null,
       models: uniqueModels,
       modelCount: uniqueModels.length,
-      freeModelCount: uniqueModels.filter((m) => m.priceClass === "free").length,
-      paidModelCount: uniqueModels.filter((m) => m.priceClass === "paid").length,
+      freeModelCount: uniqueModels.filter((m) => m.priceClass === "free" || m.priceClass === "both").length,
+      paidModelCount: uniqueModels.filter((m) => m.priceClass === "paid" || m.priceClass === "both").length,
+      bothPricingModelCount: uniqueModels.filter((m) => m.priceClass === "both").length,
       unknownPricingModelCount: uniqueModels.filter((m) => m.priceClass === "unknown").length,
       supportedParameters: Array.from(new Set(validResults.flatMap((item) => (item.models || []).flatMap((m) => Array.isArray(m.supportedParameters) ? m.supportedParameters : [])))), results,
     });
