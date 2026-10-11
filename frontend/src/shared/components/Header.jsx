@@ -216,7 +216,7 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
   };
 
   return (
-    <header className="mr-comic-header shrink-0 flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-8 pt-2 sm:pt-3 pb-2 border-b border-border-subtle bg-surface/60 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none z-20">
+    <header className="mr-comic-header relative shrink-0 flex items-center justify-between gap-1.5 px-2.5 sm:gap-2 sm:px-4 lg:px-8 pt-2 sm:pt-3 pb-2 border-b border-border-subtle bg-surface/80 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none z-20">
       {/* Mobile menu button */}
       <div className="flex items-center gap-3 lg:hidden shrink-0">
         {showMenuButton && (
@@ -301,11 +301,11 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
           <button
             type="button"
             onClick={() => setShowNotifications((value) => !value)}
-            className="relative flex size-9 items-center justify-center rounded-xl border border-transparent text-text-muted transition-all hover:border-primary/20 hover:bg-primary/10 hover:text-primary"
+            className={`relative flex size-9 sm:size-10 items-center justify-center rounded-xl border border-primary/15 bg-surface/70 text-text-muted transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary ${notifications.length ? "animate-[pulse_2s_ease-in-out_infinite]" : ""}`}
             aria-label="Notifikasi"
             title="Notifikasi"
           >
-            <HeaderIcon name="notifications" className="text-[21px]" />
+            <HeaderIcon name="notifications" className="text-[21px] transition-transform duration-200 hover:rotate-[-12deg]" />
             {notifications.length > 0 && (
               <span className="absolute right-1 top-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
                 {notifications.length > 99 ? "99+" : notifications.length}
@@ -327,7 +327,9 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
                 {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center">
                     <HeaderIcon name="notifications_none" className="text-3xl text-text-muted/60" />
-                    <p className="mt-2 text-xs text-text-muted">Belum ada notifikasi</p>
+                    <p className="mt-2 text-xs font-semibold text-text">Belum ada notifikasi</p>
+                    <p className="mx-auto mt-1 max-w-[230px] text-[11px] text-text-muted">Peringatan kuota, error layanan, dan aktivitas otomatis akan muncul di sini.</p>
+                    <button type="button" onClick={() => { setShowNotifications(false); navigate("/dashboard/usage"); }} className="mt-3 rounded-lg border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/15">Lihat penggunaan</button>
                   </div>
                 ) : notifications.slice().reverse().map((n) => (
                   <div key={n.id} className="flex gap-2 rounded-xl px-3 py-2.5 hover:bg-primary/5">
