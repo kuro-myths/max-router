@@ -1112,3 +1112,32 @@ aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) img {
 .mr-comic-sidebar nav > div.pt-3 p {
   color: #ffd4e8 !important;
 }
+
+
+/* Unified comic palette — final overrides for the desktop sidebar/header seam. */
+:root {
+  --comic-ink: #302344;
+  --comic-paper: #fff9ef;
+  --comic-pink: #ffacd0;
+  --comic-pink-soft: #ffe0ef;
+  --comic-divider: #fff4fb;
+}
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar > div:first-child,
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child,
+aside.mr-comic-sidebar > div:first-child {
+  border-bottom: 3px solid var(--comic-divider) !important;
+  box-shadow: 0 2px 0 #ffacd0 !important;
+  background: #302344 !important;
+}
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar > nav > div.pt-3,
+aside.mr-comic-sidebar > nav > div.pt-3 {
+  border-top: 1px solid rgba(255,244,251,.8) !important;
+}
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar > nav > div.pt-3 > p,
+aside.mr-comic-sidebar > nav > div.pt-3 > p {
+  color: #ffd8e9 !important;
+}
+.mr-dashboard-main > header.mr-comic-header {
+  background: var(--comic-paper) !important;
+  border-bottom-color: var(--comic-ink) !important;
+}
