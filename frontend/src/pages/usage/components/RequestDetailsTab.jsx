@@ -5,12 +5,12 @@ import Button from "@/shared/components/Button";
 import Drawer from "@/shared/components/Drawer";
 import Pagination from "@/shared/components/Pagination";
 import { cn } from "@/shared/utils/cn";
-import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
+import { AI_PROVIDERS, getPenyediaByAlias } from "@/shared/constants/providers";
 
 let providerNameCache = null;
 let providerNodesCache = null;
 
-async function fetchProviderNames() {
+async function fetchPenyediaNames() {
   if (providerNameCache && providerNodesCache) {
     return { providerNameCache, providerNodesCache };
   }
@@ -32,7 +32,7 @@ async function fetchProviderNames() {
   return { providerNameCache, providerNodesCache };
 }
 
-function getProviderName(providerId, cache) {
+function getPenyediaName(providerId, cache) {
   if (!providerId) return providerId;
   if (!cache) return providerId;
 
@@ -46,7 +46,7 @@ function getProviderName(providerId, cache) {
     return cached.name;
   }
 
-  const providerConfig = getProviderByAlias(providerId) || AI_PROVIDERS[providerId];
+  const providerConfig = getPenyediaByAlias(providerId) || AI_PROVIDERS[providerId];
   return providerConfig?.name || providerId;
 }
 
@@ -98,24 +98,24 @@ export default function RequestDetailsTab() {
   const [loading, setLoading] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [providers, setProviders] = useState([]);
-  const [providerNameCache, setProviderNameCache] = useState(null);
+  const [providers, setPenyedias] = useState([]);
+  const [providerNameCache, setPenyediaNameCache] = useState(null);
   const [filters, setFilters] = useState({
     provider: "",
     startDate: "",
     endDate: ""
   });
 
-  const fetchProviders = useCallback(async () => {
+  const fetchPenyedias = useCallback(async () => {
     try {
       const res = await fetch("/api/usage/providers");
       const data = await res.json();
-      setProviders(data.providers || []);
+      setPenyedias(data.providers || []);
 
-      const cache = await fetchProviderNames();
-      setProviderNameCache(cache.providerNameCache);
+      const cache = await fetchPenyediaNames();
+      setPenyediaNameCache(cache.providerNameCache);
     } catch (error) {
-      console.error("Failed to fetch providers:", error);
+      console.error("Gagal mengambil data penyedia:", error);
     }
   }, []);
 
@@ -136,15 +136,15 @@ export default function RequestDetailsTab() {
       setDetails(data.details || []);
       setPagination(prev => ({ ...prev, ...data.pagination }));
     } catch (error) {
-      console.error("Failed to fetch request details:", error);
+      console.error("Gagal mengambil rincian permintaan:", error);
     } finally {
       setLoading(false);
     }
   }, [pagination.page, pagination.pageSize, filters]);
 
   useEffect(() => {
-    fetchProviders();
-  }, [fetchProviders]);
+    fetchPenyedias();
+  }, [fetchPenyedias]);
 
   useEffect(() => {
     fetchDetails();
@@ -172,7 +172,7 @@ export default function RequestDetailsTab() {
       <Card padding="md">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="provider-filter" className="text-sm font-medium text-text-main">Provider</label>
+            <label htmlFor="provider-filter" className="text-sm font-medium text-text-main">Penyedia</label>
             <select
               id="provider-filter"
               value={filters.provider}
@@ -184,7 +184,7 @@ export default function RequestDetailsTab() {
               )}
               style={{ colorScheme: 'auto' }}
             >
-              <option value="">All Providers</option>
+              <option value="">Semua Penyedia</option>
               {providers.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name}
@@ -194,7 +194,7 @@ export default function RequestDetailsTab() {
           </div>
           
           <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="start-date-filter" className="text-sm font-medium text-text-main">Start Date</label>
+            <label htmlFor="start-date-filter" className="text-sm font-medium text-text-main">Tanggal Mulai</label>
             <input
               id="start-date-filter"
               type="datetime-local"
@@ -208,7 +208,7 @@ export default function RequestDetailsTab() {
           </div>
 
           <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="end-date-filter" className="text-sm font-medium text-text-main">End Date</label>
+            <label htmlFor="end-date-filter" className="text-sm font-medium text-text-main">Tanggal Selesai</label>
             <input
               id="end-date-filter"
               type="datetime-local"
@@ -229,7 +229,7 @@ export default function RequestDetailsTab() {
               disabled={!filters.provider && !filters.startDate && !filters.endDate}
               className="w-full"
             >
-              Clear Filters
+              Hapus Filter
             </Button>
           </div>
         </div>
@@ -240,13 +240,13 @@ export default function RequestDetailsTab() {
           <table className="w-full min-w-[880px]">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Timestamp</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Waktu</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Model</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Provider</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Input Tokens</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Output Tokens</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Latency</th>
-                <th className="text-center p-4 text-sm font-semibold text-text-main">Action</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Penyedia</th>
+                <th className="text-right p-4 text-sm font-semibold text-text-main">Token Masukan</th>
+                <th className="text-right p-4 text-sm font-semibold text-text-main">Token Keluaran</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Latensi</th>
+                <th className="text-center p-4 text-sm font-semibold text-text-main">Tindakan</th>
               </tr>
             </thead>
             <tbody>
@@ -255,14 +255,14 @@ export default function RequestDetailsTab() {
                   <td colSpan="7" className="p-8 text-center text-text-muted">
                     <div className="flex items-center justify-center gap-2">
                       <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
-                      Loading...
+                      Memuat...
                     </div>
                   </td>
                 </tr>
               ) : details.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-text-muted">
-                    No request details found
+                    Detail permintaan tidak ditemukan
                   </td>
                 </tr>
               ) : (
@@ -279,7 +279,7 @@ export default function RequestDetailsTab() {
                     </td>
                     <td className="max-w-[180px] truncate p-4 text-sm text-text-main">
                        <span className="font-medium">
-                         {getProviderName(detail.provider, providerNameCache)}
+                         {getPenyediaName(detail.provider, providerNameCache)}
                        </span>
                      </td>
                     <td className="p-4 text-sm text-text-main text-right font-mono">
@@ -326,7 +326,7 @@ export default function RequestDetailsTab() {
       <Drawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title="Request Details"
+        title="Rincian Permintaan"
         width="lg"
       >
         {selectedDetail && (
@@ -337,12 +337,12 @@ export default function RequestDetailsTab() {
                 <span className="break-all font-mono text-text-main">{selectedDetail.id}</span>
               </div>
               <div>
-                <span className="text-text-muted">Timestamp:</span>{" "}
+                <span className="text-text-muted">Waktu:</span>{" "}
                 <span className="text-text-main">{new Date(selectedDetail.timestamp).toLocaleString()}</span>
               </div>
               <div>
-                 <span className="text-text-muted">Provider:</span>{" "}
-                 <span className="text-text-main font-medium">{getProviderName(selectedDetail.provider, providerNameCache)}</span>
+                 <span className="text-text-muted">Penyedia:</span>{" "}
+                 <span className="text-text-main font-medium">{getPenyediaName(selectedDetail.provider, providerNameCache)}</span>
                </div>
               <div>
                 <span className="text-text-muted">Model:</span>{" "}
@@ -358,19 +358,19 @@ export default function RequestDetailsTab() {
                 </span>
               </div>
               <div>
-                <span className="text-text-muted">Latency:</span>{" "}
+                <span className="text-text-muted">Latensi:</span>{" "}
                 <span className="text-text-main font-mono">
                   TTFT {selectedDetail.latency?.ttft || 0}ms / Total {selectedDetail.latency?.total || 0}ms
                 </span>
               </div>
               <div>
-                <span className="text-text-muted">Input Tokens:</span>{" "}
+                <span className="text-text-muted">Token Masukan:</span>{" "}
                 <span className="text-text-main font-mono">
                   {getInputTokens(selectedDetail.tokens).toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-text-muted">Output Tokens:</span>{" "}
+                <span className="text-text-muted">Token Keluaran:</span>{" "}
                 <span className="text-text-main font-mono">
                   {selectedDetail.tokens?.completion_tokens?.toLocaleString() || 0}
                 </span>
@@ -378,14 +378,14 @@ export default function RequestDetailsTab() {
             </div>
             
             <div className="space-y-4">
-              <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">
+              <CollapsibleSection title="1. Permintaan Klien (Masukan)" defaultOpen={true} icon="input">
                 <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                   {JSON.stringify(selectedDetail.request, null, 2)}
                 </pre>
               </CollapsibleSection>
 
               {selectedDetail.providerRequest && (
-                <CollapsibleSection title="2. Provider Request (Translated)" icon="translate">
+                <CollapsibleSection title="2. Penyedia Request (Translated)" icon="translate">
                   <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                     {JSON.stringify(selectedDetail.providerRequest, null, 2)}
                   </pre>
@@ -393,7 +393,7 @@ export default function RequestDetailsTab() {
               )}
 
               {selectedDetail.providerResponse && (
-                <CollapsibleSection title="3. Provider Response (Raw)" icon="data_object">
+                <CollapsibleSection title="3. Penyedia Response (Raw)" icon="data_object">
                   <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                     {typeof selectedDetail.providerResponse === 'object'
                       ? JSON.stringify(selectedDetail.providerResponse, null, 2)
@@ -403,12 +403,12 @@ export default function RequestDetailsTab() {
                 </CollapsibleSection>
               )}
               
-              <CollapsibleSection title="4. Client Response (Final)" defaultOpen={true} icon="output">
+              <CollapsibleSection title="4. Respons Klien (Akhir)" defaultOpen={true} icon="output">
                 {selectedDetail.response?.thinking && (
                   <div className="mb-4">
                     <h4 className="font-semibold text-text-main mb-2 flex items-center gap-2 text-xs uppercase tracking-wide opacity-70">
                       <span className="material-symbols-outlined text-[16px]">psychology</span>
-                      Thinking Process
+                      Proses Penalaran
                     </h4>
                     <pre className="max-h-[200px] max-w-full overflow-auto rounded-lg border border-amber-200 bg-amber-50 p-3 font-mono text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100 sm:p-4">
                       {selectedDetail.response.thinking}
@@ -417,10 +417,10 @@ export default function RequestDetailsTab() {
                 )}
                 
                 <h4 className="font-semibold text-text-main mb-2 text-xs uppercase tracking-wide opacity-70">
-                  Content
+                  Konten
                 </h4>
                 <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
-                  {selectedDetail.response?.content || "[No content]"}
+                  {selectedDetail.response?.content || "[Tidak ada konten]"}
                 </pre>
               </CollapsibleSection>
             </div>
