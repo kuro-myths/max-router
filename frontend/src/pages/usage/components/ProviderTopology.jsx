@@ -80,7 +80,12 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
   const visibleProviders = providers.filter((provider) => { const label = String(provider?.name || provider?.provider || provider?.id || "").toLowerCase(); return !(/opencode/.test(label) && /free/.test(label)); });
   const entries = visibleProviders.map((provider, index) => {
     const id = String(provider?.provider || provider?.id || "");
-    const name = provider?.name || id || "Penyedia tidak dikenal";
+    const rawName = String(provider?.name || "").trim();
+    const baseUrl = String(provider?.baseUrl || provider?.baseURL || provider?.url || provider?.providerSpecificData?.baseUrl || "").trim();
+    const host = (() => { try { return new URL(baseUrl).hostname.toLowerCase().replace(/^www\\./, ""); } catch { return ""; } })();
+    const hostLabel = host.includes("atria") ? "Atria" : host.includes("xkiro") ? "xKiro" : host.includes("google") || host.includes("generativelanguage") ? "Google AI Studio" : host.includes("openrouter") ? "OpenRouter" : host.includes("openai") ? "OpenAI" : host.includes("anthropic") ? "Anthropic" : "";
+    const genericName = !rawName || /^(key|api key|kunci)(\\s*#?\\s*\\d+)?$/i.test(rawName);
+    const name = (genericName && hostLabel ? hostLabel : rawName) || hostLabel || id || "Penyedia tidak dikenal";
     const providerKeys = [id, name, provider?.name, provider?.provider, provider?.baseUrl, provider?.providerSpecificData?.nodeName].map(normalizeProvider).filter(Boolean);
     const isRunning = runningIds.has(id.toLowerCase()) || (id.toLowerCase() === "codebuddy" && runningIds.has("cb"));
     const isLastProvider = Boolean(lastProviderKey && providerKeys.some((key) => key === lastProviderKey || lastProviderKey.includes(key) || key.includes(lastProviderKey)));
