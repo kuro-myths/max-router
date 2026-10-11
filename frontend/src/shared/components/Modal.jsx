@@ -43,17 +43,17 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="mr-comic-modal-root fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-[2px] fade-in"
+        className="mr-comic-modal-overlay absolute inset-0 fade-in"
         onClick={closeOnOverlay ? onClose : undefined}
       />
 
       {/* Modal content */}
       <div
         className={cn(
-          "relative w-full bg-surface",
+          "mr-comic-modal-panel relative w-full bg-surface",
           "border border-border-subtle",
           "rounded-[14px] shadow-[var(--shadow-elev)]",
           "fade-in",
@@ -63,7 +63,7 @@ export default function Modal({
       >
         {/* Header */}
         {(title || showTrafficLights) && (
-          <div className="flex items-center justify-between p-2 border-b border-border-subtle">
+          <div className="mr-comic-modal-header flex items-center justify-between p-2 border-b border-border-subtle">
             <div className="flex items-center">
               {/* Traffic lights — desktop only */}
               {showTrafficLights && (
@@ -98,7 +98,7 @@ export default function Modal({
         )}
 
         {/* Body */}
-        <div className="p-6 max-h-[calc(85vh-100px)] overflow-y-auto custom-scrollbar">{children}</div>
+        <div className="mr-comic-modal-body p-6 max-h-[calc(85vh-100px)] overflow-y-auto custom-scrollbar">{children}</div>
 
         {/* Footer */}
         {footer && (
