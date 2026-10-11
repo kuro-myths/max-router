@@ -222,7 +222,7 @@ export default function RequestDetailsTab() {
           </div>
           
           <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
-            <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Clear</span>
+            <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Bersihkan</span>
             <Button 
               variant="ghost" 
               onClick={handleClearFilters}
@@ -290,8 +290,8 @@ export default function RequestDetailsTab() {
                     </td>
                     <td className="p-4 text-sm text-text-muted">
                       <div className="flex flex-col gap-0.5">
-                        <div>TTFT: <span className="font-mono">{detail.latency?.ttft || 0}ms</span></div>
-                        <div>Total: <span className="font-mono">{detail.latency?.total || 0}ms</span></div>
+                        <div>Waktu token pertama: <span className="font-mono">{detail.latency?.ttft || 0}ms</span></div>
+                        <div>Total waktu: <span className="font-mono">{detail.latency?.total || 0}ms</span></div>
                       </div>
                     </td>
                     <td className="p-4 text-center">
@@ -385,7 +385,7 @@ export default function RequestDetailsTab() {
               </CollapsibleSection>
 
               {selectedDetail.providerRequest && (
-                <CollapsibleSection title="2. Penyedia Request (Translated)" icon="translate">
+                <CollapsibleSection title="2. Permintaan ke Penyedia (Diterjemahkan)" icon="translate">
                   <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                     {JSON.stringify(selectedDetail.providerRequest, null, 2)}
                   </pre>
@@ -393,7 +393,7 @@ export default function RequestDetailsTab() {
               )}
 
               {selectedDetail.providerResponse && (
-                <CollapsibleSection title="3. Penyedia Response (Raw)" icon="data_object">
+                <CollapsibleSection title="3. Respons Penyedia (Mentah)" icon="data_object">
                   <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                     {typeof selectedDetail.providerResponse === 'object'
                       ? JSON.stringify(selectedDetail.providerResponse, null, 2)
