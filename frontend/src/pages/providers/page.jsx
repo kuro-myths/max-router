@@ -847,6 +847,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
         const providerName = (() => {
           try {
             const hostname = new URL(detectedBaseUrl).hostname.toLowerCase().replace(/^www\./, "");
+            if (hostname === "generativelanguage.googleapis.com") return "Google AI Studio";
             const labels = hostname.split(".").filter(Boolean);
             const ignored = new Set(["api", "gateway", "openai", "compatible", "llm"]);
             const candidate = labels.length > 2 && ignored.has(labels[0]) ? labels[1] : labels.length > 2 ? labels[labels.length - 2] : labels[0];
@@ -907,8 +908,8 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
           label="Base URL"
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
-          placeholder="https://api.example.com"
-          hint="Nama penyedia diambil otomatis dari alamat ini. Sistem mendeteksi versi API yang kompatibel."
+          placeholder="https://generativelanguage.googleapis.com/v1beta"
+          hint="Google AI Studio akan diarahkan otomatis ke endpoint OpenAI-compatible yang benar. Nama penyedia dideteksi dari alamat."
         />
         <Input
           label="URL ikon resmi (opsional)"
