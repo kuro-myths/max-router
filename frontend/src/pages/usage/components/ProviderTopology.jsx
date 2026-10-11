@@ -208,5 +208,4 @@ ProviderTopology.propTypes = {
     account: PropTypes.string,
   })),
   lastProvider: PropTypes.string,
-  errorProvider: PropTypes.string,
 };
