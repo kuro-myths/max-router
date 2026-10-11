@@ -59,7 +59,10 @@ function QuotaMeter({usage}){
 }
 QuotaMeter.propTypes={usage:PropTypes.object};
 function Row({c,index,total,usage,proxyPools=[],selected,onSelect,onUp,onDown,onToggle,onEdit,onDelete,onTest,testing,modelsState,onShowModels}){
- const [detailsOpen,setDetailsOpen]=useState(false);\n const [detailsClosing,setDetailsClosing]=useState(false);\n const openDetails=()=>{setDetailsClosing(false);setDetailsOpen(true);};\n const closeDetails=()=>{if(detailsClosing)return;setDetailsClosing(true);window.setTimeout(()=>{setDetailsOpen(false);setDetailsClosing(false);},180);};
+ const [detailsOpen,setDetailsOpen]=useState(false);
+ const [detailsClosing,setDetailsClosing]=useState(false);
+ const openDetails=()=>{setDetailsClosing(false);setDetailsOpen(true);};
+ const closeDetails=()=>{if(detailsClosing)return;setDetailsClosing(true);window.setTimeout(()=>{setDetailsOpen(false);setDetailsClosing(false);},180);};
  const status=c.isActive===false?"Nonaktif":["active","success"].includes(c.testStatus)?"Aktif":["error","unavailable","expired"].includes(c.testStatus)?"Error":"Belum diuji";
  const proxy=proxyPools.find(p=>p.id===c.providerSpecificData?.proxyPoolId);
  const statusClass=c.isActive===false?"border-slate-400/50 bg-slate-200 text-slate-700":status==="Error"?"border-red-400/50 bg-red-100 text-red-700":status==="Belum diuji"?"border-amber-400/50 bg-amber-100 text-amber-800":"border-emerald-400/50 bg-emerald-100 text-emerald-800";
