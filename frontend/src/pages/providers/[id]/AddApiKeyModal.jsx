@@ -91,7 +91,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
       if (settled) return;
       settled = true;
       setValidationResult("failed");
-      setValidationError("Validation timeout (>15s)");
+      setValidationError("Waktu pemeriksaan habis (>15 detik)");
       setValidating(false);
     }, VALIDATION_TIMEOUT_MS + 500);
     try {
@@ -104,12 +104,12 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
       if (settled) return;
       settled = true;
       setValidationResult(data.valid ? "success" : "failed");
-      setValidationError(data.valid ? "" : (data.error || "Validation failed"));
+      setValidationError(data.valid ? "" : (data.error || "Pemeriksaan gagal"));
     } catch (error) {
       if (settled) return;
       settled = true;
       setValidationResult("failed");
-      setValidationError(error.name === "AbortError" ? "Validation timeout (>15s)" : "Network error");
+      setValidationError(error.name === "AbortError" ? "Validation timeout (>15s)" : "Kesalahan jaringan");
     } finally {
       window.clearTimeout(fallbackId);
       if (settled) setValidating(false);
@@ -305,7 +305,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             />
             <div className="pt-6">
               <Button onClick={handleValidate} disabled={!formData.apiKey || validating || saving} variant="secondary">
-                {validating ? "Checking..." : "Check"}
+                {validating ? "Memeriksa..." : "Periksa"}
               </Button>
             </div>
           </div>
@@ -322,7 +322,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
               <>
                 {" "}
                 <a href={website} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                  Open {website.replace(/^https?:\/\//, "")}
+                  Buka {website.replace(/^https?:\/\//, "")}
                 </a>
               </>
             )}
@@ -407,7 +407,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
                 label="Organisasi"
                 value={azureData.organization}
                 onChange={(e) => setAzureData({ ...azureData, organization: e.target.value })}
-                placeholder="Organization ID"
+                placeholder="ID Organisasi"
               />
             </div>
           </div>
@@ -446,7 +446,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             {saving ? "Menyimpan..." : "Simpan"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>
-            Cancel
+            Batal
           </Button>
         </div>
         </>)}
