@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
 
 function formatValue(value) {
   if (value === null || value === undefined || value === "") return "Tidak diberikan provider";
@@ -13,17 +14,27 @@ function extractModels(payload) {
 
 export default function ParametersPage() {
   const [models, setModels] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/models");
-      const data = await res.json();
-      setModels(extractModels(data));
+      const [modelsResponse, providersResponse] = await Promise.all([
+        fetch("/api/v1/models", { cache: "no-store" }),
+        fetch("/api/providers", { cache: "no-store" }),
+      ]);
+      if (!modelsResponse.ok) throw new Error("Gagal memuat model");
+      const [modelsData, providersData] = await Promise.all([
+        modelsResponse.json(),
+        providersResponse.ok ? providersResponse.json() : Promise.resolve({ connections: [] }),
+      ]);
+      setModels(extractModels(modelsData));
+      setProviders(Array.isArray(providersData.connections) ? providersData.connections : []);
     } catch {
       setModels([]);
+      setProviders([]);
     } finally {
       setLoading(false);
     }
@@ -31,10 +42,30 @@ export default function ParametersPage() {
 
   useEffect(() => { load(); }, []);
 
+  const providerForModel = (model) => {
+    const owner = String(model?.owned_by || "");
+    const prefix = String(model?.id || "").split("/")[0];
+    const candidates = [owner, prefix].filter(Boolean);
+    for (const connection of providers) {
+      const data = connection.providerSpecificData || {};
+      const identifiers = [connection.provider, data.prefix, data.nodeName, connection.name]
+        .filter(Boolean).map((value) => String(value).toLowerCase());
+      if (candidates.some((candidate) => identifiers.includes(candidate.toLowerCase()))) {
+        return connection.name || data.nodeName || AI_PROVIDERS[connection.provider]?.name || connection.provider;
+      }
+    }
+    for (const candidate of candidates) {
+      const config = getProviderByAlias(candidate) || AI_PROVIDERS[candidate];
+      if (config?.name) return config.name;
+    }
+    if (owner === "combo") return "Gabungan";
+    return owner || "Tidak diketahui";
+  };
+
   const filtered = useMemo(() => models.filter((model) => {
     const q = query.trim().toLowerCase();
-    return !q || String(model.id || "").toLowerCase().includes(q);
-  }), [models, query]);
+    return !q || String(model.id || "").toLowerCase().includes(q) || providerForModel(model).toLowerCase().includes(q);
+  }), [models, query, providers]);
 
   const parameters = useMemo(() => {
     const map = new Map();
@@ -103,6 +134,7 @@ export default function ParametersPage() {
                 return (
                   <div key={model.id} className="rounded-lg border border-border-subtle bg-surface-2/40 p-3">
                     <div className="font-mono text-sm">{model.id}</div>
+                    <div className="mt-1 text-xs text-text-muted">Berasal dari layanan: <span className="font-semibold text-text-main">{providerForModel(model)}</span></div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {Array.isArray(values) && values.length ? values.map((value) => (
                         <span key={String(value)} className="rounded bg-bg px-2 py-1 text-[11px]">{String(value)}</span>
