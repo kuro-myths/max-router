@@ -77,7 +77,8 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
   const lastProviderKey = normalizeProvider(lastProvider);
   const errorProviderKey = normalizeProvider(errorProvider);
 
-  const entries = providers.map((provider, index) => {
+  const visibleProviders = providers.filter((provider) => { const label = String(provider?.name || provider?.provider || provider?.id || "").toLowerCase(); return !(/opencode/.test(label) && /free/.test(label)); });
+  const entries = visibleProviders.map((provider, index) => {
     const id = String(provider?.provider || provider?.id || "");
     const name = provider?.name || id || "Penyedia tidak dikenal";
     const providerKeys = [id, name, provider?.name, provider?.provider, provider?.baseUrl, provider?.providerSpecificData?.nodeName].map(normalizeProvider).filter(Boolean);
@@ -153,8 +154,12 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
               return (
                 <li
                   key={key}
-                  title={detail ? String(detail) : `${name}: ${style.label}`}
-                  className={`mr-provider-topology-card flex h-[48px] w-[156px] min-w-0 items-center justify-between gap-1.5 rounded-lg border-2 px-2 py-1.5 shadow-[2px_3px_0_rgba(45,35,70,0.12)] ${style.ring}` }
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => window.alert(["Penyedia: " + name, "ID: " + (provider?.provider || provider?.id || "Tidak tersedia"), "Alamat layanan: " + (provider?.baseUrl || provider?.baseURL || provider?.url || provider?.providerSpecificData?.baseUrl || "Tidak tersedia pada ringkasan"), "Status: " + style.label, "Keterangan: " + (detail || provider?.description || "Belum ada keterangan tambahan."), "", "Kunci rahasia tidak ditampilkan. Untuk mengelola atau menghapus layanan, buka menu Penyedia."].join("\n"))}
+                  onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click(); } }}
+                  title={detail ? String(detail) : "Klik untuk melihat detail " + name}
+                  className={`mr-provider-topology-card flex h-[48px] w-[156px] min-w-0 cursor-pointer items-center justify-between gap-1.5 rounded-lg border-2 px-2 py-1.5 shadow-[2px_3px_0_rgba(45,35,70,0.12)] ${style.ring}` }
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span
