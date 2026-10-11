@@ -69,7 +69,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
   const validateName = (value) => {
     if (!value.trim()) { setNameError("Name is required"); return false; }
     const full = forcePrefix + value;
-    if (!VALID_NAME_REGEX.test(full)) { setNameError("Only letters, numbers, -, _ and . allowed"); return false; }
+    if (!VALID_NAME_REGEX.test(full)) { setNameError("Hanya huruf, angka, tanda -, _ dan . yang diperbolehkan"); return false; }
     setNameError("");
     return true;
   };
@@ -123,15 +123,15 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
                 {nameError && <p className="text-[11px] text-red-500 mt-0.5">{nameError}</p>}
               </>
             ) : (
-              <Input label="Combo Name" value={name} onChange={handleNameChange} placeholder="my-combo" error={nameError} />
+              <Input label="Nama Gabungan" value={name} onChange={handleNameChange} placeholder="my-combo" error={nameError} />
             )}
             <p className="text-[10px] text-text-muted mt-0.5">
-              {forcePrefix ? `Auto-prefixed with "${forcePrefix}". ` : ""}Only letters, numbers, -, _ and . allowed
+              {forcePrefix ? `Auto-prefixed with "${forcePrefix}". ` : ""}Hanya huruf, angka, tanda -, _ dan . yang diperbolehkan
             </p>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Models</label>
+            <label className="text-sm font-medium mb-1.5 block">Model dalam gabungan</label>
             {models.length === 0 ? (
               <div className="text-center py-4 border border-dashed border-black/10 dark:border-white/10 rounded-lg bg-black/[0.01] dark:bg-white/[0.01]">
                 <span className="material-symbols-outlined text-text-muted text-xl mb-1">layers</span>
@@ -152,7 +152,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
             <button onClick={() => setShowModelSelect(true)}
               className="w-full mt-2 py-2 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-primary font-medium hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center gap-1">
               <span className="material-symbols-outlined text-[16px]">add</span>
-              Add Model
+              Tambah Model
             </button>
           </div>
 
@@ -168,7 +168,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
       <ModelSelectModal isOpen={showModelSelect} onClose={() => setShowModelSelect(false)}
         onSelect={handleAddModel} onDeselect={handleDeselectModel}
         activeProviders={activeProviders} modelAliases={modelAliases}
-        title="Add Model to Combo" kindFilter={kindFilter}
+        title="Tambah Model to Combo" kindFilter={kindFilter}
         addedModelValues={models} closeOnSelect={false} />
     </>
   );
