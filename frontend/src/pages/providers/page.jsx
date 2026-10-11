@@ -321,7 +321,7 @@ export default function ProvidersPage() {
         providerId.startsWith(ANTHROPIC_COMPATIBLE_PREFIX);
       if (!isCompatible) continue;
       const node = providerNodes.find((item) => item.id === providerId) || null;
-      add(providerId, connection.name || node?.name || providerId, connection.authType || "apikey", node);
+      add(providerId, node?.name || connection.name || providerId, connection.authType || "apikey", node);
     }
 
     return [...candidates.values()].filter((entry) => matchSearch(entry.name));
@@ -831,6 +831,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
       }
 
       let createdCount = 0;
+      let skippedDuplicateCount = 0;
       let groupIndex = 0;
 
       for (const [, group] of groups) {
@@ -883,16 +884,16 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
           throw new Error(providerData?.error || "Gagal menyimpan API key.");
         }
         createdCount += Number(providerData.createdCount || 0);
-        const skipped = Number(providerData.skippedDuplicateCount || 0);
-        if (skipped > 0) {
-          setMessage(skipped + " key sudah tersimpan sebelumnya dan dilewati.");
-        }
+        skippedDuplicateCount += Number(providerData.skippedDuplicateCount || 0);
       }
 
       if (createdCount > 0) {
-        setMessage(createdCount + " API key baru berhasil disimpan.");
+        setMessage(
+          createdCount + " API key baru berhasil disimpan." +
+          (skippedDuplicateCount > 0 ? " " + skippedDuplicateCount + " key duplikat dilewati karena sudah tersimpan." : "")
+        );
         await onCreated();
-        window.setTimeout(onClose, 900);
+        window.setTimeout(onClose, 1200);
       } else {
         setMessage("Tidak ada key baru yang disimpan. Semua key valid tersebut sudah tersimpan sebelumnya.");
         await onCreated();
