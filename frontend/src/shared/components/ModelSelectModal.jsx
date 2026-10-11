@@ -6,6 +6,31 @@ import ProviderIcon from "./ProviderIcon";
 import { getModelsByProviderId } from "@/shared/constants/models";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, AI_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, getProviderAlias } from "@/shared/constants/providers";
 
+
+// Klasifikasi biaya hanya memakai data harga yang tersedia; jangan menebak tarif model.
+function getModelPriceStatus(model, providerId) {
+  const id = String(model?.id || model?.value || model?.name || "").toLowerCase();
+  const pricing = model?.pricing || {};
+  const candidates = [
+    model?.inputPrice, model?.input_price, model?.price,
+    pricing?.input, pricing?.prompt, pricing?.inputPrice,
+  ];
+  const price = candidates.find((value) => value !== undefined && value !== null && value !== "");
+  if (price !== undefined) {
+    const numeric = Number(price);
+    if (Number.isFinite(numeric)) return numeric === 0 ? "free" : numeric > 0 ? "paid" : "unknown";
+  }
+  if (model?.isFree === true || model?.free === true || /(^|[:/._-])free($|[:/._-])/.test(id)) return "free";
+  if (model?.isFree === false || model?.free === false) return "paid";
+  if (Object.prototype.hasOwnProperty.call(FREE_PROVIDERS, providerId)) return "free";
+  return "unknown";
+}
+const PRICE_BADGES = {
+  free: { label: "Gratis", className: "border-emerald-300 bg-emerald-50 text-emerald-700" },
+  paid: { label: "Berbayar", className: "border-rose-300 bg-rose-50 text-rose-700" },
+  unknown: { label: "Harga belum diketahui", className: "border-slate-300 bg-slate-100 text-slate-600" },
+};
+
 // Provider order: OAuth first, then Free Tier, then API Key (matches dashboard/providers)
 const PROVIDER_ORDER = [
   ...Object.keys(OAUTH_PROVIDERS),
@@ -45,6 +70,7 @@ export default function ModelSelectModal({
   const [providerNodes, setProviderNodes] = useState([]);
   const [customModels, setCustomModels] = useState([]);
   const [disabledModels, setDisabledModels] = useState({});
+  const [expandedProviders, setExpandedProviders] = useState({});
 
   const fetchCombos = async () => {
     try {
@@ -379,7 +405,7 @@ export default function ModelSelectModal({
       {/* Info bar */}
       <div className="flex items-center gap-2 mb-3 px-2.5 py-2 bg-primary/8 border border-primary/20 rounded-lg text-xs text-text-muted">
         <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: "14px" }}>info</span>
-        <span>Click to add, click again to remove. Changes are saved automatically.</span>
+        <span>Pilih penyedia untuk membuka daftar model. Hijau = gratis, merah muda = berbayar, abu-abu = harga belum terverifikasi. Klik model untuk menambah atau menghapusnya.</span>
       </div>
 
       {/* Search - compact */}
@@ -390,7 +416,7 @@ export default function ModelSelectModal({
           </span>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Cari penyedia atau model..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 bg-surface border border-border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
@@ -440,7 +466,7 @@ export default function ModelSelectModal({
         {Object.entries(filteredGroups).map(([providerId, group]) => (
           <div key={providerId}>
             {/* Provider header */}
-            <div className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
+            <button type="button" onClick={() => setExpandedProviders((prev) => ({ ...prev, [providerId]: !prev[providerId] }))} aria-expanded={!!expandedProviders[providerId] || !!searchQuery.trim()} className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-left hover:border-primary/40 hover:bg-primary/5">
               <ProviderIcon
                 src={providerId === "codebuddy" || providerId === "cb" ? "/providers/codebuddy.svg" : `/providers/${providerId}.png`}
                 alt={group.name}
@@ -451,15 +477,16 @@ export default function ModelSelectModal({
               <span className="text-xs font-medium text-primary">
                 {group.name}
               </span>
-              <span className="text-[10px] text-text-muted">
-                ({group.models.length})
-              </span>
-            </div>
+              <span className="text-[10px] text-text-muted">({group.models.length} model)</span>
+              <span className="ml-auto material-symbols-outlined text-[16px] text-text-muted">{expandedProviders[providerId] || searchQuery.trim() ? "expand_less" : "expand_more"}</span>
+            </button>
 
-            <div className="flex flex-wrap gap-1.5">
+            {(expandedProviders[providerId] || !!searchQuery.trim()) && <div className="mt-2 flex flex-wrap gap-1.5">
               {group.models.map((model) => {
                 const isSelected = selectedModel === model.value;
                 const isPlaceholder = model.isPlaceholder;
+                const priceStatus = getModelPriceStatus(model, providerId);
+                const priceBadge = PRICE_BADGES[priceStatus];
                 return (
                   <button
                     key={model.value}
@@ -469,7 +496,11 @@ export default function ModelSelectModal({
                       px-2 py-1 rounded-xl text-xs font-medium transition-all border hover:cursor-pointer
                       ${isPlaceholder
                         ? "border-dashed border-border text-text-muted hover:border-primary/50 hover:text-primary bg-surface italic"
-                        : isSelected
+                        : priceStatus === "free"
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                          : priceStatus === "paid"
+                            ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                            : isSelected
                           ? "bg-primary text-white border-primary"
                           : addedModelValues.includes(model.value)
                             ? "bg-primary border-primary text-white hover:bg-primary-hover"
@@ -492,13 +523,13 @@ export default function ModelSelectModal({
                           <span className="text-[9px] opacity-60 font-normal">custom</span>
                         </>
                       ) : (
-                        model.name
+                        <>{model.name}<span className={"ml-1 rounded border px-1 py-0.5 text-[8px] not-italic " + priceBadge.className}>{priceBadge.label}</span></>
                       )}
                     </span>
                   </button>
                 );
               })}
-            </div>
+            </div>}
           </div>
         ))}
 
