@@ -128,14 +128,14 @@ export default function ParametersPage() {
           {filtered.length === 0 ? (
             <p className="text-sm text-text-muted">{loading ? "Memuat model..." : "Belum ada model."}</p>
           ) : (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {filtered.map((model) => {
                 const values = model.supported_parameters || model.supportedParameters || model.metadata?.supportedParameters || [];
                 return (
-                  <div key={model.id} className="rounded-lg border border-border-subtle bg-surface-2/40 p-3">
-                    <div className="font-mono text-sm">{model.id}</div>
-                    <div className="mt-1 text-xs text-text-muted">Berasal dari layanan: <span className="font-semibold text-text-main">{providerForModel(model)}</span></div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div key={model.id} className="min-w-0 rounded-lg border border-border-subtle bg-surface-2/40 p-3">
+                    <div className="break-all font-mono text-xs leading-snug">{model.id}</div>
+                    <div className="mt-2 text-[11px] text-text-muted">Berasal dari layanan: <span className="font-semibold text-text-main">{providerForModel(model)}</span></div>
+                    <div className="mt-2 flex flex-wrap gap-1">
                       {Array.isArray(values) && values.length ? values.map((value) => (
                         <span key={String(value)} className="rounded bg-bg px-2 py-1 text-[11px]">{String(value)}</span>
                       )) : <span className="text-xs text-text-muted">{formatValue(values)}</span>}
