@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* Compile-time Tailwind theme: no browser-side code generation or eval(). */
+@theme {
+  --color-primary: #ff79b0;
+  --color-primary-hover: #f45b9c;
+  --color-brand-500: #ff79b0;
+  --color-brand-600: #f45b9c;
+  --color-bg: #fff9ed;
+  --color-bg-alt: #fff1e7;
+  --color-surface: #fffdf6;
+  --color-surface-2: #fff3fa;
+  --color-vibrancy: #35224f;
+  --color-sidebar: #35224f;
+  --color-border: #d8bce8;
+  --color-border-subtle: #d8bce8;
+  --color-text-main: #292343;
+  --color-text-muted: #685a7d;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #e11d48;
+}
+
+/* Ensure the app uses a consistent box model and viewport-sized shell. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body { margin: 0; background: #fff9ed; color: #292343; }
+button, input, select, textarea { font: inherit; }
