@@ -557,3 +557,37 @@ aside.mr-comic-sidebar .mr-comic-sidebar-toggle:hover {
   color: #44344f !important;
   opacity: 1 !important;
 }
+
+
+/* Global button legibility audit: disabled controls must remain readable */
+button, [role="button"], .mr-comic-button {
+  -webkit-text-fill-color: currentColor;
+  text-shadow: none !important;
+}
+.mr-comic-button {
+  color: #292343 !important;
+  opacity: 1 !important;
+}
+.mr-comic-button:disabled,
+.mr-comic-button[aria-disabled="true"],
+button:disabled,
+button[aria-disabled="true"] {
+  color: #554961 !important;
+  -webkit-text-fill-color: #554961 !important;
+  background-color: #e9e0ed !important;
+  border-color: #756781 !important;
+  box-shadow: 2px 2px 0 #756781 !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+.mr-comic-button.bg-brand-500:not(:disabled),
+.mr-comic-button.bg-primary:not(:disabled) {
+  background: #ff9fc9 !important;
+  color: #292343 !important;
+  -webkit-text-fill-color: #292343 !important;
+}
+.mr-comic-button.bg-surface-3,
+.mr-comic-button.bg-surface-2 {
+  color: #292343 !important;
+  -webkit-text-fill-color: #292343 !important;
+}
