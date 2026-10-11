@@ -28,7 +28,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   const isOllamaLocal = provider === "ollama-local";
   const isCookie = authType === "cookie";
   const isXaiApiKey = provider === "xai" && !isCookie;
-  const credentialLabel = isCookie ? "Cookie Value" : "API Key";
+  const credentialLabel = isCookie ? "Nilai Cookie" : "Kunci API";
   const credentialPlaceholder = isCookie
     ? (provider === "grok-web" ? "sso=xxxxx... or just the raw value" : "eyJhbGciOi...")
     : (isXaiApiKey ? "xai-..." : "");
@@ -226,20 +226,20 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   if (!provider) return null;
 
   return (
-    <Modal isOpen={isOpen} title={`Add ${providerName || provider} ${credentialLabel}`} onClose={onClose}>
+    <Modal isOpen={isOpen} title={`Tambah ${credentialLabel} ${providerName || provider}`} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {/* Mode switcher */}
         <div className="flex gap-2">
-          <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
-          <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
+          <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Satuan</Button>
+          <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Tambah Massal</Button>
         </div>
 
         {mode === "bulk" && (
           <div className="flex flex-col gap-3">
             <p className="text-xs text-text-muted">
               {provider === "codebuddy"
-                ? <>One key per line. Format: <code>email:apiKey</code> or <code>name|email|apiKey</code>.</>
-                : <>One key per line. Format: <code>name|apiKey</code> or just <code>apiKey</code> (auto-named by index).</>
+                ? <>Satu kunci per baris. Format: <code>email:apiKey</code> atau <code>nama|email|apiKey</code>.</>
+                : <>Satu kunci per baris. Format: <code>nama|apiKey</code> atau cukup <code>apiKey</code> (nama dibuat otomatis berdasarkan urutan).</>
               }
             </p>
             <textarea
@@ -250,7 +250,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             />
             {bulkResult && (
               <div className={`text-sm font-medium ${bulkResult.failed > 0 ? "text-yellow-400" : "text-green-400"}`}>
-                ✓ {bulkResult.success} added{bulkResult.failed > 0 ? `, ✗ ${bulkResult.failed} failed` : ""}
+                ✓ {bulkResult.success} berhasil ditambahkan{bulkResult.failed > 0 ? `, ✗ ${bulkResult.failed} gagal` : ""}
               </div>
             )}
             <div className="flex gap-2">
@@ -265,17 +265,17 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         {mode === "single" && (<>
         {provider === "codebuddy" && (
           <Input
-            label="Email / Account ID"
+            label="Email / ID Akun"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="your-codebuddy-email@example.com"
           />
         )}
         <Input
-          label="Name"
+          label="Nama"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={isOllamaLocal ? "Ollama Local" : "Production Key"}
+          placeholder={isOllamaLocal ? "Ollama Local" : "Kunci Produksi"}
         />
         {isOllamaLocal && (
           <div className="flex gap-2">
@@ -288,7 +288,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             />
             <div className="pt-6">
               <Button onClick={handleValidate} disabled={validating || saving} variant="secondary">
-                {validating ? "Checking..." : "Check"}
+                {validating ? "Memeriksa..." : "Periksa"}
               </Button>
             </div>
           </div>
@@ -312,7 +312,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {isXaiApiKey && (
           <p className="text-xs text-text-muted">
-            Use a direct xAI API key from console.x.ai. This is separate from Grok Build OAuth.
+            Gunakan kunci API xAI langsung dari console.x.ai. Kunci ini berbeda dari autentikasi OAuth Grok Build.
           </p>
         )}
         {isCookie && authHint && (
@@ -330,7 +330,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {providerRegions && (
           <Select
-            label="Region"
+            label="Wilayah"
             value={region}
             onChange={(e) => setRegion(e.target.value)}
             options={providerRegions.map((r) => ({ value: r.id, label: r.label }))}
@@ -338,7 +338,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {isCompatible && (
           <Input
-            label="Default Model"
+            label="Model Bawaan"
             value={formData.defaultModel}
             onChange={(e) => setFormData({ ...formData, defaultModel: e.target.value })}
             placeholder={isAnthropic ? "claude-3-5-sonnet-latest" : "gpt-4o-mini"}
@@ -346,13 +346,13 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {isOllamaLocal && (
           <p className="text-xs text-text-muted">
-            Leave blank to use <code>http://localhost:11434</code>. For remote Ollama, enter the full host URL (e.g. <code>http://192.168.1.10:11434</code>).
+            Kosongkan untuk menggunakan <code>http://localhost:11434</code>. Untuk Ollama jarak jauh, masukkan URL host lengkap (misalnya <code>http://192.168.1.10:11434</code>).
           </p>
         )}
         {validationResult && (
           <div className="flex flex-col gap-1">
             <Badge variant={validationResult === "success" ? "success" : "error"}>
-              {validationResult === "success" ? "Valid" : "Invalid"}
+              {validationResult === "success" ? "Valid" : "Tidak valid"}
             </Badge>
             {validationResult === "failed" && validationError && (
               <span className="text-sm text-red-500">{validationError}</span>
@@ -364,47 +364,47 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {isCompatible && (
           <p className="text-xs text-text-muted">
-            Enter the model ID exactly as your compatible endpoint expects it. This model will be saved as the connection default.
+            Masukkan ID model persis seperti yang diminta endpoint kompatibel. Model ini akan disimpan sebagai model bawaan koneksi.
           </p>
         )}
         {isCloudflareAi && (
           <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
-            <h3 className="font-semibold mb-3 text-sm">Cloudflare Workers AI</h3>
+            <h3 className="font-semibold mb-3 text-sm">AI Cloudflare Workers</h3>
             <Input
-              label="Account ID"
+              label="ID Akun"
               value={cloudflareData.accountId}
               onChange={(e) => setCloudflareData({ ...cloudflareData, accountId: e.target.value })}
               placeholder="abc123def456..."
             />
             <p className="text-xs text-text-muted mt-2">
-              Find your Account ID in the right sidebar of <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">dash.cloudflare.com</a>
+              Temukan ID Akun di bilah sisi kanan pada <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">dash.cloudflare.com</a>
             </p>
           </div>
         )}
         {isAzure && (
           <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
-            <h3 className="font-semibold mb-3 text-sm">Azure OpenAI Configuration</h3>
+            <h3 className="font-semibold mb-3 text-sm">Konfigurasi Azure OpenAI</h3>
             <div className="flex flex-col gap-3">
               <Input
-                label="Azure Endpoint"
+                label="Endpoint Azure"
                 value={azureData.azureEndpoint}
                 onChange={(e) => setAzureData({ ...azureData, azureEndpoint: e.target.value })}
                 placeholder="https://your-resource.openai.azure.com"
               />
               <Input
-                label="Deployment Name"
+                label="Nama Deployment"
                 value={azureData.deployment}
                 onChange={(e) => setAzureData({ ...azureData, deployment: e.target.value })}
                 placeholder="gpt-4"
               />
               <Input
-                label="API Version"
+                label="Versi API"
                 value={azureData.apiVersion}
                 onChange={(e) => setAzureData({ ...azureData, apiVersion: e.target.value })}
                 placeholder="2024-10-01-preview"
               />
               <Input
-                label="Organization"
+                label="Organisasi"
                 value={azureData.organization}
                 onChange={(e) => setAzureData({ ...azureData, organization: e.target.value })}
                 placeholder="Organization ID"
@@ -414,31 +414,31 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
 
         <Input
-          label="Priority"
+          label="Prioritas"
           type="number"
           value={formData.priority}
           onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) || 1 })}
         />
 
         <Select
-          label="Proxy Pool"
+          label="Kelompok Proxy"
           value={formData.proxyPoolId}
           onChange={(e) => setFormData({ ...formData, proxyPoolId: e.target.value })}
           options={[
-            { value: NONE_PROXY_POOL_VALUE, label: "None" },
+            { value: NONE_PROXY_POOL_VALUE, label: "Tidak ada" },
             ...(proxyPools || []).map((pool) => ({ value: pool.id, label: pool.name })),
           ]}
-          placeholder="None"
+          placeholder="Tidak ada"
         />
 
         {(proxyPools || []).length === 0 && (
           <p className="text-xs text-text-muted">
-            No active proxy pools available. Create one in Proxy Pools page first.
+            Belum ada kelompok proxy aktif. Buat terlebih dahulu melalui halaman Kelompok Proxy.
           </p>
         )}
 
         <p className="text-xs text-text-muted">
-          Legacy manual proxy fields are still accepted by API for backward compatibility.
+          Kolom proxy manual lama masih didukung oleh API untuk menjaga kompatibilitas.
         </p>
 
         <div className="flex gap-2">
