@@ -144,6 +144,49 @@ export async function POST_handler(req, res) {
     };
 
     const testKey = async (apiKey) => {
+      // Google AI Studio supports an OpenAI-compatible endpoint under /v1beta/openai.
+      // The plain /v1beta Gemini REST API is not OpenAI-compatible, so normalize it
+      // before validating/saving a provider from this compatibility form.
+      if (/^https:\/\/generativelanguage\.googleapis\.com(?:\/|$)/i.test(root)) {
+        const googleBase = root.replace(/\/v1beta(?:\/openai)?\/?$/i, "/v1beta/openai");
+        try {
+          const response = await fetchWithTimeout(googleBase + "/models", {
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + apiKey,
+              Accept: "application/json",
+            },
+          }, 8000);
+          if (response.status === 401 || response.status === 403) {
+            return { valid: false, error: "API key Google tidak valid atau tidak memiliki izin.", status: response.status };
+          }
+          if (!response.ok) {
+            const detail = await readErrorBody(response);
+            return {
+              valid: false,
+              error: "Google Gemini OpenAI-compatible mengembalikan HTTP " + response.status + (detail ? ": " + String(detail).slice(0, 180) : ""),
+              status: response.status,
+            };
+          }
+          const data = await response.json().catch(() => null);
+          const models = classifyModels(data);
+          return {
+            valid: true,
+            detectedVersion: "v1beta/openai",
+            detectedType: "openai-compatible",
+            baseUrl: googleBase,
+            models,
+            modelCount: models.length,
+            freeModelCount: models.filter((m) => m.priceClass === "free").length,
+            paidModelCount: models.filter((m) => m.priceClass === "paid").length,
+            unknownPricingModelCount: models.filter((m) => m.priceClass === "unknown").length,
+            method: "google-openai-compatible",
+          };
+        } catch (error) {
+          return { valid: false, error: getErrorMessage(error) };
+        }
+      }
+
       let lastFailure = { valid: false, error: "Endpoint /models tidak ditemukan" };
       for (const candidate of candidates) {
         try {
