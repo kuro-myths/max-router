@@ -87,7 +87,7 @@ export default function DashboardLayout() {
       )}
 
       {/* Sidebar - Desktop */}
-      <div className="hidden lg:flex h-screen max-h-screen shrink-0 overflow-hidden">
+      <div className="hidden lg:flex h-screen max-h-screen shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out">
         <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebarCollapsed} />
       </div>
 
