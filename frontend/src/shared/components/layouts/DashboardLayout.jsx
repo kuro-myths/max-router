@@ -105,7 +105,7 @@ export default function DashboardLayout() {
         {/* Faint grid background */}
         <div className="landing-grid absolute inset-0 pointer-events-none -z-10" aria-hidden="true" />
         <Header key={pathname} onMenuClick={() => setSidebarOpen(true)} onToggleCollapse={toggleSidebarCollapsed} sidebarCollapsed={sidebarCollapsed} />
-        <div className={`mr-comic-page-scroll flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto custom-scrollbar ${pathname === "/dashboard/docs" ? "" : "p-3 sm:p-4 lg:p-6 xl:p-8"} ${pathname === "/dashboard/docs" ? "flex flex-col overflow-hidden" : ""}`}>
+        <div className={`mr-comic-page-scroll flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto custom-scrollbar ${pathname === "/dashboard/docs" ? "" : "p-2.5 sm:p-3 md:p-4 lg:p-6 xl:p-8"} ${pathname === "/dashboard/docs" ? "flex flex-col overflow-hidden" : ""}`}>
           <div className={`mr-dashboard-comic-content ${pathname === "/dashboard/docs" ? "flex-1 w-full h-full flex flex-col" : "w-full max-w-7xl mx-auto"}`}><Outlet /></div>
         </div>
       </main>
