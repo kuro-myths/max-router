@@ -66,7 +66,7 @@ export default function ConsoleLogClient() {
 
   const getSource = (line) => {
     const text = String(line);
-    const match = text.match(/(?:provider|service|layanan|connection|penyedia)\\s*[:=]\\s*["']?([a-zA-Z0-9._ -]+)/i);
+    const match = text.match(/(?:provider|service|layanan|connection|penyedia)\s*[:=]\s*["']?([a-zA-Z0-9._ -]+)/i);
     if (match) return match[1].trim().replace(/["']$/, "");
     const known = ["openai", "anthropic", "claude", "gemini", "google ai studio", "openrouter", "xkiro", "groq", "deepseek", "mistral", "ollama", "cohere"];
     return known.find((name) => text.toLowerCase().includes(name)) || "Sumber tidak tercatat";
