@@ -751,7 +751,6 @@ ApiKeyProviderCard.propTypes = {
 };
 
 function AddCompatibleModal({ isOpen, onClose, onCreated }) {
-  const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [iconUrl, setIconUrl] = useState("");
   const [apiKeys, setApiKeys] = useState("");
@@ -762,7 +761,6 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
 
   useEffect(() => {
     if (!isOpen) {
-      setName("");
       setBaseUrl("");
       setIconUrl("");
       setApiKeys("");
@@ -846,7 +844,15 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
         groupIndex += 1;
         const detectedType = group[0].detectedType || "openai-compatible";
         const detectedBaseUrl = group[0].baseUrl;
-        const providerName = name.trim() || "Provider Compatible";
+        const providerName = (() => {
+          try {
+            const hostname = new URL(detectedBaseUrl).hostname.toLowerCase().replace(/^www\./, "");
+            const labels = hostname.split(".").filter(Boolean);
+            const ignored = new Set(["api", "gateway", "openai", "compatible", "llm"]);
+            const candidate = labels.length > 2 && ignored.has(labels[0]) ? labels[1] : labels.length > 2 ? labels[labels.length - 2] : labels[0];
+            return (candidate || "penyedia-ai").replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+          } catch { return "Penyedia AI"; }
+        })();
         const prefix = slugify(providerName) + (groups.size > 1 ? "-" + groupIndex : "");
 
         const nodeRes = await fetch("/api/provider-nodes", {
@@ -898,20 +904,14 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
     <Modal isOpen={isOpen} title="Tambah Provider Compatible" onClose={onClose}>
       <div className="flex flex-col gap-4">
         <Input
-          label="Nama"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Misalnya Mercury"
-        />
-        <Input
           label="Base URL"
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
           placeholder="https://api.example.com"
-          hint="Bisa root, /v1, /v2, atau endpoint kompatibel. Sistem akan mencari versi otomatis."
+          hint="Nama penyedia diambil otomatis dari alamat ini. Sistem mendeteksi versi API yang kompatibel."
         />
         <Input
-          label="Icon resmi URL (opsional)"
+          label="URL ikon resmi (opsional)"
           value={iconUrl}
           onChange={(e) => setIconUrl(e.target.value)}
           placeholder="https://chatgpt.com"
@@ -928,7 +928,7 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
             placeholder={"key-pertama\\nkey-kedua\\nkey-ketiga"}
             spellCheck={false}
           />
-          <p className="text-xs text-text-muted">Satu key per baris. Sistem tidak menyimpan key yang gagal validasi.</p>
+          <p className="text-xs text-text-muted">Tempel banyak kunci sekaligus, satu kunci per baris. Baris kosong dan kunci duplikat diabaikan; kunci yang gagal validasi tidak disimpan.</p>
         </div>
 
         {validation?.results?.length > 0 && (
