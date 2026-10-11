@@ -134,9 +134,20 @@ export async function POST_handler(req, res) {
       }
       seenIncomingKeys.add(item.apiKey);
 
-      const connectionName =
+      const baseConnectionName =
         item.name ||
         `${node.name || "Provider Kompatibel"} Key ${existing.length + created.length + 1}`;
+      // The persistence layer updates API-key connections by name. Make the name unique
+      // so adding a new key can never silently replace another key with the same label.
+      let connectionName = baseConnectionName;
+      let suffix = 2;
+      while (
+        existing.some((connection) => connection.authType === "apikey" && connection.name === connectionName) ||
+        created.some((connection) => connection.authType === "apikey" && connection.name === connectionName)
+      ) {
+        connectionName = baseConnectionName + " (" + suffix + ")";
+        suffix += 1;
+      }
 
       let providerSpecificData = {
         prefix: node.prefix,
