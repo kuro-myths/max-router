@@ -100,7 +100,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
 
   return (
     <>
-      <aside className={cn("mr-comic-sidebar flex shrink-0 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl transition-[width] duration-200 min-h-full", collapsed ? "mr-comic-sidebar-collapsed w-[64px]" : "w-[232px]")}>
+      <aside className={cn("mr-comic-sidebar flex shrink-0 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl min-h-full overflow-hidden", collapsed ? "mr-comic-sidebar-collapsed w-[64px]" : "w-[232px]")}>
         {/* Sidebar controls */}
         <div className={cn("flex items-center pt-4 pb-2", collapsed ? "flex-col gap-3 px-3" : "justify-between px-5")}>
           <div className="flex items-center gap-2" aria-label="Status Max Router">
@@ -124,7 +124,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
         <div className={cn("py-4 flex flex-col gap-2", collapsed ? "px-2 items-center" : "px-4")}>
           <Link to="/dashboard" className={cn("flex items-center", collapsed ? "justify-center" : "gap-3") } title={collapsed ? "9Router V3" : undefined}>
             <img src="/branding/9router-v3-logo.png" alt="9Router V3" className="size-9 rounded-[10px] object-contain" />
-            <div className={cn("flex flex-col", collapsed ? "hidden" : "")}>
+            <div className={cn("flex flex-col", collapsed ? "max-w-0 -translate-x-1 opacity-0 overflow-hidden pointer-events-none" : "max-w-[180px] translate-x-0 opacity-100")}>
               <h1 className="text-lg font-semibold tracking-tight text-text-main leading-tight">
                 9Router V3
               </h1>
@@ -174,12 +174,12 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
               title={collapsed ? item.label : undefined}
             >
               <NavIcon name={item.icon} active={isActive(item.href)} />
-              <span className={cn("text-[13px] font-medium", collapsed ? "hidden" : "")}>{item.label}</span>
+              <span className={cn("max-w-[180px] whitespace-nowrap text-[13px] font-medium transition-[max-width,opacity,transform] duration-300 ease-out", collapsed ? "max-w-0 -translate-x-1 opacity-0 overflow-hidden pointer-events-none" : "translate-x-0 opacity-100")}>{item.label}</span>
             </Link>
           ))}
 
           <div className="pt-3 mt-2 space-y-1">
-            <p className={cn("px-4 text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-2", collapsed ? "hidden" : "")}>Sistem</p>
+            <p className={cn("px-4 text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-2", collapsed ? "max-w-0 -translate-x-1 opacity-0 overflow-hidden pointer-events-none" : "max-w-[180px] translate-x-0 opacity-100")}>Sistem</p>
             {systemItems.map((item) => (
               <Link
                 key={item.href}
@@ -194,7 +194,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
                 title={collapsed ? item.label : undefined}
               >
                 <NavIcon name={item.icon} active={isActive(item.href)} />
-                <span className={cn("text-[13px] font-medium", collapsed ? "hidden" : "")}>{item.label}</span>
+                <span className={cn("text-[13px] font-medium", collapsed ? "max-w-0 -translate-x-1 opacity-0 overflow-hidden pointer-events-none" : "max-w-[180px] translate-x-0 opacity-100")}>{item.label}</span>
               </Link>
             ))}
             {debugItems.map((item) => (
@@ -211,7 +211,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
                 title={collapsed ? item.label : undefined}
               >
                 <NavIcon name={item.icon} active={isActive(item.href)} />
-                <span className={cn("text-[13px] font-medium", collapsed ? "hidden" : "")}>{item.label}</span>
+                <span className={cn("text-[13px] font-medium", collapsed ? "max-w-0 -translate-x-1 opacity-0 overflow-hidden pointer-events-none" : "max-w-[180px] translate-x-0 opacity-100")}>{item.label}</span>
               </Link>
             ))}
             <Link
@@ -226,7 +226,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
               title={collapsed ? "Pengaturan" : undefined}
             >
               <NavIcon name="settings" active={isActive("/dashboard/profile")} />
-              <span className={cn("text-[13px] font-medium", collapsed ? "hidden" : "")}>Pengaturan</span>
+              <span className={cn("text-[13px] font-medium", collapsed ? "max-w-0 -translate-x-1 opacity-0 overflow-hidden pointer-events-none" : "max-w-[180px] translate-x-0 opacity-100")}>Pengaturan</span>
             </Link>
           </div>
         </nav>
