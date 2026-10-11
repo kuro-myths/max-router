@@ -1053,3 +1053,48 @@ aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) img {
     box-sizing: border-box !important;
   }
 }
+
+
+/* Source-of-truth layout alignment: the desktop sidebar control row and page header
+   use the same outer height and bottom border; do not depend on collapsed-state legacy rules. */
+@media (min-width: 1024px) {
+  .mr-sidebar-desktop-shell {
+    align-self: stretch !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    padding-top: 0 !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar > div:first-child {
+    flex: 0 0 79px !important;
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    box-sizing: border-box !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: 3px solid #292343 !important;
+    align-items: center !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child {
+    flex-basis: 79px !important;
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  .mr-dashboard-main > header.mr-comic-header {
+    flex: 0 0 79px !important;
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    box-sizing: border-box !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: 3px solid #292343 !important;
+  }
+}
