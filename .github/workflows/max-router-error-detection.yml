@@ -210,7 +210,7 @@ jobs:
           const text = fs.readFileSync(file, 'utf8');
           if (!text.includes('jobs:')) throw new Error('Workflow YAML tidak memiliki jobs');
           if (!text.includes('Email accounts handler')) throw new Error('Workflow belum memuat pemeriksaan rute email');
-          if (!text.includes('Workflow consistency audit: OK')) throw new Error('Pesan hasil audit workflow tidak ditemukan');
+          if (!text.includes('Static runtime/database/diagnostics audit: OK')) throw new Error('Pesan hasil audit runtime/database tidak ditemukan');
           console.log('Workflow consistency audit: OK');
           NODE
 
