@@ -42,11 +42,11 @@ function RecentRequests({ requests = [] }) {
     <Card className="flex min-w-0 flex-col overflow-hidden" padding="sm" style={{ height: 480 }}>
       {/* Header */}
       <div className="px-1 py-2 border-b border-border shrink-0">
-        <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">Recent Requests</span>
+        <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">Permintaan Terbaru</span>
       </div>
 
       {!requests.length ? (
-        <div className="flex-1 flex items-center justify-center text-text-muted text-sm">No requests yet.</div>
+        <div className="flex-1 flex items-center justify-center text-text-muted text-sm">Belum ada permintaan.</div>
       ) : (
         <div className="flex-1 overflow-y-auto">
           <table className="w-full min-w-[300px] border-collapse text-xs">
@@ -54,8 +54,8 @@ function RecentRequests({ requests = [] }) {
               <tr className="border-b border-border">
                 <th className="py-1.5 text-left font-semibold text-text-muted w-2"></th>
                 <th className="py-1.5 text-left font-semibold text-text-muted">Model</th>
-                <th className="py-1.5 text-right font-semibold text-text-muted whitespace-nowrap">In / Out</th>
-                <th className="py-1.5 text-right font-semibold text-text-muted">When</th>
+                <th className="py-1.5 text-right font-semibold text-text-muted whitespace-nowrap">Masuk / Keluar</th>
+                <th className="py-1.5 text-right font-semibold text-text-muted">Waktu</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -148,10 +148,10 @@ function sortData(dataMap, pendingMap = {}, sortBy, sortOrder) {
 
 function getGroupKey(item, keyField) {
   switch (keyField) {
-    case "rawModel": return item.rawModel || "Unknown Model";
-    case "accountName": return item.accountName || `Account ${item.connectionId?.slice(0, 8)}...` || "Unknown Account";
-    case "keyName": return item.keyName || "Unknown Key";
-    case "endpoint": return item.endpoint || "Unknown Endpoint";
+    case "rawModel": return item.rawModel || "Model Tidak Diketahui";
+    case "accountName": return item.accountName || `Account ${item.connectionId?.slice(0, 8)}...` || "Akun Tidak Diketahui";
+    case "keyName": return item.keyName || "Kunci Tidak Diketahui";
+    case "endpoint": return item.endpoint || "Endpoint Tidak Diketahui";
     default: return item[keyField] || "Unknown";
   }
 }
@@ -187,48 +187,48 @@ function groupDataByKey(data, keyField) {
 
 const MODEL_COLUMNS = [
   { field: "rawModel", label: "Model" },
-  { field: "provider", label: "Provider" },
-  { field: "requests", label: "Requests", align: "right" },
-  { field: "lastUsed", label: "Last Used", align: "right" },
+  { field: "provider", label: "Penyedia" },
+  { field: "requests", label: "Permintaan", align: "right" },
+  { field: "lastUsed", label: "Terakhir Digunakan", align: "right" },
 ];
 
 const ACCOUNT_COLUMNS = [
   { field: "rawModel", label: "Model" },
-  { field: "provider", label: "Provider" },
-  { field: "accountName", label: "Account" },
-  { field: "requests", label: "Requests", align: "right" },
-  { field: "lastUsed", label: "Last Used", align: "right" },
+  { field: "provider", label: "Penyedia" },
+  { field: "accountName", label: "Akun" },
+  { field: "requests", label: "Permintaan", align: "right" },
+  { field: "lastUsed", label: "Terakhir Digunakan", align: "right" },
 ];
 
 const API_KEY_COLUMNS = [
-  { field: "keyName", label: "API Key Name" },
+  { field: "keyName", label: "Nama Kunci API" },
   { field: "rawModel", label: "Model" },
-  { field: "provider", label: "Provider" },
-  { field: "requests", label: "Requests", align: "right" },
-  { field: "lastUsed", label: "Last Used", align: "right" },
+  { field: "provider", label: "Penyedia" },
+  { field: "requests", label: "Permintaan", align: "right" },
+  { field: "lastUsed", label: "Terakhir Digunakan", align: "right" },
 ];
 
 const ENDPOINT_COLUMNS = [
   { field: "endpoint", label: "Endpoint" },
   { field: "rawModel", label: "Model" },
-  { field: "provider", label: "Provider" },
-  { field: "requests", label: "Requests", align: "right" },
-  { field: "lastUsed", label: "Last Used", align: "right" },
+  { field: "provider", label: "Penyedia" },
+  { field: "requests", label: "Permintaan", align: "right" },
+  { field: "lastUsed", label: "Terakhir Digunakan", align: "right" },
 ];
 
 const TABLE_OPTIONS = [
-  { value: "model", label: "Usage by Model" },
-  { value: "account", label: "Usage by Account" },
-  { value: "apiKey", label: "Usage by API Key" },
-  { value: "endpoint", label: "Usage by Endpoint" },
+  { value: "model", label: "Penggunaan per Model" },
+  { value: "account", label: "Penggunaan per Akun" },
+  { value: "apiKey", label: "Penggunaan per Kunci API" },
+  { value: "endpoint", label: "Penggunaan per Endpoint" },
 ];
 
 const PERIODS = [
-  { value: "today", label: "Today" },
-  { value: "24h", label: "24h" },
-  { value: "7d", label: "7D" },
-  { value: "30d", label: "30D" },
-  { value: "60d", label: "60D" },
+  { value: "today", label: "Hari Ini" },
+  { value: "24h", label: "24 Jam" },
+  { value: "7d", label: "7 Hari" },
+  { value: "30d", label: "30 Hari" },
+  { value: "60d", label: "60 Hari" },
 ];
 
 function normalizeStatsData(data) {
@@ -397,7 +397,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           columns: MODEL_COLUMNS,
           groupedData: groupDataByKey(sortData(stats.byModel, pendingMap, sortBy, sortOrder), "rawModel"),
           storageKey: "usage-stats:expanded-models",
-          emptyMessage: "No usage recorded yet.",
+          emptyMessage: "Belum ada data penggunaan.",
           renderSummaryCells: (group) => (
             <>
               <td className="px-6 py-3 text-text-muted">—</td>
@@ -430,7 +430,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           columns: ACCOUNT_COLUMNS,
           groupedData: groupDataByKey(sortData(stats.byAccount, pendingMap, sortBy, sortOrder), "accountName"),
           storageKey: "usage-stats:expanded-accounts",
-          emptyMessage: "No account-specific usage recorded yet.",
+          emptyMessage: "Belum ada data penggunaan per akun.",
           renderSummaryCells: (group) => (
             <>
               <td className="px-6 py-3 text-text-muted">—</td>
@@ -481,7 +481,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           columns: ENDPOINT_COLUMNS,
           groupedData: groupDataByKey(sortData(stats.byEndpoint, {}, sortBy, sortOrder), "endpoint"),
           storageKey: "usage-stats:expanded-endpoints",
-          emptyMessage: "No endpoint usage recorded yet.",
+          emptyMessage: "Belum ada data penggunaan per endpoint.",
           renderSummaryCells: (group) => (
             <>
               <td className="px-6 py-3 text-text-muted">—</td>
@@ -541,7 +541,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       {/* Compact AI integration panel replaces the oversized arcade game */}
       {loading ? null : <AIIntegrationCard requests={stats?.recentRequests || []} />}
 
-      {/* Provider topology + Recent Requests */}
+      {/* Provider topology + Permintaan Terbaru */}
       {loading ? spinner : (
         <div className="grid min-w-0 grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
           <ProviderTopology
