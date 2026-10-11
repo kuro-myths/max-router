@@ -188,17 +188,17 @@ export default function DashboardPage() {
   }, [loadingMetrics, autoRepairAttempted, metrics.errors.length]);
 
   return (
-    <div className="space-y-5 pb-5">
-      <section className="relative overflow-hidden rounded-2xl border-2 border-[#332746] bg-[#fff0f7] p-5 sm:p-7 shadow-[4px_4px_0_rgba(51,39,70,.12)]">
-        <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-[#ffb0d0]/50" />
-        <div className="pointer-events-none absolute right-24 -bottom-16 h-32 w-32 rounded-full bg-[#e8ddff]/70" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mr-dashboard-home space-y-3 pb-2">
+      <section className="mr-dashboard-home-hero relative overflow-hidden rounded-2xl border-2 border-[#332746] bg-[#fff0f7] p-4 sm:p-5 shadow-[4px_4px_0_rgba(51,39,70,.12)]">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ffb0d0]/55" />
+        <div className="pointer-events-none absolute left-[58%] top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e8ddff]/75" />
+        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#e8a0c0] bg-white/80 px-3 py-1 text-xs font-bold text-[#6e3b65]">
               <Zap size={14} /> PUSAT KENDALI 9ROUTER
             </span>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-black text-[#302344]">Selamat datang di Beranda</h2>
-            <p className="mt-2 max-w-xl text-sm text-[#5c4b68]">Kelola penyedia AI, endpoint, model, dan aktivitas router dari satu tempat.</p>
+            <h2 className="mt-2 text-xl sm:text-2xl font-black text-[#302344]">Selamat datang di Beranda</h2>
+            <p className="mt-1 max-w-xl text-xs sm:text-sm text-[#5c4b68]">Kelola penyedia AI, endpoint, model, dan aktivitas router dari satu tempat.</p>
           </div>
           <Link to="/dashboard/providers" className="inline-flex w-fit shrink-0 items-center gap-2 rounded-xl border-2 border-[#332746] bg-[#ff9fc9] px-4 py-3 text-sm font-bold text-[#302344] shadow-[3px_3px_0_#332746] transition hover:-translate-y-0.5">
             <Server size={17} /> Kelola Penyedia <ArrowUpRight size={16} />
