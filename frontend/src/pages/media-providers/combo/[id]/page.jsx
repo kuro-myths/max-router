@@ -63,7 +63,7 @@ export default function ComboDetailPage() {
 
   const fetchAll = async () => {
     try {
-      const [comboRes, settingsRes, logsRes, keysRes, connsRes, aliasesRes] = await Promise.all([
+      const [comboRes, logsRes, keysRes, connsRes, aliasesRes] = await Promise.all([
         fetch(`/api/combos/${id}`, { cache: "no-store" }),
         fetch("/api/usage/logs", { cache: "no-store" }),
         fetch("/api/keys", { cache: "no-store" }),
