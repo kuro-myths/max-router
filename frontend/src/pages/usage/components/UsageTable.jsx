@@ -131,15 +131,15 @@ export default function UsageTable({
   const valueColumns = useMemo(() => {
     if (viewMode === "tokens") {
       return [
-        { field: "promptTokens", label: "Input Tokens" },
-        { field: "completionTokens", label: "Output Tokens" },
-        { field: "totalTokens", label: "Total Tokens" },
+        { field: "promptTokens", label: "Token Masukan" },
+        { field: "completionTokens", label: "Token Keluaran" },
+        { field: "totalTokens", label: "Total Token" },
       ];
     }
     return [
-      { field: "promptTokens", label: "Input Cost" },
-      { field: "completionTokens", label: "Output Cost" },
-      { field: "cost", label: "Total Cost" },
+      { field: "promptTokens", label: "Biaya Masukan" },
+      { field: "completionTokens", label: "Biaya Keluaran" },
+      { field: "cost", label: "Total Biaya" },
     ];
   }, [viewMode]);
 
