@@ -520,7 +520,8 @@ export default function ModelSelectModal({
                       ) : model.isCustom ? (
                         <>
                           {model.name}
-                          <span className="text-[9px] opacity-60 font-normal">custom</span>
+                          <span className="text-[9px] opacity-70 font-normal">khusus</span>
+                          <span className={"ml-1 rounded border px-1 py-0.5 text-[8px] not-italic " + priceBadge.className}>{priceBadge.label}</span>
                         </>
                       ) : (
                         <>{model.name}<span className={"ml-1 rounded border px-1 py-0.5 text-[8px] not-italic " + priceBadge.className}>{priceBadge.label}</span></>
