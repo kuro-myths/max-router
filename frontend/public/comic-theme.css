@@ -636,3 +636,11 @@ button[aria-disabled="true"] {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Sidebar open/close motion and reduced-motion fallback */
+.mr-comic-sidebar { transition: width .3s cubic-bezier(.22,.8,.25,1), transform .3s cubic-bezier(.22,.8,.25,1), opacity .22s ease !important; will-change: width, transform; }
+.mr-comic-sidebar > div, .mr-comic-sidebar .mr-comic-nav-item, .mr-comic-sidebar .mr-comic-icon-tile { transition: opacity .2s ease, transform .25s ease, max-width .3s ease, gap .3s ease, background-color .18s ease !important; }
+.mr-sidebar-scrim { animation: mrScrimIn .24s ease both; }
+@keyframes mrScrimIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mr-comic-sidebar, .mr-comic-sidebar > div, .mr-comic-sidebar .mr-comic-nav-item, .mr-comic-sidebar .mr-comic-icon-tile, .mr-sidebar-scrim { animation: none !important; transition-duration: .01ms !important; } }
