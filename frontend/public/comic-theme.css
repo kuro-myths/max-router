@@ -993,3 +993,28 @@ aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) img {
     padding-bottom: 8px !important;
   }
 }
+
+
+/* Sinkronkan garis pemisah bagian atas sidebar dengan garis bawah header */
+.mr-comic-sidebar > div:first-child {
+  height: 79px !important;
+  min-height: 79px !important;
+  flex: 0 0 79px !important;
+  box-sizing: border-box !important;
+  border-bottom: 3px solid #292343 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.mr-comic-header {
+  height: 79px !important;
+  min-height: 79px !important;
+  box-sizing: border-box !important;
+  border-bottom: 3px solid #292343 !important;
+}
+@media (max-width: 1023px) {
+  .mr-comic-sidebar > div:first-child {
+    height: 79px !important;
+    min-height: 79px !important;
+    flex-basis: 79px !important;
+  }
+}
