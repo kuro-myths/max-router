@@ -28,6 +28,7 @@ const HELP = [
   { command: "help", description: "Tampilkan daftar perintah" },
   { command: "clear", description: "Bersihkan tampilan log (log buffer server juga dibersihkan)" },
   { command: "status", description: "Ringkasan koneksi dan jumlah log" },
+  { command: "test all", description: "Uji semua koneksi layanan aktif dan tampilkan hasil dalam tabel" },
   { command: "logs", description: "Tampilkan semua log yang tersimpan" },
   { command: "table", description: "Tampilkan log dalam bentuk tabel" },
   { command: "filter error", description: "Tampilkan log error saja" },
@@ -58,8 +59,41 @@ export default function ConsoleLogClient() {
   const [levelFilter, setLevelFilter] = useState("ALL");
   const [searchText, setSearchText] = useState("");
   const [history, setHistory] = useState([]);
+  const [testResults, setTestResults] = useState([]);
+  const [testingAll, setTestingAll] = useState(false);
   const logRef = useRef(null);
   const commandRef = useRef(null);
+
+  const getSource = (line) => {
+    const text = String(line);
+    const match = text.match(/(?:provider|service|layanan|connection|penyedia)\\s*[:=]\\s*["']?([a-zA-Z0-9._ -]+)/i);
+    if (match) return match[1].trim().replace(/["']$/, "");
+    const known = ["openai", "anthropic", "claude", "gemini", "google ai studio", "openrouter", "xkiro", "groq", "deepseek", "mistral", "ollama", "cohere"];
+    return known.find((name) => text.toLowerCase().includes(name)) || "Sumber tidak tercatat";
+  };
+
+  const runTestAll = async () => {
+    setTestingAll(true);
+    setOutput("Menjalankan pengujian semua koneksi layanan aktif...");
+    try {
+      const response = await fetch("/api/providers/test-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "all" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Pengujian gagal");
+      setTestResults(data.results || []);
+      setView("table");
+      setOutput("Pengujian selesai: " + (data.summary?.passed || 0) + " berhasil, " + (data.summary?.failed || 0) + " gagal, dari " + (data.summary?.total || 0) + " koneksi.");
+      (data.results || []).forEach((result) => console[result.valid ? "info" : "error"]("[TEST] provider=" + result.provider + " service=" + result.connectionName + " status=" + (result.valid ? "BERHASIL" : "GAGAL") + (result.error ? " error=" + result.error : ""));
+    } catch (error) {
+      setOutput("Gagal menguji layanan: " + (error?.message || "Kesalahan tidak diketahui"));
+      console.error("[TEST] Gagal menguji semua layanan:", error);
+    } finally {
+      setTestingAll(false);
+    }
+  };
 
   const visibleLogs = useMemo(() => logs.filter((line) => {
     const levelMatches = levelFilter === "ALL" || getLevel(line) === levelFilter;
@@ -108,11 +142,12 @@ export default function ConsoleLogClient() {
     const normalized = name.toLowerCase();
 
     if (normalized === "help" || normalized === "?") {
-      setView("help");
-      setOutput("Perintah bantuan dibuka.");
+      setOutput("Daftar perintah selalu tersedia pada panel bantuan di bawah terminal.");
     } else if (normalized === "clear" || normalized === "cls") {
       await handleClear();
       setView("terminal");
+    } else if (normalized === "test" && arg.toLowerCase() === "all") {
+      await runTestAll();
     } else if (normalized === "status") {
       setView("terminal");
       setOutput("STATUS KONSOL\nKoneksi log: " + (connected ? "TERHUBUNG" : "TERPUTUS") + "\nJumlah log tersimpan: " + logs.length + "\nLog error: " + logs.filter((line) => getLevel(line) === "ERROR").length + "\nPeringatan: " + logs.filter((line) => getLevel(line) === "WARN").length + "\nBatas buffer: " + CONSOLE_LOG_CONFIG.maxLines);
@@ -159,7 +194,8 @@ export default function ConsoleLogClient() {
             <span className="text-xs font-normal text-text-muted">{connected ? "Terhubung langsung" : "Menyambungkan ulang..."}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => { setView("help"); setOutput("Daftar perintah tersedia."); }}>Bantuan</Button>
+            <Button size="sm" variant="outline" onClick={() => setOutput("Daftar perintah selalu tersedia pada panel bantuan.")}>Bantuan</Button>
+            <Button size="sm" variant="outline" disabled={testingAll} onClick={runTestAll}>{testingAll ? "Menguji..." : "Uji semua layanan"}</Button>
             <Button size="sm" variant="outline" onClick={() => { setView("table"); setOutput("Log ditampilkan sebagai tabel."); }}>Tampilan tabel</Button>
             <Button size="sm" variant="outline" onClick={() => runCommand("export csv")}>Ekspor CSV</Button>
             <Button size="sm" variant="outline" icon="delete" onClick={handleClear}>Bersihkan log</Button>
@@ -185,8 +221,8 @@ export default function ConsoleLogClient() {
         ) : view === "table" ? (
           <div className="mx-4 mb-4 max-h-[calc(100vh-390px)] overflow-auto rounded-lg border border-border">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-surface-2"><tr><th className="px-3 py-2">No.</th><th className="px-3 py-2">Level</th><th className="px-3 py-2">Pesan</th></tr></thead>
-              <tbody>{visibleLogs.map((line, i) => <tr key={i} className="border-t border-border align-top"><td className="px-3 py-2">{i + 1}</td><td className={"px-3 py-2 font-semibold " + (LOG_LEVEL_COLORS[getLevel(line)] || "text-text-main")}>{getLevel(line)}</td><td className="whitespace-pre-wrap break-all px-3 py-2 font-mono">{line}</td></tr>)}</tbody>
+              <thead className="sticky top-0 bg-surface-2"><tr><th className="px-3 py-2">No.</th><th className="px-3 py-2">Level</th><th className="px-3 py-2">Layanan</th><th className="px-3 py-2">Pesan</th></tr></thead>
+              <tbody>{visibleLogs.map((line, i) => <tr key={i} className="border-t border-border align-top"><td className="px-3 py-2">{i + 1}</td><td className={"px-3 py-2 font-semibold " + (LOG_LEVEL_COLORS[getLevel(line)] || "text-text-main")}>{getLevel(line)}</td><td className="px-3 py-2">{getSource(line)}</td><td className="whitespace-pre-wrap break-all px-3 py-2 font-mono">{line}</td></tr>)}</tbody>
             </table>
             {visibleLogs.length === 0 && <div className="p-5 text-center text-sm text-text-muted">Tidak ada log yang cocok.</div>}
           </div>
@@ -195,6 +231,16 @@ export default function ConsoleLogClient() {
             {visibleLogs.length === 0 ? <span className="text-slate-400">Belum ada log yang cocok dengan filter.</span> : <div className="space-y-0.5">{visibleLogs.map((line, i) => <div key={i} className="break-words">{colorLine(line)}</div>)}</div>}
           </div>
         )}
+        {testResults.length > 0 && <div className="mx-4 mb-4 overflow-x-auto rounded-lg border border-border">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-2 px-3 py-2 text-sm font-semibold"><span>Hasil uji semua layanan</span><span className="text-xs font-normal">{testResults.filter((r) => r.valid).length} berhasil · {testResults.filter((r) => !r.valid).length} gagal · {testResults.length} total</span></div>
+          <table className="w-full text-left text-xs"><thead className="bg-surface-2"><tr><th className="px-3 py-2">Layanan</th><th className="px-3 py-2">Penyedia</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Waktu (ms)</th><th className="px-3 py-2">Pesan</th></tr></thead>
+          <tbody>{testResults.map((r, i) => <tr key={r.connectionId || i} className="border-t border-border"><td className="px-3 py-2">{r.connectionName || "—"}</td><td className="px-3 py-2">{r.provider || "—"}</td><td className={"px-3 py-2 font-semibold " + (r.valid ? "text-emerald-600" : "text-rose-600")}>{r.valid ? "BERHASIL" : "GAGAL"}</td><td className="px-3 py-2">{r.latencyMs ?? "—"}</td><td className="max-w-[360px] whitespace-pre-wrap break-words px-3 py-2">{r.error || r.diagnosis?.message || "Uji koneksi berhasil"}</td></tr>)}</tbody></table>
+        </div>}
+        <div className="mx-4 mb-4 overflow-x-auto rounded-lg border border-border">
+          <div className="bg-surface-2 px-3 py-2 text-sm font-semibold">Bantuan perintah (selalu tersedia)</div>
+          <table className="w-full text-left text-xs"><thead><tr><th className="px-3 py-2">Perintah</th><th className="px-3 py-2">Fungsi</th></tr></thead>
+          <tbody>{HELP.map((item) => <tr key={item.command} className="border-t border-border"><td className="px-3 py-2 font-mono text-primary">{item.command}</td><td className="px-3 py-2">{item.description}</td></tr>)}</tbody></table>
+        </div>
         <form onSubmit={handleSubmit} className="flex gap-2 border-t border-border p-3">
           <label htmlFor="console-command" className="self-center font-mono text-sm text-primary">›</label>
           <input ref={commandRef} id="console-command" name="console-command" value={command} onChange={(e) => setCommand(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm" placeholder="Ketik perintah, contoh: help, table, filter error..." autoComplete="off" />
