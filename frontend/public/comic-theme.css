@@ -514,3 +514,46 @@ aside.mr-comic-sidebar .mr-comic-sidebar-toggle:hover {
   }
   .mr-comic-modal-body .grid { gap: 8px !important; }
 }
+
+
+/* High contrast for modal actions: legacy button utilities were washing labels out */
+.mr-comic-modal-body .mr-comic-button {
+  color: #302344 !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+  border: 2px solid #302344 !important;
+  box-shadow: 3px 3px 0 #302344 !important;
+  background: #f0e8ff !important;
+}
+.mr-comic-modal-body .mr-comic-button:not(:disabled):hover {
+  background: #e0d0ff !important;
+  color: #241832 !important;
+}
+.mr-comic-modal-body .mr-comic-button:disabled {
+  color: #5e5068 !important;
+  background: #e7dfec !important;
+  border-color: #71647a !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+.mr-comic-modal-body .mr-comic-button.bg-brand-500,
+.mr-comic-modal-body .mr-comic-button.bg-red-500,
+.mr-comic-modal-body .mr-comic-button.bg-green-600 {
+  background: #ff9fc9 !important;
+  color: #302344 !important;
+}
+.mr-comic-modal-body .mr-comic-button.bg-brand-500:not(:disabled):hover {
+  background: #ff79b0 !important;
+}
+.mr-comic-modal-body .mr-comic-button:focus-visible {
+  outline: 3px solid #8b6cff !important;
+  outline-offset: 3px !important;
+}
+.mr-comic-modal-body .mr-comic-modal-info p,
+.mr-comic-modal-body .mr-comic-modal-benefit p,
+.mr-comic-modal-body > p {
+  color: #44344f !important;
+  opacity: 1 !important;
+}
