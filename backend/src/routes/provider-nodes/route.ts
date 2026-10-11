@@ -55,10 +55,10 @@ export async function POST_handler(req, res) {
 
     // Reuse a compatible node for the same endpoint to avoid duplicate/orphan definitions.
     if (nodeType === "openai-compatible" || nodeType === "anthropic-compatible") {
-      const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\\/+$/, "").toLowerCase();
+      const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\/+$/, "").toLowerCase();
       const existingNodes = await getProviderNodes({ type: nodeType });
       const existingNode = existingNodes.find((item) =>
-        String(item.baseUrl || "").trim().replace(/\\/+$/, "").toLowerCase() === normalizedBaseUrl &&
+        String(item.baseUrl || "").trim().replace(/\/+$/, "").toLowerCase() === normalizedBaseUrl &&
         (nodeType !== "openai-compatible" || (item.apiType || "chat") === (apiType || "chat"))
       );
       if (existingNode) return res.status(200).json({ node: existingNode, alreadyExists: true });
