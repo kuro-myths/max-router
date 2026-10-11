@@ -100,7 +100,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
 
   return (
     <>
-      <aside className={cn("mr-comic-sidebar flex shrink-0 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl min-h-full overflow-hidden", collapsed ? "mr-comic-sidebar-collapsed w-[64px]" : "w-[232px]")}>
+      <aside className={cn("mr-comic-sidebar flex shrink-0 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl min-h-full overflow-hidden transition-[width] duration-300 ease-in-out will-change-[width]", collapsed ? "mr-comic-sidebar-collapsed w-[64px]" : "w-[232px]")}>
         {/* Sidebar controls */}
         <div className={cn("flex items-center pt-4 pb-2", collapsed ? "flex-col gap-3 px-3" : "justify-between px-5")}>
           <div className="flex items-center gap-2" aria-label="Status Max Router">
