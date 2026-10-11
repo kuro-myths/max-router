@@ -1141,3 +1141,42 @@ aside.mr-comic-sidebar > nav > div.pt-3 > p {
   background: var(--comic-paper) !important;
   border-bottom-color: var(--comic-ink) !important;
 }
+
+
+/* Comic purple refresh: align sidebar divider with header bottom edge. */
+:root {
+  --comic-ink: #3b2855;
+  --comic-sidebar: #493365;
+  --comic-sidebar-deep: #402b5c;
+  --comic-divider: #fffdfb;
+}
+.mr-sidebar-desktop-shell {
+  background: var(--comic-sidebar) !important;
+}
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar,
+aside.mr-comic-sidebar {
+  background: var(--comic-sidebar) !important;
+  border-right: 0 !important;
+}
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar > div:first-child,
+.mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child,
+aside.mr-comic-sidebar > div:first-child {
+  border-bottom: 3px solid var(--comic-divider) !important;
+  box-shadow: none !important;
+  background: var(--comic-sidebar) !important;
+}
+/* Keep the header and sidebar divider on the same horizontal baseline. */
+@media (min-width: 1024px) {
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar > div:first-child,
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child,
+  .mr-dashboard-main > header.mr-comic-header {
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    flex: 0 0 79px !important;
+    box-sizing: border-box !important;
+  }
+  .mr-dashboard-main > header.mr-comic-header {
+    border-bottom: 3px solid var(--comic-ink) !important;
+  }
+}
