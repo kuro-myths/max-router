@@ -39,7 +39,6 @@ const debugItems = [
 ];
 
 const systemItems = [
-  { href: "/dashboard/proxy-pools", label: "Kumpulan Proksi", icon: "lan" },
   { href: "/dashboard/automation", label: "Otomatisasi", icon: "smart_toy" },
 ];
 
