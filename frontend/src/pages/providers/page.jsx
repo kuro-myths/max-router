@@ -306,29 +306,22 @@ export default function ProvidersPage() {
       });
     };
 
+    // Render every compatible provider node, not only the legacy xKiro/Atria entries.
+    // Nodes are the canonical provider definitions; connections hold their saved API keys.
     for (const node of providerNodes) {
-      const haystack = [
-        node.id,
-        node.name,
-        node.baseUrl,
-        node.providerSpecificData?.nodeName,
-      ].filter(Boolean).join(" ").toLowerCase();
-
-      if (haystack.includes("xkiro")) add(node.id || "xkiro", "xKiro", "apikey", node);
-      if (haystack.includes("atria")) add(node.id || "atria", "Atria", "apikey", node);
+      if (node.type === "openai-compatible" || node.type === "anthropic-compatible") {
+        add(node.id, node.name || "Penyedia Kompatibel", "apikey", node);
+      }
     }
 
     for (const connection of connections) {
-      const haystack = [
-        connection.provider,
-        connection.name,
-        connection.email,
-        connection.providerSpecificData?.nodeName,
-        connection.providerSpecificData?.baseUrl,
-      ].filter(Boolean).join(" ").toLowerCase();
-
-      if (haystack.includes("xkiro")) add(connection.provider || "xkiro", "xKiro", connection.authType, null);
-      if (haystack.includes("atria")) add(connection.provider || "atria", "Atria", connection.authType, null);
+      const providerId = String(connection.provider || "");
+      const isCompatible =
+        providerId.startsWith(OPENAI_COMPATIBLE_PREFIX) ||
+        providerId.startsWith(ANTHROPIC_COMPATIBLE_PREFIX);
+      if (!isCompatible) continue;
+      const node = providerNodes.find((item) => item.id === providerId) || null;
+      add(providerId, connection.name || node?.name || providerId, connection.authType || "apikey", node);
     }
 
     return [...candidates.values()].filter((entry) => matchSearch(entry.name));
@@ -878,19 +871,32 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             provider: nodeData.node.id,
-            batch: group.map((item) => ({ apiKey: item.apiKey })),
+            // Unique names prevent name-based upserts from overwriting keys in the same batch.
+            batch: group.map((item, index) => ({
+              apiKey: item.apiKey,
+              name: group.length > 1 ? providerName + " Key " + (index + 1) : providerName,
+            })),
           }),
         });
         const providerData = await providerRes.json();
         if (!providerRes.ok) {
           throw new Error(providerData?.error || "Gagal menyimpan API key.");
         }
-        createdCount += Number(providerData.createdCount || group.length);
+        createdCount += Number(providerData.createdCount || 0);
+        const skipped = Number(providerData.skippedDuplicateCount || 0);
+        if (skipped > 0) {
+          setMessage(skipped + " key sudah tersimpan sebelumnya dan dilewati.");
+        }
       }
 
-      setMessage(createdCount + " API key valid berhasil disimpan.");
-      await onCreated();
-      setTimeout(onClose, 500);
+      if (createdCount > 0) {
+        setMessage(createdCount + " API key baru berhasil disimpan.");
+        await onCreated();
+        window.setTimeout(onClose, 900);
+      } else {
+        setMessage("Tidak ada key baru yang disimpan. Semua key valid tersebut sudah tersimpan sebelumnya.");
+        await onCreated();
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal menyimpan provider.");
     } finally {
