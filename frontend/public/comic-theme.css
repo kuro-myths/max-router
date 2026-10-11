@@ -1018,3 +1018,38 @@ aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:nth-child(2) img {
     flex-basis: 79px !important;
   }
 }
+
+
+/* Final alignment override: the sidebar's control row and header share one baseline.
+   Keep this rule last so collapsed-sidebar legacy sizing cannot pull the divider upward. */
+@media (min-width: 1024px) {
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar > div:first-child {
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    flex: 0 0 79px !important;
+    box-sizing: border-box !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: 3px solid #292343 !important;
+    align-items: center !important;
+  }
+  .mr-sidebar-desktop-shell > aside.mr-comic-sidebar.mr-comic-sidebar-collapsed > div:first-child {
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    flex-basis: 79px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  .mr-dashboard-main > .mr-comic-header {
+    height: 79px !important;
+    min-height: 79px !important;
+    max-height: 79px !important;
+    flex: 0 0 79px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: 3px solid #292343 !important;
+    box-sizing: border-box !important;
+  }
+}
