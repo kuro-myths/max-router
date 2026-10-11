@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Activity, BarChart3, Bot, Layers, MessageSquare, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home } from "lucide-react";
+import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home } from "lucide-react";
 import PropTypes from "prop-types";
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -11,7 +11,7 @@ import Button from "./Button";
 import { ConfirmModal } from "./Modal";
 
 const NAV_ICONS = {
-  home: Home, api: Activity, dns: Server, chat: MessageSquare, manage_search: Search,
+  home: Home, api: Activity, dns: Server, manage_search: Search,
   layers: Layers, bar_chart: BarChart3, tune: SlidersHorizontal,
   terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings,
 };
@@ -28,7 +28,6 @@ const navItems = [
   { href: "/dashboard", label: "Beranda", icon: "home" },
   { href: "/dashboard/endpoint", label: "Endpoint", icon: "api" },
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
-  { href: "/dashboard/compatible-chat", label: "Obrolan Kompatibel", icon: "chat" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
