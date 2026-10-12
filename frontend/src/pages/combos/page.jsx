@@ -180,8 +180,8 @@ export default function CombosPage() {
               onSalin={copy}
               onUbah={() => setUbahingCombo(combo)}
               onHapus={() => handleHapus(combo.id)}
-              roundRobinEnabled={comboStrategies[combo.name]?.fallbackStrategy === "round-robin"}
-              onToggleRoundRobin={(enabled) => handleToggleRoundRobin(combo.name, enabled)}
+              strategy={comboStrategies[combo.name]?.fallbackStrategy || "fallback"}
+              onChangeStrategy={(strategy) => handleToggleRoundRobin(combo.name, strategy === "round-robin")}
             />
           ))}
         </div>
@@ -219,7 +219,7 @@ export default function CombosPage() {
   );
 }
 
-function ComboCard({ combo, copied, onSalin, onUbah, onHapus, roundRobinEnabled, onToggleRoundRobin }) {
+function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, onChangeStrategy }) {
   return (
     <Card padding="sm" className="group">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -229,7 +229,7 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, roundRobinEnabled,
           </div>
           <div className="min-w-0 flex-1">
             <code className="block truncate font-mono text-sm font-medium">{combo.name}</code>
-            <p className="mt-1 text-[10px] text-text-muted">{roundRobinEnabled ? "Mode: putaran bergilir antar-model." : "Mode: urutan prioritas dengan model cadangan."} Biaya bergantung pada tarif dan kuota penyedia.</p>
+            <p className="mt-1 text-[10px] text-text-muted">{strategy === "round-robin" ? "Round Robin: permintaan dibagi bergiliran ke model dalam combo." : "Fallback: mencoba model menurut urutan; jika gagal, lanjut ke model berikutnya."} Biaya mengikuti tarif dan kuota penyedia.</p>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
               {combo.models.length === 0 ? (
                 <span className="text-xs text-text-muted italic">Belum ada model</span>
@@ -249,14 +249,18 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, roundRobinEnabled,
 
         {/* Actions */}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:shrink-0">
-          {/* Putaran Bergilir Toggle — always visible */}
-          <div className="flex items-center justify-between gap-1.5 rounded-lg bg-black/[0.02] px-2 py-1.5 dark:bg-white/[0.02] sm:justify-start sm:bg-transparent sm:px-0 sm:py-0 sm:dark:bg-transparent">
-            <span className="text-xs text-text-muted font-medium" title="Aktif: permintaan bergiliran antar-model. Nonaktif: urutan prioritas/cadangan.">Putaran Bergilir</span>
-            <Toggle
-              size="sm"
-              checked={roundRobinEnabled}
-              onChange={onToggleRoundRobin}
-            />
+          <div className="flex min-w-0 flex-col gap-1 rounded-lg bg-black/[0.02] px-2 py-1.5 dark:bg-white/[0.02] sm:min-w-[175px]">
+            <label className="text-[10px] font-semibold text-text-muted" htmlFor={`combo-strategy-${combo.id}`}>Strategi combo</label>
+            <select
+              id={`combo-strategy-${combo.id}`}
+              value={strategy}
+              onChange={(event) => onChangeStrategy(event.target.value)}
+              title="Fallback mencoba model berikutnya jika gagal. Round Robin membagi permintaan bergiliran."
+              className="max-w-full rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary"
+            >
+              <option value="fallback">Fallback · cadangan</option>
+              <option value="round-robin">Round Robin · bergiliran</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-3 gap-1 sm:flex">
