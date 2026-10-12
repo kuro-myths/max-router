@@ -44,7 +44,7 @@ const ALWAYS_PROTECTED = [
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const path = req.path;
 
-  if (PUBLIC_API_PATHS.some((p) => path === p || path.startsWith(p + "/"))) return next();
+  // Read-only combo metadata is exposed so MAX Editor can sync combo names/models\n  // without requiring a dashboard cookie from a different browser origin.\n  // Keep every write operation on /api/combos protected by the normal auth checks.\n  if (path === "/api/combos" && req.method === "GET") return next();\n\n  if (PUBLIC_API_PATHS.some((p) => path === p || path.startsWith(p + "/"))) return next();
   if (PUBLIC_PREFIXES.some((p) => path.startsWith(p))) return next();
   if (await hasValidCliToken(req)) return next();
 
