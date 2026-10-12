@@ -135,11 +135,11 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       try {
         const payload = await response.clone().json();
         const content = payload?.choices?.[0]?.message?.content;
-        if (content) outputs.push({ model: models[i], content: Array.isArray(content) ? content.map(part => part.text || "").join("\\n") : String(content) });
+        if (content) outputs.push({ model: models[i], content: Array.isArray(content) ? content.map(part => part.text || "").join("\n") : String(content) });
       } catch (error) { lastFailure = error; }
     }
     if (!outputs.length) return new Response(JSON.stringify({ error: { message: lastFailure?.message || "Semua model dalam Fusion gagal." } }), { status: 503, headers: { "Content-Type": "application/json" } });
-    const content = outputs.map((item, i) => "### Hasil " + (i + 1) + " — " + item.model + "\\n" + item.content).join("\\n\\n");
+    const content = outputs.map((item, i) => "### Hasil " + (i + 1) + " — " + item.model + "\n" + item.content).join("\n\n");
     return new Response(JSON.stringify({ id: "combo-fusion-" + Date.now(), object: "chat.completion", model: comboName || "fusion", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, combo: { strategy: "fusion", successful_models: outputs.map(item => item.model) } }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
   }
   
