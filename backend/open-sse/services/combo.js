@@ -31,7 +31,7 @@ function shuffleModels(models) {
   return shuffled;
 }
 function stableKey(comboName) { return comboName || "__default__"; }
-function getRotatedModels(models, comboName, strategy, stickyLimit = 1, body = {}) {
+export function getRotatedModels(models, comboName, strategy, stickyLimit = 1, body = {}) {
   if (!Array.isArray(models) || models.length <= 1) return models || [];
   const key = stableKey(comboName);
   switch (strategy || "fallback") {
