@@ -124,7 +124,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   // Fusion returns the successful outputs from all models in parallel. It deliberately
   // does not claim to synthesize a single judge answer because no judge model is configured.
   if (comboStrategy === "fusion") {
-    const settled = await Promise.allSettled(models.map(model => handleSingleModel(body, model)));
+    const settled = await Promise.allSettled(models.map(model => handleSingleModel({ ...body, stream: false }, model)));
     const outputs = [];
     let lastFailure = null;
     for (let i = 0; i < settled.length; i++) {
