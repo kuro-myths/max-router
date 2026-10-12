@@ -10,6 +10,18 @@ import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/sha
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
+const COMBO_STRATEGIES = [
+  { value: "fallback", label: "Fallback · cadangan", description: "Mencoba model sesuai urutan. Jika model gagal atau kuota habis, lanjut ke model berikutnya." },
+  { value: "round-robin", label: "Round Robin · bergiliran", description: "Memutar model untuk permintaan berikutnya sesuai batas putaran yang dikonfigurasi." },
+  { value: "random", label: "Random · acak", description: "Mengacak urutan percobaan model pada setiap permintaan, lalu fallback jika diperlukan." },
+  { value: "priority", label: "Priority · prioritas", description: "Selalu mencoba model paling atas terlebih dahulu; perilaku cadangan sama seperti Fallback." },
+  { value: "reverse-priority", label: "Reverse Priority · urutan balik", description: "Mencoba model dari urutan paling bawah ke atas." },
+  { value: "least-used", label: "Least Used · paling sedikit dipakai", description: "Mendahulukan model yang paling sedikit dipilih selama proses Router berjalan." },
+  { value: "last-good", label: "Last Good · terakhir berhasil", description: "Mendahulukan model terakhir yang berhasil, lalu mencoba model lain jika gagal." },
+  { value: "shuffle", label: "Shuffle · acak tiap permintaan", description: "Mengacak urutan model pada setiap permintaan dan mencoba sisanya bila gagal." },
+  { value: "capacity", label: "Capacity · sesuai kemampuan", description: "Mendahulukan model yang namanya mengindikasikan dukungan gambar atau audio; ini heuristik, bukan jaminan." },
+  { value: "fusion", label: "Fusion · hasil paralel", description: "Meminta semua model secara paralel lalu menampilkan jawaban berhasil dengan label model; belum memakai model penilai." },
+];
 
 export default function CombosPage() {
   const [combos, setCombos] = useState([]);
