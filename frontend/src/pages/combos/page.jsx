@@ -37,7 +37,7 @@ export default function CombosPage() {
       const settingsData = settingsRes.ok ? await settingsRes.json() : {};
       
       // Only LLM combos here — webSearch/webFetch combos belong to media-providers/web
-      if (combosRes.ok) setCombos((combosData.combos || []).filter(c => !c.kind));
+      if (combosRes.ok) setCombos((combosData.combos || []).filter(c => !["webSearch", "webFetch", "web-search", "web-fetch"].includes(c.kind)));
       if (providersRes.ok) {
         setActiveProviders(providersData.connections || []);
       }
@@ -105,24 +105,19 @@ export default function CombosPage() {
     });
   };
 
-  const handleToggleRoundRobin = async (comboName, enabled) => {
+  const handleChangeStrategy = async (comboName, strategy) => {
     try {
-      const updated = { ...comboStrategies };
-      if (enabled) {
-        updated[comboName] = { fallbackStrategy: "round-robin" };
-      } else {
-        delete updated[comboName];
-      }
-      
-      await fetch("/api/settings", {
+      const updated = { ...comboStrategies, [comboName]: { ...(comboStrategies[comboName] || {}), fallbackStrategy: strategy } };
+      const response = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comboStrategies: updated }),
       });
-      
+      if (!response.ok) throw new Error("HTTP " + response.status);
       setComboStrategies(updated);
     } catch (error) {
       console.log("Error updating combo strategy:", error);
+      alert("Strategi combo gagal disimpan. Periksa koneksi dan coba lagi.");
     }
   };
 
@@ -181,7 +176,7 @@ export default function CombosPage() {
               onUbah={() => setUbahingCombo(combo)}
               onHapus={() => handleHapus(combo.id)}
               strategy={comboStrategies[combo.name]?.fallbackStrategy || "fallback"}
-              onChangeStrategy={(strategy) => handleToggleRoundRobin(combo.name, strategy === "round-robin")}
+              onChangeStrategy={(strategy) => handleChangeStrategy(combo.name, strategy)}
             />
           ))}
         </div>
@@ -229,7 +224,7 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, onChange
           </div>
           <div className="min-w-0 flex-1">
             <code className="block truncate font-mono text-sm font-medium">{combo.name}</code>
-            <p className="mt-1 text-[10px] text-text-muted">{strategy === "round-robin" ? "Round Robin: permintaan dibagi bergiliran ke model dalam combo." : "Fallback: mencoba model menurut urutan; jika gagal, lanjut ke model berikutnya."} Biaya mengikuti tarif dan kuota penyedia.</p>
+            <p className="mt-1 text-[10px] text-text-muted">{COMBO_STRATEGIES.find(item => item.value === strategy)?.description || "Strategi combo akan menggunakan pengaturan yang tersimpan."}</p>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
               {combo.models.length === 0 ? (
                 <span className="text-xs text-text-muted italic">Belum ada model</span>
@@ -255,11 +250,10 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, onChange
               id={`combo-strategy-${combo.id}`}
               value={strategy}
               onChange={(event) => onChangeStrategy(event.target.value)}
-              title="Fallback mencoba model berikutnya jika gagal. Round Robin membagi permintaan bergiliran."
+              title={COMBO_STRATEGIES.find(item => item.value === strategy)?.description || "Pilih strategi combo"}
               className="max-w-full rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary"
             >
-              <option value="fallback">Fallback · cadangan</option>
-              <option value="round-robin">Round Robin · bergiliran</option>
+              {COMBO_STRATEGIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </div>
 
