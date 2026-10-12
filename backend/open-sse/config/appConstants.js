@@ -131,3 +131,6 @@ export function buildKimiHeaders() {
     "X-Msh-Device-Id": `kimi-${Date.now()}`
   };
 }
+
+// Default system instruction for Antigravity-backed Gemini requests.
+export const ANTIGRAVITY_DEFAULT_SYSTEM = "You are an AI coding assistant. Follow the user's request carefully, preserve existing project behavior, and provide accurate, actionable answers.";
