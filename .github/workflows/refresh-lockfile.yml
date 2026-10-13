@@ -1,0 +1,47 @@
+name: Refresh npm lockfile
+on:
+  push:
+    branches: [master]
+    paths:
+      - "package.json"
+      - "backend/package.json"
+      - "frontend/package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: npm-lock-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Refresh lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit
+      - name: Apply compatible security updates
+        run: npm audit fix --package-lock-only --ignore-scripts || true
+      - name: Commit lockfile changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(deps): refresh lockfile and apply safe audit fixes"
+            git push origin HEAD:master
+          else
+            echo "Lockfile is already up to date."
+          fi
