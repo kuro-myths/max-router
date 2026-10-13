@@ -224,8 +224,14 @@ async function importLegacyPostgres(pool, connectionString) {
 }
 
 export async function createMysqlAdapter(connectionString, legacyConnectionString = null) {
+  const parsedUrl = new URL(connectionString);
+  if (!["mysql:", "mariadb:"].includes(parsedUrl.protocol.toLowerCase())) throw new Error("[DB] MYSQL_URL must use mysql:// or mariadb://");
   const pool = mysql.createPool({
-    uri: connectionString,
+    host: parsedUrl.hostname,
+    port: Number(parsedUrl.port || 3306),
+    user: decodeURIComponent(parsedUrl.username),
+    password: decodeURIComponent(parsedUrl.password),
+    database: decodeURIComponent(parsedUrl.pathname.replace(/^\//, "")),
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
