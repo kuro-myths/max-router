@@ -59,7 +59,7 @@ function normalizedOrigin(value: string | undefined): string | null {
   }
 }
 const configuredOrigins = [
-  FRONTEND_ORIGIN,
+  process.env.FRONTEND_ORIGIN || (process.env.NODE_ENV !== "production" ? FRONTEND_ORIGIN : undefined),
   process.env.PUBLIC_BASE_URL,
   process.env.RAILWAY_PUBLIC_DOMAIN,
   process.env.RAILWAY_STATIC_URL,
