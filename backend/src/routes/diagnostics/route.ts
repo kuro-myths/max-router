@@ -88,7 +88,9 @@ async function scanDatabase() {
     const driver = db.driver || "unknown";
     const rows = /postgres/i.test(driver)
       ? await db.all("SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public'")
-      : await db.all("SELECT name FROM sqlite_master WHERE type = 'table'");
+      : /mysql/i.test(driver)
+        ? await db.all("SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE()")
+        : await db.all("SELECT name FROM sqlite_master WHERE type = 'table'");
     const tables = rows || [];
     const result = [];
     if (!tables.some(x => x.name === "settings")) result.push(issue("DB-001","Database","error","Tabel settings tidak ditemukan","Database aktif tidak memiliki tabel settings.","Driver: " + driver,"Jalankan migration database."));
@@ -127,7 +129,7 @@ function scanEnvironment() {
     for (const key of ["JWT_SECRET","API_KEY_SECRET"]) {
       if (!String(process.env[key] || "").trim()) result.push(issue("ENV-001","Environment","error",key + " belum dikonfigurasi","Variable wajib production tidak tersedia.",key,"Set sebagai environment secret."));
     }
-    if (!String(process.env.DATABASE_URL || "").trim() && !/^(1|true|yes)$/i.test(process.env.ALLOW_EPHEMERAL_SQLITE || "")) result.push(issue("ENV-002","Environment","error","DATABASE_URL belum dikonfigurasi","Production membutuhkan PostgreSQL kecuali ephemeral SQLite diizinkan.","NODE_ENV=production","Set DATABASE_URL PostgreSQL."));
+    if (!String(process.env.MYSQL_URL || "").trim() && !/^mysql(?:s)?:\/\//i.test(String(process.env.DATABASE_URL || "")) && !/^mariadb:\/\//i.test(String(process.env.DATABASE_URL || ""))) result.push(issue("ENV-002","Environment","error","MYSQL_URL belum dikonfigurasi","Production harus menggunakan MySQL persisten.","NODE_ENV=production","Set MYSQL_URL ke layanan MySQL Railway."));
   }
   return result;
 }
@@ -141,7 +143,7 @@ export async function GET_handler(req,res) {
     if (!routeCount) findings.push(issue("ROUTE-001","Backend","error","Route module tidak ditemukan","Tidak ada route.ts/route.js yang terdeteksi."));
     const summary = findings.reduce((acc,item) => { acc[item.severity]=(acc[item.severity]||0)+1; return acc; },{error:0,warning:0,info:0});
     res.set("Cache-Control","no-store");
-    return res.json({ok:summary.error===0,scannedAt:new Date().toISOString(),durationMs:Date.now()-started,summary,findings,database:database.meta,routes:{count:routeCount},probes:application.probes,capabilities:{yml:fs.existsSync(WORKFLOWS) || true,database:true,backend:true,uiAssets:true,environment:true,githubActions:true}});
+    return res.json({ok:summary.error===0,scannedAt:new Date().toISOString(),durationMs:Date.now()-started,summary,findings,database:database.meta,routes:{count:routeCount},probes:application.probes,capabilities:{yml:fs.existsSync(WORKFLOWS),database:true,backend:true,uiAssets:true,environment:true,githubActions:true}});
   } catch (error) {
     return res.status(500).json({ok:false,summary:{error:1,warning:0,info:0},findings:[issue("DIAG-500","System","error","Diagnostic engine gagal",error?.message || String(error),"","Periksa runtime logs.")]});
   }
