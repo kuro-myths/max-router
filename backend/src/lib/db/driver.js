@@ -61,11 +61,28 @@ async function initAdapter() {
 
   if (isProduction && !databaseUrl && !allowEphemeralSqlite) {
     throw new Error(
-      "[DB] DATABASE_URL wajib di production. SQLite lokal/ephemeral dinonaktifkan agar koneksi OAuth provider tidak hilang saat redeploy. Set DATABASE_URL PostgreSQL atau ALLOW_EPHEMERAL_SQLITE=true hanya untuk pengujian."
+      "[DB] MYSQL_URL wajib di production. SQLite lokal/ephemeral dinonaktifkan agar koneksi OAuth provider tidak hilang saat redeploy. Set MYSQL_URL ke layanan MySQL Railway."
     );
   }
 
+  const mysqlUrl = process.env.MYSQL_URL?.trim() || (/^mysql(?:s)?:\/\//i.test(databaseUrl || "") || /^mariadb:\/\//i.test(databaseUrl || "") ? databaseUrl : "");
+  if (mysqlUrl) {
+    const legacyUrl = databaseUrl && databaseUrl !== mysqlUrl && /^postgres(?:ql)?:\/\//i.test(databaseUrl) ? databaseUrl : process.env.LEGACY_DATABASE_URL?.trim();
+    const { createMysqlAdapter } = await import("./adapters/mysqlAdapter.js");
+    const adapter = await createMysqlAdapter(mysqlUrl, legacyUrl || null);
+    if (!state.logged) {
+      const parsed = new URL(mysqlUrl);
+      console.log(`[DB] Driver: ${adapter.driver} | host: ${parsed.hostname} | database: ${parsed.pathname.slice(1)}`);
+      state.logged = true;
+    }
+    return adapter;
+  }
+
+  if (isProduction && !databaseUrl) {
+    throw new Error("[DB] MYSQL_URL wajib di production. Set MYSQL_URL ke layanan MySQL Railway.");
+  }
   if (databaseUrl) {
+    if (isProduction) throw new Error("[DB] Database production harus MySQL. Set MYSQL_URL; PostgreSQL hanya dipertahankan sebagai sumber migrasi sementara.");
     const { createPostgresAdapter } = await import("./adapters/postgresAdapter.js");
     const adapter = await createPostgresAdapter(databaseUrl);
     if (!state.logged) {
