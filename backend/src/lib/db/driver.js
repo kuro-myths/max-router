@@ -59,7 +59,7 @@ async function initAdapter() {
     process.env.ALLOW_EPHEMERAL_SQLITE || ""
   );
 
-  if (isProduction && !databaseUrl && !allowEphemeralSqlite) {
+  if (isProduction && !databaseUrl && !process.env.MYSQL_URL?.trim() && !allowEphemeralSqlite) {
     throw new Error(
       "[DB] MYSQL_URL wajib di production. SQLite lokal/ephemeral dinonaktifkan agar koneksi OAuth provider tidak hilang saat redeploy. Set MYSQL_URL ke layanan MySQL Railway."
     );
