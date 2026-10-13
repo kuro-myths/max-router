@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import mysql from "mysql2/promise";
 import pg from "pg";
-import { TABLES, buildCreateTableSql } from "../schema.js";
+import { TABLES } from "../schema.js";
 import { latestVersion } from "../migrations/index.js";
 
 const { Pool: PgPool } = pg;
@@ -96,7 +96,7 @@ function normalizeMysqlDefinition(name, definition, indexed) {
   if (/^INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT$/i.test(result)) return "INT NOT NULL AUTO_INCREMENT PRIMARY KEY";
   result = result.replace(/\bAUTOINCREMENT\b/gi, "AUTO_INCREMENT").replace(/\bREAL\b/gi, "DOUBLE");
   if (/\bTEXT\b/i.test(result)) {
-    const useVarchar = indexed.has(name) || /\bDEFAULT\b/i.test(result);
+    const useVarchar = indexed.has(name) || (/\bDEFAULT\b/i.test(result) && name !== "resultsJson");
     result = result.replace(/\bTEXT\b/gi, useVarchar ? "VARCHAR(191)" : "LONGTEXT");
     if (/LONGTEXT/i.test(result)) result = result.replace(/\bDEFAULT\s+'([^']*)'/i, "DEFAULT ('$1')");
   }
