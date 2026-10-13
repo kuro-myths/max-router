@@ -49,9 +49,32 @@ process.on("uncaughtException", (error) => {
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
+// Never reflect arbitrary Origin values when credentialed cookies are enabled.
+function normalizedOrigin(value: string | undefined): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const input = /^https?:\/\//i.test(value) ? value : "https://" + value;
+    return new URL(input).origin;
+  } catch {
+    return null;
+  }
+}
+const configuredOrigins = [
+  FRONTEND_ORIGIN,
+  process.env.PUBLIC_BASE_URL,
+  process.env.RAILWAY_PUBLIC_DOMAIN,
+  process.env.RAILWAY_STATIC_URL,
+  ...(process.env.CORS_ORIGINS || "").split(","),
+].map((value) => normalizedOrigin(value)).filter((value): value is string => Boolean(value));
+const allowedOrigins = new Set(configuredOrigins);
+if (process.env.NODE_ENV !== "production") {
+  allowedOrigins.add("http://localhost:5177");
+  allowedOrigins.add("http://127.0.0.1:5177");
+}
 app.use(cors({
   origin: (origin, callback) => {
-    callback(null, origin || true);
+    if (!origin) return callback(null, true);
+    return callback(null, allowedOrigins.has(normalizedOrigin(origin) || ""));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -59,9 +82,11 @@ app.use(cors({
 }));
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
+// Keep default request memory use bounded. Raise JSON_BODY_LIMIT explicitly only
+// when the deployment intentionally accepts very large JSON payloads.
 app.use(cookieParser());
-app.use(express.json({ limit: "128mb" }));
-app.use(express.urlencoded({ extended: true, limit: "128mb" }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "16mb" }));
+app.use(express.urlencoded({ extended: true, limit: process.env.FORM_BODY_LIMIT || "1mb" }));
 
 // ─── Health Check (no auth) ────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
@@ -74,28 +99,17 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// Safe public diagnostics: useful for Railway/container troubleshooting without
-// exposing secrets or environment variable values.
+// Minimal public diagnostics only. Runtime errors, stack traces, host details,
+// process identifiers and memory statistics stay in protected server logs.
 app.get("/api/diagnostics", (_req, res) => {
-  const memory = process.memoryUsage();
+  res.set("Cache-Control", "no-store");
   res.status(200).json({
-    status: "ok",
-    service: process.env.RAILWAY_SERVICE_NAME || "max-router",
-    environment: process.env.NODE_ENV || "development",
-    node: process.version,
-    platform: process.platform,
-    hostname: os.hostname(),
-    pid: process.pid,
-    port: PORT,
+    status: startupReady ? "ok" : "starting",
+    service: "max-router",
+    version: "3.0.0",
     uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
     ready: startupReady,
-    memoryMb: {
-      rss: Math.round(memory.rss / 1024 / 1024),
-      heapUsed: Math.round(memory.heapUsed / 1024 / 1024),
-      heapTotal: Math.round(memory.heapTotal / 1024 / 1024),
-    },
-    recentErrors: runtimeErrors.slice(-20),
   });
 });
 
@@ -139,7 +153,7 @@ async function start() {
   console.log("[startup] Route graph ready.");
   resumeModelTestJobs().catch((err) => console.error("[model-test-worker] startup resume gagal:", err));
   app.use("/api", (req, res, next) => {
-    console.log("API request:", req.method, req.url, req.originalUrl);
+    console.log("API request:", req.method, req.path);
     apiRouter(req, res, next);
   });
 
