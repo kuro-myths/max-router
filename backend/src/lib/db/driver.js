@@ -82,7 +82,7 @@ async function initAdapter() {
     throw new Error("[DB] MYSQL_URL wajib di production. Set MYSQL_URL ke layanan MySQL Railway.");
   }
   if (databaseUrl) {
-    if (isProduction) throw new Error("[DB] Database production harus MySQL. Set MYSQL_URL; PostgreSQL hanya dipertahankan sebagai sumber migrasi sementara.");
+    if (isProduction) console.warn("[DB] MYSQL_URL belum tersedia; memakai PostgreSQL lama sementara agar layanan tetap hidup selama migrasi disiapkan.");
     const { createPostgresAdapter } = await import("./adapters/postgresAdapter.js");
     const adapter = await createPostgresAdapter(databaseUrl);
     if (!state.logged) {
