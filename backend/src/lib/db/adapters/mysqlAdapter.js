@@ -109,7 +109,7 @@ function mysqlCreateTableSql(name, def) {
     const columnName = column.toLowerCase() === "key" ? "`key`" : column;
     return columnName + " " + normalizeMysqlDefinition(column, definition, indexed);
   });
-  if (def.primaryKey) cols.push(def.primaryKey.replace(/\bkey\b/gi, "`key`"));
+  if (def.primaryKey) cols.push(def.primaryKey.replace(/\(([^)]*)\)/, (_match, inner) => "(" + inner.split(",").map((column) => column.trim().toLowerCase() === "key" ? "`key`" : column.trim()).join(", ") + ")"));
   if (def.unique) cols.push("UNIQUE (" + def.unique.map((column) => column.toLowerCase() === "key" ? "`key`" : column).join(", ") + ")");
   return "CREATE TABLE IF NOT EXISTS " + quoteIdentifier(name) + " (" + cols.join(", ") + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 }
