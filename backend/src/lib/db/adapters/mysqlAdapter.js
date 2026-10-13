@@ -61,6 +61,10 @@ function translateSql(sql) {
     if (ch === "/" && next === "*") { mode = "block"; result += ch + next; i++; continue; }
     const match = out.slice(i).match(/^key\b/i);
     if (match && (i === 0 || !/[A-Za-z0-9_]/.test(out[i - 1]))) {
+      const before = out.slice(0, i);
+      if (/\b(?:PRIMARY|DUPLICATE|FOREIGN)\s+$/i.test(before)) {
+        result += match[0]; i += match[0].length - 1; continue;
+      }
       result += "`key`"; i += match[0].length - 1; continue;
     }
     result += ch;
