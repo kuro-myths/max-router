@@ -284,7 +284,7 @@ export async function createMysqlAdapter(connectionString, legacyConnectionStrin
       const [rows] = await query(sql, params);
       return rows.map(mapRow);
     },
-    async exec(sql) { await query(sql); },
+    async exec(sql) { await currentConnection().query(translateSql(sql)); },
     async transaction(fn) {
       const current = transactionStorage.getStore();
       if (current) {
