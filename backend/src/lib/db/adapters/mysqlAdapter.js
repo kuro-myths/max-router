@@ -215,6 +215,14 @@ async function importLegacyPostgres(pool, connectionString) {
       if (tableRows) { tables++; rowsCopied += tableRows; }
       console.log("[DB][mysql-migrate] " + tableName + ": " + tableRows + " rows imported");
     }
+    const metaExists = await source.query("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '_meta' LIMIT 1");
+    if (metaExists.rowCount) {
+      const metaRows = await source.query('SELECT "key", value FROM "_meta"');
+      for (const row of metaRows.rows) {
+        if (row.key === "postgresImportCompleted" || row.key === "postgresImportStarted") continue;
+        await pool.query("INSERT INTO `_meta` (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)", [row.key, row.value]);
+      }
+    }
     await pool.query(
       "INSERT INTO `_meta` (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)",
       ["postgresImportCompleted", "true"],
