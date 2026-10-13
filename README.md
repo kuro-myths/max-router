@@ -46,7 +46,7 @@ V3 does not claim authorship of the routing engine or provider integrations. Tho
 - **Multi-provider routing** with load balancing, fallback, and key rotation.
 - **Modern dashboard** for providers, connections, proxy pools, CLI tools, automation, usage, and security settings.
 - **Password and OIDC authentication** for dashboard access.
-- **SQLite or PostgreSQL persistence**, selected automatically through `DATABASE_URL`.
+- **MySQL persistence in production**, with SQLite reserved for local development and a one-time PostgreSQL-to-MySQL import path.
 - **Cloudflare Workers AI automation** with Playwright, CAPTCHA providers, and temporary email.
 - **Portable deployment** for local machines, Docker, Railway, Heroku, and Linux VPS hosts.
 
@@ -82,7 +82,8 @@ Start from [`backend/.env.example`](./backend/.env.example). The main runtime va
 | `JWT_SECRET` | Signs dashboard sessions |
 | `INITIAL_PASSWORD` | Initial dashboard password; required until a password is stored |
 | `API_KEY_SECRET` | Signs generated API keys |
-| `DATABASE_URL` | Optional PostgreSQL connection string; when set, PostgreSQL replaces SQLite |
+| `MYSQL_URL` | Required persistent MySQL connection string in production (Railway private URL) |
+| `DATABASE_URL` | Temporary PostgreSQL source for one-time import to MySQL; remove after verified migration |
 | `DATA_DIR` | Stores SQLite data, logs, and runtime files; still used for non-database runtime files with PostgreSQL |
 | `NODE_ENV` | Use `production` outside local development |
 | `PORT` | HTTP port; most PaaS providers inject this automatically |
