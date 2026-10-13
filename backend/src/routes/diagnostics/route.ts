@@ -126,7 +126,7 @@ async function scanApplication(req) {
 function scanEnvironment() {
   const result = [];
   if (process.env.NODE_ENV === "production") {
-    for (const key of ["JWT_SECRET","API_KEY_SECRET"]) {
+    for (const key of ["JWT_SECRET"]) {
       if (!String(process.env[key] || "").trim()) result.push(issue("ENV-001","Environment","error",key + " belum dikonfigurasi","Variable wajib production tidak tersedia.",key,"Set sebagai environment secret."));
     }
     if (!String(process.env.MYSQL_URL || "").trim() && !/^mysql(?:s)?:\/\//i.test(String(process.env.DATABASE_URL || "")) && !/^mariadb:\/\//i.test(String(process.env.DATABASE_URL || ""))) result.push(issue("ENV-002","Environment","error","MYSQL_URL belum dikonfigurasi","Production harus menggunakan MySQL persisten.","NODE_ENV=production","Set MYSQL_URL ke layanan MySQL Railway."));
