@@ -156,14 +156,17 @@ async function importLegacyPostgres(pool, connectionString) {
   if (!connectionString || !/^postgres(?:ql)?:\/\//i.test(connectionString)) return { imported: false, tables: 0, rows: 0 };
   const [markerRows] = await pool.query("SELECT value FROM `_meta` WHERE `key` = ?", ["postgresImportCompleted"]);
   if (markerRows.length && markerRows[0].value === "true") return { imported: false, tables: 0, rows: 0 };
+  const [startedRows] = await pool.query("SELECT value FROM `_meta` WHERE `key` = ?", ["postgresImportStarted"]);
+  const retrying = startedRows.length && startedRows[0].value === "true";
 
-  // Never silently merge into a non-empty target: this migration is intended
-  // for the newly provisioned MySQL service. Upserts make interrupted retries safe.
-  for (const tableName of Object.keys(TABLES).filter((name) => name !== "_meta")) {
-    const [countRows] = await pool.query("SELECT COUNT(*) AS c FROM " + quoteIdentifier(tableName));
-    if (Number(countRows[0]?.c || 0) > 0) {
-      throw new Error("[DB][mysql-migrate] MySQL target is not empty; refusing automatic PostgreSQL import to prevent accidental data merge.");
+  // The target is expected to be a newly provisioned database. Record intent before
+  // copying so an interrupted run can safely resume using idempotent upserts.
+  if (!retrying) {
+    for (const tableName of Object.keys(TABLES).filter((name) => name !== "_meta")) {
+      const [countRows] = await pool.query("SELECT COUNT(*) AS c FROM " + quoteIdentifier(tableName));
+      if (Number(countRows[0]?.c || 0) > 0) throw new Error("[DB][mysql-migrate] MySQL target is not empty; refusing automatic import.");
     }
+    await pool.query("INSERT INTO `_meta` (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)", ["postgresImportStarted", "true"]);
   }
 
   const source = new PgPool({ connectionString, connectionTimeoutMillis: 10000, max: 2 });
