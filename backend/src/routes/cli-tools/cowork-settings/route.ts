@@ -331,7 +331,7 @@ export async function POST_handler(req, res) {
 
     // Register custom stdio plugins into bridge + persist for restart survival.
     if (customPluginsArray.length > 0) {
-      const { registerCustomPlugin } = require("../../../lib/mcp/stdioSseBridge");
+      const { registerCustomPlugin } = require("../../../lib/mcp/stdioSseBridge.js");
       const stdioCustoms = customPluginsArray
         .filter((p) => p && typeof p.command === "string" && p.command.trim())
         .filter((p) => ALLOWED_MCP_COMMANDS.has(path.basename(p.command)))

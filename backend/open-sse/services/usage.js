@@ -2,7 +2,7 @@
  * Usage Fetcher - Get usage data from provider APIs
  */
 
-import { CLIENT_METADATA, getPlatformUserAgent } from "../config/appConstants.js";
+import { CLIENT_METADATA, CLOUD_CODE_API, getPlatformUserAgent } from "../config/appConstants.js";
 import { proxyAwareFetch } from "../utils/proxyFetch.js";
 
 // GitHub API config
@@ -249,7 +249,7 @@ async function getGeminiUsage(accessToken, providerSpecificData, proxyOptions = 
     let response;
     try {
       response = await proxyAwareFetch(
-        ANTIGRAVITY_ENDPOINTS.retrieveUserQuota,
+        CLOUD_CODE_API.retrieveUserQuota,
         {
           method: "POST",
           headers: {
@@ -313,7 +313,7 @@ async function getGeminiSubscriptionInfo(accessToken, proxyOptions = null) {
   const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await proxyAwareFetch(
-      ANTIGRAVITY_ENDPOINTS.loadCodeAssist,
+      CLOUD_CODE_API.loadCodeAssist,
       {
         method: "POST",
         headers: {

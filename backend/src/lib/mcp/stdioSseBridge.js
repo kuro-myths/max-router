@@ -1,4 +1,6 @@
 import { createRequire } from "module";
+import { LOCAL_STDIO_PLUGINS, ALLOWED_MCP_COMMANDS } from "../../shared/constants/coworkPlugins.js";
+import { DATA_DIR } from "../../lib/dataDir.js";
 const require = createRequire(import.meta.url);
 // Inline stdio<->SSE bridge for MCP. Spawns one child per plugin on demand,
 // broadcasts JSON-RPC frames over SSE, accepts client messages via HTTP POST.
@@ -7,8 +9,6 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { LOCAL_STDIO_PLUGINS, ALLOWED_MCP_COMMANDS } = require("../../shared/constants/coworkPlugins.js");
-const { DATA_DIR } = require("../../lib/dataDir");
 
 const CUSTOM_FILE = path.join(DATA_DIR, "mcp", "customPlugins.json");
 

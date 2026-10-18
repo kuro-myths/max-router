@@ -26,6 +26,7 @@ export const GITHUB_COPILOT = {
 export const CLOUD_CODE_API = {
   loadCodeAssist: "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
   onboardUser: "https://cloudcode-pa.googleapis.com/v1internal:onboardUser",
+  retrieveUserQuota: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
 };
 export const LOAD_CODE_ASSIST_HEADERS = {
   "Content-Type": "application/json",

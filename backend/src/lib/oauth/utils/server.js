@@ -200,6 +200,7 @@ export function startCodexProxy(appPort) {
           if (!code) throw new Error("No authorization code received");
 
           // OAuth token exchange is handled by the provider service.
+          const { exchangeTokens } = await import("../providers.js");
           const { createProviderConnection } = await import("@/models");
 
           const tokenData = await exchangeTokens(

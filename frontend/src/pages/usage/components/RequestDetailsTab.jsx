@@ -46,7 +46,7 @@ function getPenyediaName(providerId, cache) {
     return cached.name;
   }
 
-  const providerConfig = getPenyediaByAlias(providerId) || AI_PROVIDERS[providerId];
+  const providerConfig = getProviderByAlias(providerId) || AI_PROVIDERS[providerId];
   return providerConfig?.name || providerId;
 }
 

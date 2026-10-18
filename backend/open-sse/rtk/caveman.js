@@ -18,7 +18,8 @@ export function injectCaveman(body, format, level) {
     case FORMATS.GEMINI:
     case FORMATS.GEMINI_CLI:
     case FORMATS.VERTEX:
-
+      injectGeminiSystem(body, prompt);
+      return;
     default:
       // OpenAI and OpenAI-shaped formats (responses/codex/cursor/kiro/ollama)
       injectMessagesSystem(body, prompt);

@@ -25,6 +25,7 @@ import {
   CODEBUDDY_CONFIG,
 } from "./constants/oauth.js";
 import { XAI_CONFIG, XAI_PKCE_VERIFIER_BYTES } from "./constants/xai.js";
+import { LOAD_CODE_ASSIST_METADATA } from "../../../open-sse/config/appConstants.js";
 
 // Inlined from services/xai.js to keep web route bundle free of `open` (CLI-only) package
 let cachedXaiDiscovery = null;
@@ -367,7 +368,7 @@ const PROVIDERS = {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              metadata: getOAuthClientMetadata(),
+              metadata: LOAD_CODE_ASSIST_METADATA,
               mode: 1,
             }),
           }
@@ -487,7 +488,7 @@ const PROVIDERS = {
     // locally, the user lands on qoder.com/device/selectAccounts in the
     // browser, and we poll openapi.qoder.sh until a `dt-...` token appears.
     requestDeviceCode: async (config) => {
-      const { QoderService } = await import("../../lib/oauth/services/qoder");
+      const { QoderService } = await import("../../lib/oauth/services/qoder.js");
       const flow = new QoderService().initiateDeviceFlow();
       // Match the device_code shape the rest of the OAuthModal expects
       // (device_code, user_code, verification_uri[_complete], interval).
@@ -508,7 +509,7 @@ const PROVIDERS = {
       };
     },
     pollToken: async (config, deviceCode, codeVerifier, extraData) => {
-      const { QoderService } = await import("../../lib/oauth/services/qoder");
+      const { QoderService } = await import("../../lib/oauth/services/qoder.js");
       const svc = new QoderService();
       const nonce = deviceCode || extraData?._qoderNonce;
       const verifier = codeVerifier || extraData?._qoderVerifier;
@@ -1325,7 +1326,7 @@ export async function backfillCodexEmails() {
   if (codexBackfillDone) return;
   codexBackfillDone = true;
   try {
-    const { getProviderConnections, updateProviderConnection } = await import("../../lib/localDb");
+    const { getProviderConnections, updateProviderConnection } = await import("../../lib/localDb.js");
     const connections = await getProviderConnections();
     const targets = connections.filter((c) => {
       if (c.provider !== "codex" || c.authType !== "oauth" || !c.idToken) return false;

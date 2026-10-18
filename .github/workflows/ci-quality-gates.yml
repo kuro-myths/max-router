@@ -32,6 +32,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Check imports (typecheck runs with noCheck)
+        run: node scripts/check-imports.mjs
+
       - name: Typecheck all workspaces
         run: npm run typecheck
 

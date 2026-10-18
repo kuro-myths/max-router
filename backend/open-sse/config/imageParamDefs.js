@@ -124,14 +124,6 @@ export const IMAGE_PARAMS = {
     description: "End/last-frame image URL for first-last-frame video models (e.g. Kling, Veo). The model interpolates video between image_url (start) and end_image_url (end).",
   },
 
-  video_url: {
-    name: "video_url",
-    type: "string",
-    required: false,
-    default: null,
-    description: "Reference video URL for video-to-video conditioning (e.g. motion transfer, style reference on video input).",
-  },
-
   image: {
     name: "image",
     type: "string",
