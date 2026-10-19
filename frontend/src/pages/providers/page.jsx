@@ -117,10 +117,44 @@ export default function ProvidersPage() {
   const [testingMode, setTestingMode] = useState(null);
   const [testResults, setTestResults] = useState(null);
   const [isAddCompatibleOpen, setIsAddCompatibleOpen] = useState(false);
+  const [isAddLoginServiceOpen, setIsAddLoginServiceOpen] = useState(false);
+  const [loginServiceName, setLoginServiceName] = useState("");
+  const [loginServiceUrl, setLoginServiceUrl] = useState("");
+  const [loginServices, setLoginServices] = useState([]);
   const notify = useNotificationStore();
   const searchQuery = useHeaderSearchStore((s) => s.query);
   const registerSearch = useHeaderSearchStore((s) => s.register);
   const unregisterSearch = useHeaderSearchStore((s) => s.unregister);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem("max-router-login-services") || "[]");
+      if (Array.isArray(saved)) setLoginServices(saved.filter((item) => item && typeof item.name === "string" && typeof item.url === "string"));
+    } catch {
+      setLoginServices([]);
+    }
+  }, []);
+
+  const saveLoginServices = (items) => {
+    setLoginServices(items);
+    try { window.localStorage.setItem("max-router-login-services", JSON.stringify(items)); } catch { /* storage may be disabled */ }
+  };
+
+  const handleAddLoginService = (event) => {
+    event.preventDefault();
+    const name = loginServiceName.trim();
+    const rawUrl = loginServiceUrl.trim();
+    let parsed;
+    try { parsed = new URL(rawUrl); } catch { notify.error("Masukkan URL layanan yang valid"); return; }
+    if (!["https:", "http:"].includes(parsed.protocol)) { notify.error("URL harus menggunakan HTTP atau HTTPS"); return; }
+    if (!name) { notify.error("Masukkan nama layanan"); return; }
+    const next = [...loginServices, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, url: parsed.href }];
+    saveLoginServices(next);
+    setLoginServiceName("");
+    setLoginServiceUrl("");
+    setIsAddLoginServiceOpen(false);
+    notify.success(`Layanan ${name} ditambahkan`);
+  };
 
   useEffect(() => {
     registerSearch("Cari provider...");
@@ -353,22 +387,70 @@ export default function ProvidersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Penyedia</h1>
-          <p className="text-sm text-text-muted">Kelola API Base URL dan API key untuk penyedia kompatibel, atau buka halaman login dan registrasi layanan AI.</p>
+          <p className="text-sm text-text-muted">Kelola API Base URL dan API key untuk penyedia kompatibel, atau tambahkan URL masuk layanan AI.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button icon="add" onClick={() => setIsAddCompatibleOpen(true)}>
             Tambah Kompatibel
           </Button>
-          <Link
-            to="/dashboard/service-login"
-            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
-            title="Buka halaman login dan registrasi layanan AI"
-          >
-            <span className="material-symbols-outlined text-[17px]" aria-hidden="true">login</span>
-            Layanan Masuk
-          </Link>
+          <Button icon="login" onClick={() => setIsAddLoginServiceOpen(true)}>
+            Tambah Layanan Masuk
+          </Button>
         </div>
       </div>
+
+      {loginServices.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Layanan Masuk Tersimpan</h2>
+            <span className="text-xs text-text-muted">{loginServices.length} layanan</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {loginServices.map((service) => (
+              <article key={service.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
+                <div className="min-w-0">
+                  <h3 className="truncate font-semibold text-text-main">{service.name}</h3>
+                  <p className="truncate text-xs text-text-muted">{service.url}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <a href={service.url} target="_blank" rel="noopener noreferrer" className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20" aria-label={`Buka ${service.name}`} title="Buka layanan">
+                    <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                  </a>
+                  <button type="button" onClick={() => saveLoginServices(loginServices.filter((item) => item.id !== service.id))} className="inline-flex size-9 items-center justify-center rounded-lg text-text-muted hover:bg-red-500/10 hover:text-red-500" aria-label={`Hapus ${service.name}`} title="Hapus layanan">
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <Modal
+        isOpen={isAddLoginServiceOpen}
+        onClose={() => setIsAddLoginServiceOpen(false)}
+        title="Tambah Layanan Masuk"
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAddLoginServiceOpen(false)}>Batal</Button>
+            <Button onClick={handleAddLoginService}>Simpan Layanan</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleAddLoginService} className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="login-service-name" className="text-sm font-medium text-text-main">Nama layanan</label>
+            <Input id="login-service-name" value={loginServiceName} onChange={(event) => setLoginServiceName(event.target.value)} placeholder="Contoh: Claude" required />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="login-service-url" className="text-sm font-medium text-text-main">URL halaman masuk</label>
+            <Input id="login-service-url" type="url" value={loginServiceUrl} onChange={(event) => setLoginServiceUrl(event.target.value)} placeholder="https://claude.ai/login" required />
+            <p className="text-xs leading-5 text-text-muted">Masukkan URL login atau registrasi. Layanan disimpan di browser ini dan dibuka di tab baru; akun tidak otomatis masuk ke Max Router.</p>
+          </div>
+          <button type="submit" className="hidden" aria-hidden="true" tabIndex={-1}>Simpan</button>
+        </form>
+      </Modal>
 
       {!hasAnyResult && (
         <div className="text-center py-8 border border-dashed border-border rounded-xl">
