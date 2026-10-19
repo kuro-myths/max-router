@@ -159,6 +159,58 @@ async function main() {
         const { platform } = require('node:process');
         const command = platform === 'win32' ? 'start "" "' + baseUrl + '"' : platform === 'darwin' ? 'open "' + baseUrl + '"' : 'xdg-open "' + baseUrl + '"';
         exec(command);
+      } else if (choice === '8') {
+        await ensureKey();
+        const allModels = await loadModels();
+        const combos = allModels.filter(m => String(m.owned_by || '').toLowerCase() === 'combo' || String(m.kind || '').toLowerCase() === 'combo');
+        console.log('\\nCombo yang tersedia: ' + combos.length);
+        if (!combos.length) {
+          console.log('Belum ada Combo aktif yang muncul di API. Buka menu 9 untuk membuat atau mengatur Combo dahulu.');
+        } else {
+          combos.forEach((m, i) => console.log(' [' + (i + 1) + '] ' + m.id));
+          const selected = await ask('\\nPilih nomor Combo atau ID Combo (Enter = batal): ');
+          if (selected) {
+            const index = Number(selected);
+            const chosen = Number.isInteger(index) && index >= 1 && index <= combos.length ? combos[index - 1] : combos.find(m => m.id === selected);
+            if (!chosen) throw new Error('Combo tidak ditemukan pada daftar API.');
+            model = chosen.id;
+            const messages = [];
+            console.log('Combo aktif: ' + model + '. Router akan menjalankan strategi Combo yang tersimpan di dashboard. Ketik /keluar untuk berhenti.');
+            while (true) {
+              const prompt = await ask('\\nAnda: ');
+              if (prompt === '/keluar') break;
+              if (!prompt) continue;
+              messages.push({ role: 'user', content: prompt });
+              try {
+                const data = await request('/api/v1/chat/completions', { method: 'POST', body: JSON.stringify({ model, messages, stream: false }) });
+                const answer = data?.choices?.[0]?.message?.content ?? data?.output_text;
+                if (answer == null) throw new Error('Respons API tidak memuat teks jawaban.');
+                const output = Array.isArray(answer) ? answer.map(x => x.text || '').join('') : String(answer);
+                console.log('\\nAI (Combo ' + model + '): ' + output);
+                messages.push({ role: 'assistant', content: output });
+              } catch (err) {
+                messages.pop();
+                console.log('\\nGagal menjalankan Combo: ' + err.message);
+                if (/No active credentials|No credentials for provider/i.test(err.message)) console.log('Aktifkan kredensial provider yang dipakai anggota Combo melalui dashboard, lalu coba lagi.');
+              }
+            }
+          }
+        }
+      } else if (choice === '9') {
+        const { exec } = require('node:child_process');
+        const { platform } = require('node:process');
+        const url = baseUrl + '/combos';
+        const command = platform === 'win32' ? 'start "" "' + url + '"' : platform === 'darwin' ? 'open "' + url + '"' : 'xdg-open "' + url + '"';
+        exec(command);
+        console.log('Membuka pengelola Combo Max Router: ' + url);
+      } else if (choice === '10') {
+        const { exec } = require('node:child_process');
+        const { platform } = require('node:process');
+        const url = 'https://app.kiro.dev/';
+        const command = platform === 'win32' ? 'start "" "' + url + '"' : platform === 'darwin' ? 'open "' + url + '"' : 'xdg-open "' + url + '"';
+        exec(command);
+        console.log('Membuka Kiro Web. Hubungkan repositori GitHub di pengaturan Kiro jika ingin meminta Kiro membantu mengubah kode Max Router.');
+        console.log('Catatan: pengaturan Combo live tetap dilakukan di dashboard Max Router, bukan di Kiro Web.');
       } else if (choice === '7') {
         const models = await loadModels();
         if (!models.length) console.log('Tidak ada data model. Periksa provider aktif di dashboard.');
