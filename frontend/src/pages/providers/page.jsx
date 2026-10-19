@@ -353,11 +353,21 @@ export default function ProvidersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Penyedia</h1>
-          <p className="text-sm text-text-muted">Kelola integrasi tersimpan dan tambahkan provider OpenAI/Anthropic Compatible.</p>
+          <p className="text-sm text-text-muted">Kelola API Base URL dan API key untuk penyedia kompatibel, atau buka halaman login dan registrasi layanan AI.</p>
         </div>
-        <Button icon="add" onClick={() => setIsAddCompatibleOpen(true)}>
-          Tambah Kompatibel
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button icon="add" onClick={() => setIsAddCompatibleOpen(true)}>
+            Tambah Kompatibel
+          </Button>
+          <Link
+            to="/dashboard/service-login"
+            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+            title="Buka halaman login dan registrasi layanan AI"
+          >
+            <Bot size={16} aria-hidden="true" />
+            Layanan Masuk
+          </Link>
+        </div>
       </div>
 
       {!hasAnyResult && (
