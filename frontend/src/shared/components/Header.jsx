@@ -81,15 +81,8 @@ const getPageInfo = (pathname) => {
   if (pathname.includes("/providers") && !pathname.includes("/media-providers"))
     return {
       title: "Penyedia",
-      description: "Kelola API Base URL dan API key, atau buka halaman login dan registrasi layanan AI",
+      description: "Kelola API Base URL, API key, dan URL masuk layanan AI",
       icon: "dns",
-      breadcrumbs: [],
-    };
-  if (pathname.includes("/service-login"))
-    return {
-      title: "Layanan Masuk AI",
-      description: "Buka halaman login dan registrasi layanan AI",
-      icon: "smart_toy",
       breadcrumbs: [],
     };
   if (pathname.includes("/combos"))
