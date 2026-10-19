@@ -35,6 +35,9 @@ jobs:
       - name: Check imports (typecheck runs with noCheck)
         run: node scripts/check-imports.mjs
 
+      - name: Unit tests
+        run: npm test
+
       - name: Typecheck all workspaces
         run: npm run typecheck
 

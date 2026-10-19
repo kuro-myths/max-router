@@ -230,3 +230,20 @@ Thanks to:
 - **codestorm** as the creator and maintainer of the **9Router V3** continuation.
 
 Upstream copyright notices remain intact out of respect for the original authors and in compliance with the license.
+
+## Kesehatan & rating model
+
+Router mencatat hasil setiap permintaan (sukses/gagal, latensi, respons kosong) per `provider/model`, lalu menilai
+mana yang **berfungsi** dan **berguna**. Data disimpan di database dan bertahan setelah restart; bukti lama memudar
+otomatis (waktu paruh 6 jam), jadi model yang lama tidak dipakai kembali berstatus `unknown`.
+
+- `GET /api/model-health` — peringkat model: `status` (`working`/`degraded`/`down`/`unknown`), `score` 0–100,
+  tingkat sukses, latensi, alasan, plus `best` (model terbaik yang benar-benar `working`) dan ringkasan per provider.
+  Filter: `?status=working&provider=cc&limit=10`.
+- `POST /api/model-health/probe` `{ "models": ["alias/model"], "limit": 8 }` — kirim ping 1 token untuk memastikan.
+  Tanpa `models`, yang diprobe adalah model yang paling lama tidak terlihat.
+- Probe terjadwal (opsional, mati secara default karena tetap memakai kuota provider):
+  `MODEL_HEALTH_PROBE_INTERVAL_MIN=30` dan `MODEL_HEALTH_PROBE_LIMIT=5`.
+
+Penilaian: 60% keandalan, 25% kecepatan respons pertama, 15% respons berisi. Error 400/422 dari klien dan pembatalan
+tidak dihitung sebagai kesalahan model; 429 dihitung setengah. Logika murni ada di `backend/src/lib/modelHealth/scoring.js`.

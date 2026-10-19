@@ -1,4 +1,5 @@
 import { getAdapter } from "../driver.js";
+import { recordModelOutcome } from "../../modelHealth/ledger.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 
 const DEFAULT_MAX_RECORDS = 200;
@@ -123,6 +124,8 @@ async function flushToDatabase() {
 }
 
 export async function saveRequestDetail(detail) {
+  // Model health sees every outcome, including when request observability is switched off.
+  recordModelOutcome(detail);
   const config = await getObservabilityConfig();
   if (!config.enabled) return;
 

@@ -9,6 +9,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node --import ./bin/register-alias.mjs dist/server.js",
     "build": "node bin/prepare-build.cjs && tsc && node bin/sync-open-sse.cjs",
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

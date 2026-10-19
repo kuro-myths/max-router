@@ -15,6 +15,7 @@
     "frontend": "npm run dev --workspace=9router-frontend",
     "start": "npm run start --workspace=9router-backend",
     "heroku-postbuild": "npm run build",
+    "test": "npm run test --workspace=9router-backend",
     "typecheck": "npm run typecheck --workspace=9router-backend && npm run typecheck --workspace=9router-frontend"
   },
   "devDependencies": {
