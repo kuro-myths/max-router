@@ -247,3 +247,16 @@ otomatis (waktu paruh 6 jam), jadi model yang lama tidak dipakai kembali berstat
 
 Penilaian: 60% keandalan, 25% kecepatan respons pertama, 15% respons berisi. Error 400/422 dari klien dan pembatalan
 tidak dihitung sebagai kesalahan model; 429 dihitung setengah. Logika murni ada di `backend/src/lib/modelHealth/scoring.js`.
+
+
+## Koneksi CMD langsung ke database Railway
+
+Untuk membuka shell database PostgreSQL dari Windows CMD tanpa menyalin token GitHub atau password database secara manual:
+
+1. Pasang [Railway CLI](https://docs.railway.com/cli/installation) jika belum tersedia. Di PowerShell, jalankan `iwr https://railway.com/install.ps1 | iex`.
+2. Pasang PostgreSQL Command Line Tools agar perintah `psql` tersedia di PATH.
+3. Unduh file `connect-railway-data.cmd` dari repositori ini, lalu jalankan dengan klik dua kali atau dari CMD.
+4. Saat pertama kali, skrip meminta login Railway melalui browser. Setelah itu skrip menautkan CLI ke project `multiver`, environment `production`, lalu menjalankan `railway connect` untuk memilih layanan database.
+5. Ketik `\q` di prompt PostgreSQL untuk keluar.
+
+Skrip memakai Railway CLI dan izin akun Railway yang sudah login; skrip tidak menyimpan kredensial database. Akses database tetap mengikuti izin akun Railway. Jalankan query perubahan data dengan hati-hati dan buat backup sebelum operasi yang berisiko.
