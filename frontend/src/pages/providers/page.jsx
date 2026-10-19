@@ -364,7 +364,7 @@ export default function ProvidersPage() {
             className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
             title="Buka halaman login dan registrasi layanan AI"
           >
-            <Bot size={16} aria-hidden="true" />
+            <span className="material-symbols-outlined text-[17px]" aria-hidden="true">login</span>
             Layanan Masuk
           </Link>
         </div>
