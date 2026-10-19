@@ -1,23 +1,41 @@
 @echo off
 setlocal
 title Max Router Online CLI
-set "CLI_DIR=%LOCALAPPDATA%\MaxRouterCLI"
-set "CLI_FILE=%CLI_DIR%\maxrouter-cli.ps1"
-if not exist "%CLI_DIR%" mkdir "%CLI_DIR%" >nul 2>&1
 echo.
 echo  MAX ROUTER ONLINE CLI
-echo  Mengambil klien terminal dari GitHub...
-where powershell.exe >nul 2>&1
+echo  Memuat klien terbaru dari GitHub...
+echo.
+
+where node.exe >nul 2>&1
 if errorlevel 1 (
-  echo PowerShell tidak ditemukan. Windows PowerShell diperlukan.
+  echo GAGAL: Node.js tidak ditemukan di PATH.
+  echo Pasang Node.js versi 20 atau lebih baru, lalu buka CMD baru.
+  echo Situs resmi: https://nodejs.org/
   pause
   exit /b 1
 )
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/rizki-habibi/max-router/master/maxrouter-cli.ps1' -OutFile '%CLI_FILE%'"
+
+set "CLI_FILE=%TEMP%\maxrouter-cli.js"
+curl.exe -fLsS "https://raw.githubusercontent.com/rizki-habibi/max-router/master/maxrouter-cli.js" -o "%CLI_FILE%"
 if errorlevel 1 (
-  echo Gagal mengunduh klien. Periksa koneksi internet atau branch GitHub.
+  echo GAGAL: Tidak dapat mengunduh maxrouter-cli.js dari GitHub.
+  echo Periksa internet dan akses repositori.
   pause
   exit /b 1
 )
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%CLI_FILE%"
+if not exist "%CLI_FILE%" (
+  echo GAGAL: File CLI tidak ditemukan setelah diunduh.
+  pause
+  exit /b 1
+)
+
+node.exe --version
+echo Menjalankan Max Router online, bukan CLI lokal lama...
+node.exe "%CLI_FILE%"
+set "EXITCODE=%ERRORLEVEL%"
+if not "%EXITCODE%"=="0" (
+  echo.
+  echo CLI berhenti dengan kode %EXITCODE%.
+  pause
+)
 endlocal
