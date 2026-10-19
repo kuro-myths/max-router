@@ -141,7 +141,7 @@ export default function ProvidersPage() {
   };
 
   const handleAddLoginService = (event) => {
-    event.preventDefault();
+    event?.preventDefault();
     const name = loginServiceName.trim();
     const rawUrl = loginServiceUrl.trim();
     let parsed;
