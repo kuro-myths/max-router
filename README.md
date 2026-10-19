@@ -260,3 +260,24 @@ Untuk membuka shell database PostgreSQL dari Windows CMD tanpa menyalin token Gi
 5. Ketik `\q` di prompt PostgreSQL untuk keluar.
 
 Skrip memakai Railway CLI dan izin akun Railway yang sudah login; skrip tidak menyimpan kredensial database. Akses database tetap mengikuti izin akun Railway. Jalankan query perubahan data dengan hati-hati dan buat backup sebelum operasi yang berisiko.
+
+
+## Max Router CLI Online dari Windows CMD
+
+Klien terminal ini mengakses Max Router yang sudah berjalan di Railway; tidak menjalankan backend atau database di komputer lokal.
+
+**Jalankan satu baris dari CMD:**
+
+```bat
+curl -L https://raw.githubusercontent.com/rizki-habibi/max-router/master/maxrouter.cmd -o "%TEMP%\maxrouter.cmd" && "%TEMP%\maxrouter.cmd"
+```
+
+Menu CLI:
+- Cek apakah dashboard Railway dapat dijangkau.
+- Lihat jumlah dan ID model/API yang dikembalikan endpoint OpenAI-compatible `/v1/models`.
+- Chat melalui `/v1/chat/completions`.
+- Ganti URL dasar untuk server lain atau buka dashboard web.
+
+CLI meminta API key saat diperlukan dan hanya menyimpannya di memori selama sesi terminal. Buat atau salin API key dari pengaturan Max Router; kata sandi login dashboard belum tentu merupakan API key. Jangan membagikan API key ke orang lain. Jika model tidak muncul atau mendapat HTTP 401/403, periksa API key dan izin yang dikonfigurasi di Max Router.
+
+Klien ini berjalan dari CMD/PowerShell sebagai terminal lokal, tetapi semua permintaan AI dikirim ke layanan online Railway. Koneksi internet dan layanan Railway harus aktif.
