@@ -87,6 +87,9 @@ async function main() {
     console.log(' [5] Ganti API key');
     console.log(' [6] Buka dashboard web');
     console.log(' [7] Detail model dan kapasitas');
+    console.log(' [8] Jalankan Combo (gabungan model)');
+    console.log(' [9] Kelola Combo di dashboard');
+    console.log(' [10] Buka Kiro Web');
     console.log(' [0] Keluar\n');
     const choice = await ask('Pilih menu: ');
     try {
