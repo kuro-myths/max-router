@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "@types/bcryptjs": "^3.0.0"
+  }
 }
