@@ -28,7 +28,6 @@ const navItems = [
   { href: "/dashboard", label: "Beranda", icon: "home" },
   { href: "/dashboard/endpoint", label: "Endpoint", icon: "api" },
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
-  { href: "/dashboard/service-login", label: "Layanan Masuk", icon: "smart_toy" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
