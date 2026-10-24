@@ -19,7 +19,7 @@
     "typecheck": "npm run typecheck --workspace=9router-backend && npm run typecheck --workspace=9router-frontend"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^10.0.6"
   },
   "overrides": {
     "dompurify": "^3.4.17"
