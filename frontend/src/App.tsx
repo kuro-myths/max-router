@@ -14,6 +14,7 @@ const Usage           = lazy(() => import("./pages/usage/page"));
 
 const ProxyPools      = lazy(() => import("./pages/proxy-pools/page"));
 const Combos          = lazy(() => import("./pages/combos/page"));
+const MaxBrowser     = lazy(() => import("./pages/max-browser/page"));
 const Endpoint        = lazy(() => import("./pages/endpoint/page"));
 const Automation      = lazy(() => import("./pages/automation/page"));
 const CompatibleChat = lazy(() => import("./pages/compatible-chat/page"));
@@ -126,6 +127,7 @@ export default function App() {
             {/* Pricing settings page omitted in v2 currently */}
             <Route path="proxy-pools"     element={<ProxyPools />} />
             <Route path="combos"          element={<Combos />} />
+            <Route path="max-browser"     element={<MaxBrowser />} />
             <Route path="endpoint"        element={<Endpoint />} />
             <Route path="automation"      element={<Automation />} />
             <Route path="automation/ammail-tutorial" element={<AmmailTutorial />} />

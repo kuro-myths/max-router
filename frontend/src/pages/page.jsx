@@ -1,4 +1,4 @@
-import { Activity, Bot, Layers, MessageSquare, Search, Server, BarChart3, SlidersHorizontal, Network, Settings, ArrowUpRight, Zap, X, Filter, CircleAlert, CircleDollarSign, CheckCircle2, RefreshCw, KeyRound, Boxes, Wrench, FileText } from "lucide-react";
+import { Activity, Bot, Layers, MessageSquare, Search, Server, BarChart3, SlidersHorizontal, Network, Settings, ArrowUpRight, Zap, X, Filter, CircleAlert, CircleDollarSign, CheckCircle2, RefreshCw, KeyRound, Boxes, Wrench, FileText, Globe } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -12,6 +12,7 @@ const shortcuts = [
   { title: "Parameter", description: "Sesuaikan parameter dan perilaku router.", href: "/dashboard/parameters", icon: SlidersHorizontal, tone: "orange" },
   { title: "Kumpulan Proksi", description: "Kelola kumpulan koneksi proksi.", href: "/dashboard/proxy-pools", icon: Network, tone: "blue" },
   { title: "Otomatisasi", description: "Kelola tugas otomatisasi yang tersedia.", href: "/dashboard/automation", icon: Bot, tone: "lavender" },
+  { title: "MAX Browser", description: "Browsing langsung plus AI agent web dari dashboard.", href: "/dashboard/max-browser", icon: Globe, tone: "blue" },
 ];
 
 const tones = {
@@ -272,7 +273,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-extrabold text-[#302344]">Akses Cepat</h2>
             <p className="text-xs text-[#766780]">Pilih menu untuk membuka fitur.</p>
           </div>
-          <span className="rounded-full bg-[#e8ddff] px-3 py-1 text-[11px] font-bold text-[#6947a6]">9 fitur</span>
+          <span className="rounded-full bg-[#e8ddff] px-3 py-1 text-[11px] font-bold text-[#6947a6]">10 fitur</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {shortcuts.map((item) => {
