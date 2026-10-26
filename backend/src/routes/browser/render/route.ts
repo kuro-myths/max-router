@@ -4,7 +4,7 @@
 // sendiri sehingga situs yang memblokir iframe tetap tampil dan konten dinamis
 // (YouTube, Google, SPA) ikut ter-render. Bila Chromium tidak tersedia/gagal,
 // otomatis fallback ke pengambilan HTML statis seperti mode view lama.
-// Terproteksi sesi dashboard / API key. Hanya http/https; host privat diblokir.
+// Terproteksi sesi dashboard / API key. Hanya http/https; host privat/lokal diblokir.
 
 function isBlockedHost(hostname: string): boolean {
   const h = String(hostname || "").toLowerCase();
@@ -41,7 +41,11 @@ let browserPromise: Promise<any> | null = null;
 async function getBrowser(): Promise<any> {
   if (!browserPromise) {
     browserPromise = (async () => {
-      const puppeteer = (await import("puppeteer-core")).default;
+      // Import via variabel agar tsc tidak mencoba resolve tipe puppeteer-core
+      // (paket dipasang lewat Dockerfile dengan --no-save).
+      const moduleName = "puppeteer-core";
+      const mod: any = await import(moduleName);
+      const puppeteer = mod.default || mod;
       const executablePath =
         process.env.PUPPETEER_EXECUTABLE_PATH ||
         process.env.CHROME_PATH ||
@@ -68,7 +72,7 @@ async function getBrowser(): Promise<any> {
   return browserPromise;
 }
 
-async function renderWithChromium(target: URL, timeoutMs = 25000): Promise<{ html: string; finalUrl: string; status: number } | null> {
+async function renderWithChromium(target: URL): Promise<{ html: string; finalUrl: string; status: number } | null> {
   let page: any = null;
   let browser: any = null;
   try {

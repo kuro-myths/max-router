@@ -32,6 +32,8 @@ COPY backend/bin backend/bin
 COPY backend/open-sse/package.json backend/open-sse/package.json
 COPY backend/open-sse ./backend/open-sse
 RUN npm ci --omit=dev
+# puppeteer-core dipasang --no-save supaya package-lock.json tetap sinkron dengan npm ci.
+RUN npm install --no-save --omit=dev puppeteer-core@23.11.0
 
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/frontend/dist ./frontend/dist
