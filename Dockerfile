@@ -21,6 +21,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
 
+# Chromium untuk MAX Browser (render halaman + JavaScript, ala Chrome sungguhan).
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
 COPY backend/bin backend/bin

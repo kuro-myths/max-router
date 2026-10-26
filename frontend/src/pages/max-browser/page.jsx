@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Globe, RefreshCw, ExternalLink, Sparkles, StopCircle, ShieldCheck, Zap, Search } from "lucide-react";
+import { Globe, RefreshCw, ExternalLink, Sparkles, StopCircle, ShieldCheck, Zap, Search, ArrowLeft, ArrowRight } from "lucide-react";
 
 const AGENT_SYSTEM_PROMPT = [
   "Kamu adalah MAX Browser, AI agent yang menjelajahi web lewat alat ambil-halaman dan pencarian server.",
@@ -66,11 +66,11 @@ function isLikelyUrl(value) {
   if (!target) return false;
   if (/^https?:\/\//i.test(target)) return true;
   if (/\s/.test(target)) return false;
-  return /^[^\s]+.[^\s]+(\/|$|:)/.test(target);
+  return /^[^\s]+\.[^\s]+(\/|$|:)/.test(target);
 }
 
-function proxyUrl(full) {
-  return "/api/browser/view?url=" + encodeURIComponent(full);
+function renderUrl(full) {
+  return "/api/browser/render?url=" + encodeURIComponent(full);
 }
 
 export default function MaxBrowserPage() {
@@ -83,8 +83,13 @@ export default function MaxBrowserPage() {
   const [loadingText, setLoadingText] = useState(false);
   const [textError, setTextError] = useState("");
 
+  // Riwayat navigasi untuk tombol Back / Forward (seperti Chrome).
+  const [history, setHistory] = useState([]);
+  const [histIndex, setHistIndex] = useState(-1);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
+  const [searchEngine, setSearchEngine] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
 
@@ -132,14 +137,16 @@ export default function MaxBrowserPage() {
       setFrameLoading(true);
       setPageText(null);
       setTextError("");
+      setHistory((h) => [...h.slice(0, histIndex + 1), nav]);
+      setHistIndex((i) => i + 1);
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [histIndex]);
 
   const effectiveModel = modelChoice === "auto" ? (bestModel || models[0]?.id || "") : modelChoice;
 
-  const go = (full) => {
+  const go = (full, pushHistory = true) => {
     setUrl(full);
     setFrameUrl(full);
     setFrameKey((k) => k + 1);
@@ -148,6 +155,38 @@ export default function MaxBrowserPage() {
     setTextError("");
     setSearchResults(null);
     setSearchError("");
+    if (pushHistory) {
+      setHistory((h) => [...h.slice(0, histIndex + 1), full]);
+      setHistIndex((i) => i + 1);
+    }
+  };
+
+  const goBack = () => {
+    if (histIndex <= 0) return;
+    const target = history[histIndex - 1];
+    setHistIndex((i) => i - 1);
+    setUrl(target);
+    setFrameUrl(target);
+    setFrameKey((k) => k + 1);
+    setFrameLoading(true);
+    setPageText(null);
+  };
+
+  const goForward = () => {
+    if (histIndex >= history.length - 1) return;
+    const target = history[histIndex + 1];
+    setHistIndex((i) => i + 1);
+    setUrl(target);
+    setFrameUrl(target);
+    setFrameKey((k) => k + 1);
+    setFrameLoading(true);
+    setPageText(null);
+  };
+
+  const reload = () => {
+    if (!frameUrl) return;
+    setFrameKey((k) => k + 1);
+    setFrameLoading(true);
   };
 
   const doSearch = async (query) => {
@@ -156,6 +195,7 @@ export default function MaxBrowserPage() {
     setSearching(true);
     setSearchError("");
     setSearchResults(null);
+    setSearchEngine("");
     setSearchQuery(q);
     try {
       const res = await fetch("/api/browser/search?q=" + encodeURIComponent(q), {
@@ -165,6 +205,8 @@ export default function MaxBrowserPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Gagal mencari (HTTP " + res.status + ")");
       setSearchResults(Array.isArray(data?.results) ? data.results : []);
+      setSearchEngine(data?.engine || "");
+      if (data?.note && (!data?.results || data.results.length === 0)) setSearchError(data.note);
     } catch (error) {
       setSearchResults([]);
       setSearchError(error?.message || "Gagal melakukan pencarian.");
@@ -180,7 +222,6 @@ export default function MaxBrowserPage() {
     if (isLikelyUrl(raw)) {
       go(normalizeUrl(raw));
     } else {
-      // Input bukan URL: perlakukan sebagai kata kunci pencarian (ala Nanobrowser).
       setSearchQuery(raw);
       doSearch(raw);
     }
@@ -335,7 +376,7 @@ export default function MaxBrowserPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">MAX Browser</h1>
-          <p className="text-xs text-text-muted">Browsing, pencarian web, dan AI agent web dari dashboard — tanpa extension.</p>
+          <p className="text-xs text-text-muted">Browser Chrome sungguhan di dashboard — render Chromium, pencarian web, dan AI agent.</p>
         </div>
         <button type="button" onClick={loadSetup} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium hover:bg-bg">
           <RefreshCw size={13} /> Perbarui model
@@ -343,40 +384,71 @@ export default function MaxBrowserPage() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Kolom kiri: mini browser + pencarian */}
+        {/* Kolom kiri: mini browser (Chrome-like) */}
         <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
-          <form onSubmit={openUrlOrSearch} className="flex flex-wrap items-center gap-2">
-            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-border bg-bg px-3">
+          {/* Bar alamat + navigasi ala Chrome */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-0.5 rounded-lg border border-border bg-bg p-1">
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={histIndex <= 0}
+                title="Kembali"
+                className="rounded-md px-2 py-1 text-text-muted hover:bg-surface-2 hover:text-text-main disabled:opacity-30"
+              >
+                <ArrowLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={goForward}
+                disabled={histIndex >= history.length - 1}
+                title="Maju"
+                className="rounded-md px-2 py-1 text-text-muted hover:bg-surface-2 hover:text-text-main disabled:opacity-30"
+              >
+                <ArrowRight size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={reload}
+                disabled={!frameUrl}
+                title="Muat ulang"
+                className="rounded-md px-2 py-1 text-text-muted hover:bg-surface-2 hover:text-text-main disabled:opacity-30"
+              >
+                <RefreshCw size={14} />
+              </button>
+            </div>
+            <form onSubmit={openUrlOrSearch} className="flex min-w-[200px] flex-1 items-center gap-2 rounded-full border border-border bg-bg px-3">
               <Globe size={16} className="text-text-muted" />
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="URL atau kata kunci pencarian, mis. berita teknologi"
+                placeholder="Cari di web atau masukkan URL, mis. berita teknologi"
                 className="w-full bg-transparent py-2 text-sm outline-none"
               />
-            </div>
-            <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white">Buka</button>
-            <button
-              type="button"
-              onClick={runSearch}
-              disabled={searching || !url.trim()}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-bg px-3 py-2 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
-            >
-              <Search size={13} /> {searching ? "Mencari..." : "Cari"}
+              <button
+                type="submit"
+                disabled={searching}
+                title="Cari"
+                className="text-text-muted hover:text-primary"
+              >
+                <Search size={15} />
+              </button>
+            </form>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={runSearch} disabled={searching || !url.trim()} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+              {searching ? "Mencari..." : "Cari"}
             </button>
             <button
               type="button"
               onClick={loadText}
               disabled={loadingText || !url.trim()}
-              className="rounded-lg border border-border bg-bg px-3 py-2 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
+              className="rounded-lg border border-border bg-bg px-3 py-1.5 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
             >
               {loadingText ? "Mengambil..." : "Ambil Teks"}
             </button>
-          </form>
-
-          <p className="text-[11px] text-text-muted">
-            Masukkan URL untuk membuka halaman, atau ketik kata kunci lalu tekan Enter / klik "Cari" — hasil pencarian akan tampil di sini seperti Nanobrowser.
-          </p>
+          </div>
 
           {textError && <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-xs">{textError}</p>}
           {searchError && <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-xs">{searchError}</p>}
@@ -384,7 +456,7 @@ export default function MaxBrowserPage() {
           {searchResults !== null && (
             <div className="max-h-[340px] space-y-2 overflow-y-auto rounded-lg border border-border bg-bg p-3">
               <p className="text-xs font-semibold">
-                Hasil pencarian untuk <span className="text-primary">{searchQuery}</span> ({(searchResults || []).length} hasil)
+                Hasil pencarian untuk <span className="text-primary">{searchQuery}</span> ({(searchResults || []).length} hasil){searchEngine ? " — via " + searchEngine : ""}
               </p>
               {(searchResults || []).length === 0 ? (
                 <p className="text-xs text-text-muted">Tidak ada hasil ditemukan. Coba kata kunci lain.</p>
@@ -395,7 +467,7 @@ export default function MaxBrowserPage() {
                       type="button"
                       onClick={() => go(result.url)}
                       className="text-left text-sm font-medium text-primary hover:underline"
-                      title="Buka di mini browser (mode Render)"
+                      title="Buka di mini browser (render Chromium)"
                     >
                       {result.title || result.url}
                     </button>
@@ -410,16 +482,16 @@ export default function MaxBrowserPage() {
           {frameUrl ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
-                <span className="truncate">{frameUrl}</span>
+                <span className="max-w-[60%] truncate">{frameUrl}</span>
                 <div className="flex shrink-0 items-center gap-2">
                   <div className="flex items-center gap-1 rounded-lg border border-border bg-bg p-1">
                     <button
                       type="button"
                       onClick={() => switchMode("proxy")}
                       className={"inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium " + (mode === "proxy" ? "bg-primary text-white" : "text-text-muted hover:text-text-main")}
-                      title="Halaman diambil server lalu ditampilkan di sini — bisa untuk situs yang memblokir iframe"
+                      title="Halaman dirender Chromium di server (JavaScript jalan) — bisa untuk situs yang memblokir iframe"
                     >
-                      <ShieldCheck size={13} /> Render
+                      <ShieldCheck size={13} /> Chrome
                     </button>
                     <button
                       type="button"
@@ -439,27 +511,27 @@ export default function MaxBrowserPage() {
                 <iframe
                   key={frameKey}
                   title="MAX Browser"
-                  src={mode === "proxy" ? proxyUrl(frameUrl) : frameUrl}
+                  src={mode === "proxy" ? renderUrl(frameUrl) : frameUrl}
                   referrerPolicy="no-referrer"
                   sandbox={mode === "proxy" ? "allow-scripts allow-forms allow-popups" : "allow-scripts allow-forms allow-popups allow-same-origin"}
                   onLoad={() => setFrameLoading(false)}
-                  className="h-[420px] w-full rounded-lg border border-border bg-white"
+                  className="h-[440px] w-full rounded-lg border border-border bg-white"
                 />
                 {frameLoading && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-white/60 text-xs text-text-muted">
-                    Memuat halaman...
+                    Merender halaman (Chromium)...
                   </div>
                 )}
               </div>
               <p className="text-[11px] text-text-muted">
                 {mode === "proxy"
-                  ? "Mode Render: halaman diambil server MAX Router lalu ditampilkan di sini, jadi situs yang memblokir iframe (Google, YouTube, app Railway, dll.) tetap tampil. Klik tautan di dalam frame untuk pindah halaman."
-                  : "Mode Langsung: situs dibuka apa adanya, lebih cepat — tapi situs yang memblokir penyematan tidak akan tampil; kalau kosong, coba mode Render."}
+                  ? "Mode Chrome: halaman dirender pakai Chromium headless di server MAX Router (JavaScript ikut berjalan), lalu tampil di sini — situs seperti Google, YouTube, dan app Railway tetap muncul. Klik tautan di dalam frame untuk pindah halaman."
+                  : "Mode Langsung: situs dibuka apa adanya, lebih cepat — tapi situs yang memblokir penyematan tidak akan tampil; kalau kosong, pakai mode Chrome."}
               </p>
             </>
           ) : (
-            <div className="flex h-[320px] items-center justify-center rounded-lg border border-dashed border-border text-center text-sm text-text-muted">
-              <span className="max-w-xs px-4">Masukkan URL untuk browsing, atau kata kunci untuk mencari di web.</span>
+            <div className="flex h-[340px] items-center justify-center rounded-lg border border-dashed border-border text-center text-sm text-text-muted">
+              <span className="max-w-xs px-4">Ketik kata kunci untuk mencari di web, atau masukkan URL untuk membuka halaman.</span>
             </div>
           )}
 
