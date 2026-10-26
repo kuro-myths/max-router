@@ -21,7 +21,7 @@ function normalizeUrl(input) {
     if (u.protocol !== "http:" && u.protocol !== "https:") return null;
     if (!u.hostname.includes(".")) return null;
     return u.toString();
-  } catch {
+  } catch (err) {
     return null;
   }
 }
@@ -29,26 +29,32 @@ function normalizeUrl(input) {
 export default function MaxBrowserPage() {
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    try { setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]").slice(0, 12)); } catch { /* ignore */ }
+    try {
+      const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      if (Array.isArray(saved)) setHistory(saved.slice(0, 12));
+    } catch (err) { /* ignore */ }
   }, []);
 
-  const open = (raw: string) => {
+  const open = (raw) => {
     const url = normalizeUrl(raw);
-    if (!url) { setError("Alamat tidak valid. Contoh: example.com atau https://example.com"); return; }
+    if (!url) {
+      setError("Alamat tidak valid. Contoh: example.com atau https://example.com");
+      return;
+    }
     setError("");
     window.open(url, "_blank", "noopener,noreferrer");
     const next = [url, ...history.filter((h) => h !== url)].slice(0, 12);
     setHistory(next);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch (err) { /* ignore */ }
   };
 
-  const removeHistory = (url: string) => {
+  const removeHistory = (url) => {
     const next = history.filter((h) => h !== url);
     setHistory(next);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch (err) { /* ignore */ }
   };
 
   return (
