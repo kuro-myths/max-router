@@ -26,17 +26,17 @@ function detectBrowser(ua: string): BrowserInfo {
   let engine = "Tidak dikenal";
 
   const pairs: Array<[RegExp, string, string]> = [
-    [/edg(?:e|a|ios)?/([d.]+)/, "Microsoft Edge", "Blink"],
-    [/opr/([d.]+)|opera[s/]([d.]+)/, "Opera", "Blink"],
-    [/samsungbrowser/([d.]+)/, "Samsung Internet", "Blink"],
-    [/miuibrowser/([d.]+)/, "Mi Browser", "Blink"],
-    [/opr/([d.]+)/, "Opera", "Blink"],
-    [/chrome/([d.]+)/, "Chrome", "Blink"],
-    [/crios/([d.]+)/, "Chrome (iOS)", "WebKit"],
-    [/firefox/([d.]+)|fxios/([d.]+)/, "Firefox", "Gecko"],
-    [/version/([d.]+).*safari/, "Safari", "WebKit"],
-    [/safari/([d.]+)/, "Safari", "WebKit"],
-    [/msies([d.]+)|trident.*rv:([d.]+)/, "Internet Explorer", "Trident"],
+    [/edg(?:e|a|ios)?\/([\d.]+)/, "Microsoft Edge", "Blink"],
+    [/opr\/([\d.]+)|opera[s/]([\d.]+)/, "Opera", "Blink"],
+    [/samsungbrowser\/([\d.]+)/, "Samsung Internet", "Blink"],
+    [/miuibrowser\/([\d.]+)/, "Mi Browser", "Blink"],
+    [/opr\/([\d.]+)/, "Opera", "Blink"],
+    [/chrome\/([\d.]+)/, "Chrome", "Blink"],
+    [/crios\/([\d.]+)/, "Chrome (iOS)", "WebKit"],
+    [/firefox\/([\d.]+)|fxios\/([\d.]+)/, "Firefox", "Gecko"],
+    [/version\/([\d.]+).*safari/, "Safari", "WebKit"],
+    [/safari\/([\d.]+)/, "Safari", "WebKit"],
+    [/msie([\d.]+)|trident.*rv:([\d.]+)/, "Internet Explorer", "Trident"],
   ];
 
   for (const [re, n, e] of pairs) {
@@ -52,9 +52,9 @@ function detectBrowser(ua: string): BrowserInfo {
   // Sistem operasi
   let os = "Tidak dikenal";
   if (/windows nt 10/i.test(s)) os = "Windows 10/11";
-  else if (/windows nt ([d.]+)/i.test(s)) os = "Windows";
-  else if (/android ([d.]+)/i.test(s)) os = "Android " + (s.match(/android ([d.]+)/i)?.[1] ?? "");
-  else if (/iphone os ([d_.]+)/i.test(s)) os = "iOS " + (s.match(/iphone os ([d_.]+)/i)?.[1] ?? "").replace(/_/g, ".");
+  else if (/windows nt ([\d.]+)/i.test(s)) os = "Windows";
+  else if (/android ([\d.]+)/i.test(s)) os = "Android " + (s.match(/android ([d.]+)/i)?.[1] ?? "");
+  else if (/iphone os ([\d_.]+)/i.test(s)) os = "iOS " + (s.match(/iphone os ([d_.]+)/i)?.[1] ?? "").replace(/_/g, ".");
   else if (/ipad|cpu os/i.test(s)) os = "iPadOS";
   else if (/mac os x/i.test(s)) os = "macOS";
   else if (/cros/i.test(s)) os = "ChromeOS";
