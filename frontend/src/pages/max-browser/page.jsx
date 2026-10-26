@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Globe, RefreshCw, ExternalLink, Sparkles, StopCircle } from "lucide-react";
+import { Globe, RefreshCw, ExternalLink, Sparkles, StopCircle, ShieldCheck, Zap } from "lucide-react";
 
 const AGENT_SYSTEM_PROMPT = [
   "Kamu adalah MAX Browser, AI agent yang menjelajahi web lewat alat ambil-halaman server.",
@@ -46,9 +46,16 @@ function normalizeUrl(value) {
   return /^https?:\/\//i.test(target) ? target : "https://" + target;
 }
 
+function proxyUrl(full) {
+  return "/api/browser/view?url=" + encodeURIComponent(full);
+}
+
 export default function MaxBrowserPage() {
   const [url, setUrl] = useState("");
   const [frameUrl, setFrameUrl] = useState("");
+  const [mode, setMode] = useState("proxy");
+  const [frameKey, setFrameKey] = useState(0);
+  const [frameLoading, setFrameLoading] = useState(false);
   const [pageText, setPageText] = useState(null);
   const [loadingText, setLoadingText] = useState(false);
   const [textError, setTextError] = useState("");
@@ -85,16 +92,48 @@ export default function MaxBrowserPage() {
 
   useEffect(() => { loadSetup(); }, [loadSetup]);
 
+  // Tautan yang diklik di dalam frame proxy dikirim ke sini via postMessage,
+  // lalu halaman baru dimuat ulang lewat proxy dari konteks dashboard.
+  useEffect(() => {
+    const onMessage = (event) => {
+      const nav = event?.data?.__maxBrowserNav;
+      if (typeof nav !== "string" || !/^https?:\/\//i.test(nav)) return;
+      setUrl(nav);
+      setFrameUrl(nav);
+      setFrameKey((k) => k + 1);
+      setFrameLoading(true);
+      setPageText(null);
+      setTextError("");
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   const effectiveModel = modelChoice === "auto" ? (bestModel || models[0]?.id || "") : modelChoice;
+
+  const go = (full) => {
+    setUrl(full);
+    setFrameUrl(full);
+    setFrameKey((k) => k + 1);
+    setFrameLoading(true);
+    setPageText(null);
+    setTextError("");
+  };
 
   const openUrl = (event) => {
     event.preventDefault();
     const full = normalizeUrl(url);
     if (!full) return;
-    setUrl(full);
-    setFrameUrl(full);
-    setPageText(null);
-    setTextError("");
+    go(full);
+  };
+
+  const switchMode = (next) => {
+    if (next === mode) return;
+    setMode(next);
+    if (frameUrl) {
+      setFrameKey((k) => k + 1);
+      setFrameLoading(true);
+    }
   };
 
   const loadText = async () => {
@@ -241,21 +280,52 @@ export default function MaxBrowserPage() {
 
           {frameUrl ? (
             <>
-              <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
                 <span className="truncate">{frameUrl}</span>
-                <button type="button" onClick={() => window.open(frameUrl, "_blank", "noopener")} className="inline-flex shrink-0 items-center gap-1 hover:text-text-main">
-                  <ExternalLink size={13} /> Tab baru
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-lg border border-border bg-bg p-1">
+                    <button
+                      type="button"
+                      onClick={() => switchMode("proxy")}
+                      className={"inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium " + (mode === "proxy" ? "bg-primary text-white" : "text-text-muted hover:text-text-main")}
+                      title="Halaman diambil server lalu ditampilkan di sini — bisa untuk situs yang memblokir iframe"
+                    >
+                      <ShieldCheck size={13} /> Render
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchMode("direct")}
+                      className={"inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium " + (mode === "direct" ? "bg-primary text-white" : "text-text-muted hover:text-text-main")}
+                      title="Situs dibuka langsung apa adanya (lebih cepat)"
+                    >
+                      <Zap size={13} /> Langsung
+                    </button>
+                  </div>
+                  <button type="button" onClick={() => window.open(frameUrl, "_blank", "noopener")} className="inline-flex items-center gap-1 hover:text-text-main">
+                    <ExternalLink size={13} /> Tab baru
+                  </button>
+                </div>
               </div>
-              <iframe
-                title="MAX Browser"
-                src={frameUrl}
-                referrerPolicy="no-referrer"
-                sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
-                className="h-[420px] w-full rounded-lg border border-border bg-white"
-              />
+              <div className="relative">
+                <iframe
+                  key={frameKey}
+                  title="MAX Browser"
+                  src={mode === "proxy" ? proxyUrl(frameUrl) : frameUrl}
+                  referrerPolicy="no-referrer"
+                  sandbox={mode === "proxy" ? "allow-scripts allow-forms allow-popups" : "allow-scripts allow-forms allow-popups allow-same-origin"}
+                  onLoad={() => setFrameLoading(false)}
+                  className="h-[420px] w-full rounded-lg border border-border bg-white"
+                />
+                {frameLoading && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-white/60 text-xs text-text-muted">
+                    Memuat halaman...
+                  </div>
+                )}
+              </div>
               <p className="text-[11px] text-text-muted">
-                Catatan: situs yang memblokir penyematan (Google, YouTube, dll.) tidak tampil di frame — pakai "Ambil Teks" atau "Tab baru".
+                {mode === "proxy"
+                  ? "Mode Render: halaman diambil server MAX Router lalu ditampilkan di sini, jadi situs yang memblokir iframe (Google, YouTube, app Railway, dll.) tetap tampil. Klik tautan di dalam frame untuk pindah halaman."
+                  : "Mode Langsung: situs dibuka apa adanya, lebih cepat — tapi situs yang memblokir penyematan tidak akan tampil; kalau kosong, coba mode Render."}
               </p>
             </>
           ) : (
