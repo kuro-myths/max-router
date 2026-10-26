@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "@types/node": "^26.6.5"
+  }
 }
