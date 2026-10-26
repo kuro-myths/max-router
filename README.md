@@ -249,6 +249,14 @@ Penilaian: 60% keandalan, 25% kecepatan respons pertama, 15% respons berisi. Err
 tidak dihitung sebagai kesalahan model; 429 dihitung setengah. Logika murni ada di `backend/src/lib/modelHealth/scoring.js`.
 
 
+## Config untuk AI agent (MAX Browser / MAX Editor)
+
+Endpoint ringkas supaya agent ekosistem MAX selalu memakai model terbaik saat ini:
+
+- `GET /api/agent/config` — ringkasan dari model health ledger: `best` (model `working` terbaik), `top`, `summary`, plus hint endpoint. Autentikasi mengikuti aturan `/api/*` (API key `Authorization: Bearer` atau sesi dashboard).
+
+Klien seperti MAX Browser (extension Chrome di `max-editor/browser-extension`) cukup set `model = best.id` di `/v1/chat/completions`, atau kosongkan `model` untuk routing default.
+
 ## Koneksi CMD langsung ke database Railway
 
 Untuk membuka shell database PostgreSQL dari Windows CMD tanpa menyalin token GitHub atau password database secara manual:
