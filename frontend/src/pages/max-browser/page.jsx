@@ -10,7 +10,7 @@ const QUICK_LINKS = [
   { label: "Mistral", url: "https://mistral.ai" },
 ];
 
-function normalizeUrl(input: string): string | null {
+function normalizeUrl(input) {
   const value = String(input || "").trim();
   if (!value) return null;
   const looksLikeDomain = /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith("//");
