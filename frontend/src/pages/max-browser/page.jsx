@@ -1,125 +1,139 @@
 import { useEffect, useState } from "react";
-import { Globe, RefreshCw, Copy, Monitor, Smartphone, Tablet, Bot, Check } from "lucide-react";
+import { Globe, ExternalLink, Clock, X } from "lucide-react";
 
-const API_URL = "/api/browser/detect";
+const HISTORY_KEY = "maxrouter.browser.history";
+const QUICK_LINKS = [
+  { label: "Google", url: "https://www.google.com" },
+  { label: "YouTube", url: "https://www.youtube.com" },
+  { label: "GitHub", url: "https://github.com" },
+  { label: "Wikipedia", url: "https://id.wikipedia.org" },
+  { label: "Mistral", url: "https://mistral.ai" },
+];
+
+function normalizeUrl(input: string): string | null {
+  const value = String(input || "").trim();
+  if (!value) return null;
+  const looksLikeDomain = /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith("//");
+  let candidate = looksLikeDomain ? value : "https://" + value;
+  if (candidate.startsWith("//")) candidate = "https:" + candidate;
+  try {
+    const u = new URL(candidate);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    if (!u.hostname.includes(".")) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
 
 export default function MaxBrowserPage() {
-  const [data, setData] = useState(null);
+  const [input, setInput] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
 
-  const detect = async () => {
-    setLoading(true);
+  useEffect(() => {
+    try { setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]").slice(0, 12)); } catch { /* ignore */ }
+  }, []);
+
+  const open = (raw: string) => {
+    const url = normalizeUrl(raw);
+    if (!url) { setError("Alamat tidak valid. Contoh: example.com atau https://example.com"); return; }
     setError("");
-    try {
-      const res = await fetch(API_URL, { credentials: "same-origin", cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error || "Gagal mendeteksi browser.");
-      setData(json);
-    } catch (err) {
-      setError(err?.message || "Gagal terhubung ke server.");
-    } finally {
-      setLoading(false);
-    }
+    window.open(url, "_blank", "noopener,noreferrer");
+    const next = [url, ...history.filter((h) => h !== url)].slice(0, 12);
+    setHistory(next);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
-  useEffect(() => { detect(); }, []);
-
-  const copyUA = async () => {
-    if (!data?.userAgent) return;
-    try { await navigator.clipboard.writeText(data.userAgent); } catch { /* ignore */ }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const removeHistory = (url: string) => {
+    const next = history.filter((h) => h !== url);
+    setHistory(next);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
-
-  const deviceIcon = data?.bot ? Bot : data?.device === "Ponsel" ? Smartphone : data?.device === "Tablet" ? Tablet : Monitor;
-
-  const rows = data ? [
-    { label: "Browser", value: data.name + (data.version ? " " + data.version : "") },
-    { label: "Engine", value: data.engine },
-    { label: "Sistem Operasi", value: data.os },
-    { label: "Perangkat", value: data.bot ? "Bot / Otomatis" : data.device },
-    { label: "User-Agent", value: data.userAgent, mono: true },
-    { label: "Platform (Client Hints)", value: data.clientHints?.platform || "-", mono: true },
-  ] : [];
 
   return (
     <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
-      <header className="mb-6 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Globe size={22} aria-hidden="true" />
-          </span>
-          <div>
-            <h1 className="text-xl font-semibold text-text-main">Deteksi Browser</h1>
-            <p className="text-xs text-text-muted">Kenali browser yang kamu pakai untuk membuka dashboard ini.</p>
-          </div>
+      <header className="mb-6 flex items-center gap-3">
+        <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Globe size={22} aria-hidden="true" />
+        </span>
+        <div>
+          <h1 className="text-xl font-semibold text-text-main">Buka Website</h1>
+          <p className="text-xs text-text-muted">Ketik alamatnya, situs resminya terbuka di tab baru — semua fitur &amp; klik di dalamnya berfungsi normal.</p>
         </div>
-        <button
-          type="button"
-          onClick={detect}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
-        >
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} aria-hidden="true" />
-          Deteksi Ulang
-        </button>
       </header>
 
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-500">
-          {error}
-        </div>
-      )}
-
       <section className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
-        {loading && !data ? (
-          <p className="py-8 text-center text-sm text-text-muted">Mendeteksi browser...</p>
-        ) : data ? (
-          <>
-            <div className="mb-4 flex items-center gap-3 rounded-xl bg-bg p-3">
-              {(() => {
-                const Icon = deviceIcon || Monitor;
-                return (
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon size={20} aria-hidden="true" />
-                  </span>
-                );
-              })()}
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold text-text-main">
-                  {data.bot ? "Bot / Otomatis" : data.name} {data.version && !data.bot ? data.version : ""}
-                </p>
-                <p className="text-xs text-text-muted">{data.os} &middot; {data.bot ? "Bot/Otomatis" : data.device}</p>
-              </div>
-            </div>
+        <form
+          onSubmit={(e) => { e.preventDefault(); open(input); }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => { setInput(e.target.value); setError(""); }}
+            placeholder="contoh: github.com atau https://mistral.ai"
+            spellCheck={false}
+            autoComplete="off"
+            className="flex-1 min-w-0 rounded-lg border border-border bg-bg px-3 py-2.5 font-mono text-sm text-text-main placeholder:text-text-muted/60 outline-none focus:border-primary"
+          />
+          <button
+            type="submit"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+          >
+            <ExternalLink size={15} aria-hidden="true" />
+            Buka
+          </button>
+        </form>
 
-            <dl className="space-y-2">
-              {rows.map((row) => (
-                <div key={row.label} className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-bg p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{row.label}</dt>
-                  <dd className={("break-all text-right " + (row.mono ? "font-mono text-xs" : "text-sm")) + " text-text-main"}>{row.value}</dd>
-                </div>
-              ))}
-            </dl>
+        {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
 
-            <div className="mt-4 flex justify-end">
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Situs cepat</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_LINKS.map((link) => (
               <button
+                key={link.url}
                 type="button"
-                onClick={copyUA}
-                className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-2 hover:text-text-main"
+                onClick={() => open(link.url)}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-2 hover:text-text-main"
               >
-                {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
-                {copied ? "Tersalin!" : "Salin User-Agent"}
+                {link.label}
               </button>
-            </div>
-          </>
-        ) : null}
+            ))}
+          </div>
+        </div>
+
+        {history.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-muted"><Clock size={11} className="mr-1 inline" aria-hidden="true" />Riwayat</p>
+            <ul className="space-y-1">
+              {history.map((url) => (
+                <li key={url} className="flex items-center gap-2 rounded-lg bg-bg px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => open(url)}
+                    className="min-w-0 flex-1 truncate text-left font-mono text-xs text-text-main hover:text-primary"
+                  >
+                    {url}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeHistory(url)}
+                    className="shrink-0 text-text-muted hover:text-red-500"
+                    aria-label={"Hapus " + url + " dari riwayat"}
+                  >
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <p className="mt-4 text-center text-[11px] text-text-muted">
-        Fitur browser berat (render Chromium, proxy halaman, pencarian web) sudah dihapus dan digantikan deteksi ringan ini.
+        Situs dibuka langsung di browsermu (tab baru), bukan lewat proxy server — jadi login, klik, dan semua interaksi berjalan seperti biasa.
       </p>
     </div>
   );
