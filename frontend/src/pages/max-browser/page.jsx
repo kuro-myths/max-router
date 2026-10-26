@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Globe, RefreshCw, ExternalLink, Sparkles, StopCircle, ShieldCheck, Zap } from "lucide-react";
+import { Globe, RefreshCw, ExternalLink, Sparkles, StopCircle, ShieldCheck, Zap, Search } from "lucide-react";
 
 const AGENT_SYSTEM_PROMPT = [
-  "Kamu adalah MAX Browser, AI agent yang menjelajahi web lewat alat ambil-halaman server.",
+  "Kamu adalah MAX Browser, AI agent yang menjelajahi web lewat alat ambil-halaman dan pencarian server.",
   "Aturan:",
+  "- Panggil web_search untuk mencari informasi di web; hasilnya berupa daftar tautan dengan judul dan ringkasan.",
   "- Panggil fetch_page untuk membuka URL; hasilnya berisi url, judul, teks halaman (mungkin terpotong), dan daftar tautan.",
-  "- Gunakan daftar tautan dari hasil sebelumnya untuk menelusuri halaman lain.",
+  "- Gunakan hasil pencarian dan daftar tautan dari observasi sebelumnya untuk menelusuri halaman lain.",
   "- Satu langkah per giliran, lalu tunggu hasil observasi.",
   "- Halaman diambil tanpa JavaScript, jadi konten dinamis mungkin tidak tersedia; cari tautan alternatif bila ada.",
   "- Saat tugas selesai atau mustahil, panggil finish dengan jawaban ringkas dalam Bahasa Indonesia.",
 ].join("\n");
 
 const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "web_search",
+      description: "Cari di web dengan kata kunci; kembalikan daftar hasil (judul, URL, ringkasan). Gunakan ini saat butuh informasi tapi belum tahu URL-nya.",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string", description: "Kata kunci pencarian" } },
+        required: ["query"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -46,6 +59,16 @@ function normalizeUrl(value) {
   return /^https?:\/\//i.test(target) ? target : "https://" + target;
 }
 
+// Deteksi sederhana: input dianggap URL bila punya skema http(s), atau
+// tanpa spasi dan mengandung titik (mis. "example.com"). Sisanya = query pencarian.
+function isLikelyUrl(value) {
+  const target = String(value || "").trim();
+  if (!target) return false;
+  if (/^https?:\/\//i.test(target)) return true;
+  if (/\s/.test(target)) return false;
+  return /^[^\s]+.[^\s]+(\/|$|:)/.test(target);
+}
+
 function proxyUrl(full) {
   return "/api/browser/view?url=" + encodeURIComponent(full);
 }
@@ -59,6 +82,11 @@ export default function MaxBrowserPage() {
   const [pageText, setPageText] = useState(null);
   const [loadingText, setLoadingText] = useState(false);
   const [textError, setTextError] = useState("");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const [models, setModels] = useState([]);
   const [modelChoice, setModelChoice] = useState("auto");
@@ -118,13 +146,52 @@ export default function MaxBrowserPage() {
     setFrameLoading(true);
     setPageText(null);
     setTextError("");
+    setSearchResults(null);
+    setSearchError("");
   };
 
-  const openUrl = (event) => {
+  const doSearch = async (query) => {
+    const q = String(query || "").trim();
+    if (!q || searching) return;
+    setSearching(true);
+    setSearchError("");
+    setSearchResults(null);
+    setSearchQuery(q);
+    try {
+      const res = await fetch("/api/browser/search?q=" + encodeURIComponent(q), {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Gagal mencari (HTTP " + res.status + ")");
+      setSearchResults(Array.isArray(data?.results) ? data.results : []);
+    } catch (error) {
+      setSearchResults([]);
+      setSearchError(error?.message || "Gagal melakukan pencarian.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const openUrlOrSearch = (event) => {
     event.preventDefault();
-    const full = normalizeUrl(url);
-    if (!full) return;
-    go(full);
+    const raw = String(url || "").trim();
+    if (!raw) return;
+    if (isLikelyUrl(raw)) {
+      go(normalizeUrl(raw));
+    } else {
+      // Input bukan URL: perlakukan sebagai kata kunci pencarian (ala Nanobrowser).
+      setSearchQuery(raw);
+      doSearch(raw);
+    }
+  };
+
+  const runSearch = (event) => {
+    event.preventDefault();
+    const q = String(url || "").trim();
+    if (!q) return;
+    setSearchQuery(q);
+    doSearch(q);
   };
 
   const switchMode = (next) => {
@@ -138,7 +205,7 @@ export default function MaxBrowserPage() {
 
   const loadText = async () => {
     const full = normalizeUrl(url);
-    if (!full || loadingText) return;
+    if (!full || loadingText || !isLikelyUrl(full)) return;
     setLoadingText(true);
     setTextError("");
     try {
@@ -168,6 +235,20 @@ export default function MaxBrowserPage() {
       return data;
     } catch (error) {
       return { ok: false, error: error?.message || "gagal mengambil halaman" };
+    }
+  };
+
+  const webSearchTool = async (query) => {
+    try {
+      const res = await fetch("/api/browser/search?q=" + encodeURIComponent(String(query || "")), {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data?.error || "HTTP " + res.status };
+      return data;
+    } catch (error) {
+      return { ok: false, error: error?.message || "gagal mencari" };
     }
   };
 
@@ -217,7 +298,16 @@ export default function MaxBrowserPage() {
             done = true;
             break;
           }
-          if (name === "fetch_page") {
+          if (name === "web_search") {
+            const query = String(args.query || "").slice(0, 200);
+            push("action", "Mencari: " + query);
+            const observation = await webSearchTool(query);
+            const summary = observation.ok === false
+              ? "Error: " + observation.error
+              : (observation.results || []).slice(0, 8).map((r, idx) => (idx + 1) + ". " + (r.title || r.url) + " — " + r.url).join("\n") || "Tidak ada hasil.";
+            push("observation", summary);
+            messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(observation).slice(0, 12000) });
+          } else if (name === "fetch_page") {
             push("action", "Membuka " + String(args.url || ""));
             const observation = await fetchPageTool(args.url);
             const summary = observation.ok === false
@@ -245,7 +335,7 @@ export default function MaxBrowserPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">MAX Browser</h1>
-          <p className="text-xs text-text-muted">Browsing langsung dan AI agent web dari dashboard — tanpa extension.</p>
+          <p className="text-xs text-text-muted">Browsing, pencarian web, dan AI agent web dari dashboard — tanpa extension.</p>
         </div>
         <button type="button" onClick={loadSetup} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium hover:bg-bg">
           <RefreshCw size={13} /> Perbarui model
@@ -253,19 +343,27 @@ export default function MaxBrowserPage() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Kolom kiri: mini browser */}
+        {/* Kolom kiri: mini browser + pencarian */}
         <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
-          <form onSubmit={openUrl} className="flex flex-wrap items-center gap-2">
+          <form onSubmit={openUrlOrSearch} className="flex flex-wrap items-center gap-2">
             <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-border bg-bg px-3">
               <Globe size={16} className="text-text-muted" />
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="Masukkan URL, mis. example.com"
+                placeholder="URL atau kata kunci pencarian, mis. berita teknologi"
                 className="w-full bg-transparent py-2 text-sm outline-none"
               />
             </div>
             <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white">Buka</button>
+            <button
+              type="button"
+              onClick={runSearch}
+              disabled={searching || !url.trim()}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-bg px-3 py-2 text-xs font-medium hover:bg-surface-2 disabled:opacity-50"
+            >
+              <Search size={13} /> {searching ? "Mencari..." : "Cari"}
+            </button>
             <button
               type="button"
               onClick={loadText}
@@ -276,7 +374,38 @@ export default function MaxBrowserPage() {
             </button>
           </form>
 
+          <p className="text-[11px] text-text-muted">
+            Masukkan URL untuk membuka halaman, atau ketik kata kunci lalu tekan Enter / klik "Cari" — hasil pencarian akan tampil di sini seperti Nanobrowser.
+          </p>
+
           {textError && <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-xs">{textError}</p>}
+          {searchError && <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-xs">{searchError}</p>}
+
+          {searchResults !== null && (
+            <div className="max-h-[340px] space-y-2 overflow-y-auto rounded-lg border border-border bg-bg p-3">
+              <p className="text-xs font-semibold">
+                Hasil pencarian untuk <span className="text-primary">{searchQuery}</span> ({(searchResults || []).length} hasil)
+              </p>
+              {(searchResults || []).length === 0 ? (
+                <p className="text-xs text-text-muted">Tidak ada hasil ditemukan. Coba kata kunci lain.</p>
+              ) : (
+                (searchResults || []).map((result, index) => (
+                  <div key={result.url + index} className="rounded-lg border border-border bg-surface px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => go(result.url)}
+                      className="text-left text-sm font-medium text-primary hover:underline"
+                      title="Buka di mini browser (mode Render)"
+                    >
+                      {result.title || result.url}
+                    </button>
+                    <p className="truncate text-[10px] text-text-muted">{result.url}</p>
+                    {result.snippet && <p className="mt-1 text-xs text-text-muted">{result.snippet}</p>}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
 
           {frameUrl ? (
             <>
@@ -330,7 +459,7 @@ export default function MaxBrowserPage() {
             </>
           ) : (
             <div className="flex h-[320px] items-center justify-center rounded-lg border border-dashed border-border text-center text-sm text-text-muted">
-              <span className="max-w-xs px-4">Masukkan URL lalu klik Buka untuk browsing langsung di sini.</span>
+              <span className="max-w-xs px-4">Masukkan URL untuk browsing, atau kata kunci untuk mencari di web.</span>
             </div>
           )}
 
@@ -348,7 +477,7 @@ export default function MaxBrowserPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h2 className="flex items-center gap-2 text-sm font-semibold"><Sparkles size={15} className="text-primary" /> AI Agent Web</h2>
-              <p className="mt-0.5 text-xs text-text-muted">Agent menjelajah lewat pengambilan halaman server. Model: {effectiveModel || "belum tersedia"}</p>
+              <p className="mt-0.5 text-xs text-text-muted">Agent mencari & menjelajah web lewat server. Model: {effectiveModel || "belum tersedia"}</p>
             </div>
             <select
               value={modelChoice}
@@ -369,7 +498,7 @@ export default function MaxBrowserPage() {
             onChange={(e) => setTask(e.target.value)}
             rows={3}
             disabled={running || !effectiveModel}
-            placeholder="Contoh: buka detik.com, cari 3 berita teknologi terbaru, lalu rangkum"
+            placeholder="Contoh: cari 3 berita teknologi terbaru hari ini, lalu rangkum"
             className="rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none"
           />
 
