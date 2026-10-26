@@ -30,7 +30,7 @@ const navItems = [
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
-  { href: "/dashboard/max-browser", label: "Deteksi Browser", icon: "browser" },
+  { href: "/dashboard/max-browser", label: "Browser", icon: "browser" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
   { href: "/dashboard/parameters", label: "Parameter", icon: "tune" },
 ];
