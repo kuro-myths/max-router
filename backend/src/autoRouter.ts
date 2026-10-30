@@ -177,9 +177,17 @@ export async function buildAutoRouter(): Promise<Router> {
   }
 
   if (importFailures.length > 0) {
-    throw new Error(
-      `[router] Failed to import ${importFailures.length} route file(s):\n${importFailures.join("\n")}`
-    );
+    // Jangan biarkan satu route yang gagal import menjatuhkan seluruh server
+    // (dulu throw -> server.ts exit(1) -> health check Back4App gagal).
+    // Route yang gagal dilewati, sisanya tetap jalan. Set STRICT_ROUTE_IMPORTS=true
+    // untuk perilaku lama (fail-fast) saat debugging.
+    console.error(`[router] ${importFailures.length} route file(s) failed to import (skipped):`);
+    for (const failure of importFailures) console.error("  - " + failure);
+    if (process.env.STRICT_ROUTE_IMPORTS === "true") {
+      throw new Error(
+        `[router] Failed to import ${importFailures.length} route file(s):\n${importFailures.join("\n")}`
+      );
+    }
   }
 
   if (process.env.DEBUG_ROUTES) {
