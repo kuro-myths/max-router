@@ -20,6 +20,12 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
+# Pastikan DATA_DIR selalu ada di dalam container (Back4App tanpa volume eksternal).
+RUN mkdir -p /data
+# Deployment single-container (mis. Back4App tanpa layanan MySQL terpisah):
+# izinkan SQLite persisten di /data agar app tidak langsung exit saat start.
+# Jika MYSQL_URL di-set (Railway MySQL), guard ini otomatis tidak dipakai.
+ENV ALLOW_EPHEMERAL_SQLITE=true
 
 # Chromium untuk MAX Browser (render halaman + JavaScript, ala Chrome sungguhan).
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto
