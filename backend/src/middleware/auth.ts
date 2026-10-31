@@ -59,7 +59,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   try {
     const settings = await getSettings();
-    const requireLogin = process.env.DISABLE_DASHBOARD_AUTH !== "true" && settings?.requireLogin === true;
+    const requireLogin = process.env.DISABLE_DASHBOARD_AUTH !== "true" && settings?.requireLogin !== false;
 
     const token = req.cookies?.["9r_session"];
     if (token) {
