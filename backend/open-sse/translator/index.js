@@ -5,18 +5,39 @@ import { cloakClaudeTools } from "../utils/claudeCloaking.js";
 import { filterToOpenAIFormat } from "./helpers/openaiHelper.js";
 import { normalizeThinkingConfig } from "../services/provider.js";
 
-// Registry for translators
-const requestRegistry = new Map();
-const responseRegistry = new Map();
+// Registry for translators - var + lazy-init agar aman terhadap circular import
+// (modul translator di-import statis di bawah dan mendaftar saat dievaluasi).
+var requestRegistry = null;
+var responseRegistry = null;
 
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+// Translator modules - dimuat via import statis ESM.
+// require() tidak bisa memuat ES Module di runtime Node serverless.
+import "./request/claude-to-openai.js";
+import "./request/openai-to-claude.js";
+import "./request/gemini-to-openai.js";
+import "./request/openai-to-gemini.js";
+import "./request/openai-to-vertex.js";
+import "./request/openai-responses.js";
+import "./request/openai-to-kiro.js";
+import "./request/openai-to-cursor.js";
+import "./request/openai-to-ollama.js";
+import "./request/openai-to-commandcode.js";
+import "./response/claude-to-openai.js";
+import "./response/openai-to-claude.js";
+import "./response/gemini-to-openai.js";
+import "./response/openai-responses.js";
+import "./response/kiro-to-openai.js";
+import "./response/cursor-to-openai.js";
+import "./response/ollama-to-openai.js";
+import "./response/commandcode-to-openai.js";
 
 // Track initialization state
 let initialized = false;
 
 // Register translator
 export function register(from, to, requestFn, responseFn) {
+  if (!requestRegistry) requestRegistry = new Map();
+  if (!responseRegistry) responseRegistry = new Map();
   const key = `${from}:${to}`;
   if (requestFn) {
     requestRegistry.set(key, requestFn);
@@ -30,28 +51,7 @@ export function register(from, to, requestFn, responseFn) {
 function ensureInitialized() {
   if (initialized) return;
   initialized = true;
-
-  // Request translators - sync require pattern for bundler
-  require("./request/claude-to-openai.js");
-  require("./request/openai-to-claude.js");
-  require("./request/gemini-to-openai.js");
-  require("./request/openai-to-gemini.js");
-  require("./request/openai-to-vertex.js");
-  require("./request/openai-responses.js");
-  require("./request/openai-to-kiro.js");
-  require("./request/openai-to-cursor.js");
-  require("./request/openai-to-ollama.js");
-  require("./request/openai-to-commandcode.js");
-
-  // Response translators
-  require("./response/claude-to-openai.js");
-  require("./response/openai-to-claude.js");
-  require("./response/gemini-to-openai.js");
-  require("./response/openai-responses.js");
-  require("./response/kiro-to-openai.js");
-  require("./response/cursor-to-openai.js");
-  require("./response/ollama-to-openai.js");
-  require("./response/commandcode-to-openai.js");
+  // Translator dimuat otomatis via import statis di atas.
 }
 
 // Strip specific content types from messages (explicit opt-in via strip[] in PROVIDER_MODELS)
