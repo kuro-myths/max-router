@@ -60,7 +60,7 @@ app.use(async (req, res, next) => {
   if (!isApi && !isV1 && !isV1beta) return next();
   try {
     const router = await getRouter();
-    if (isApi) req.url = req.url.replace(/^\/api(?=\/|$)/, "") || "/";
+    if (isApi) req.url = req.url === "/api" ? "/" : req.url.startsWith("/api/") ? req.url.slice(4) : req.url;
     return router(req, res, next);
   } catch (error) {
     console.error("[vercel] route initialization failed:", error);
