@@ -707,6 +707,8 @@ export async function GET_handler(req, res, { params }) {
         connectionId: connection.id,
         models,
         modelCount: models.length,
+        freeModelCount: models.filter((m) => ["free"].includes(String(m.accessTier || "").toLowerCase()) || (m.pricing && Number(m.pricing.input ?? -1) === 0 && Number(m.pricing.output ?? -1) === 0)).length,
+        paidModelCount: models.filter((m) => ["paid", "premium"].includes(String(m.accessTier || "").toLowerCase()) || (m.pricing && (Number(m.pricing.input ?? 0) > 0 || Number(m.pricing.output ?? 0) > 0))).length,
         supportedParameters: Array.from(new Set(models.flatMap((m) => m.supportedParameters || []))),
         source: "upstream",
         stale: false,
