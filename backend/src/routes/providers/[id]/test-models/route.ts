@@ -24,7 +24,13 @@ export async function POST_handler(req, res, { params }) {
 
     let models = getProviderModels(alias);
 
-    const baseUrl = `http://127.0.0.1:${process.env.PORT || 3001}`;
+    // Loopback hanya berlaku saat router berjalan lokal.
+    // Di Vercel/serverless, pakai host publik request ini agar ping internal tetap sampai.
+    const reqHost = req.headers?.host || "";
+    const isLocalHost = /^(localhost|127\.|0\.0\.0\.0)/.test(reqHost);
+    const baseUrl = isLocalHost
+      ? `http://127.0.0.1:${process.env.PORT || 3001}`
+      : `${req.headers?.["x-forwarded-proto"] || "https"}://${reqHost}`;
 
     // Compatible providers: fetch live model list
     if (isCompatible && models.length === 0) {
