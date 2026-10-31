@@ -17,6 +17,13 @@ const ROUTES_DIR = join(__dirname, "routes");
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 
+export const routerDebugState: { routeFiles: number; mountedCount: number; mounted: string[]; importFailures: string[] } = {
+  routeFiles: 0,
+  mountedCount: 0,
+  mounted: [],
+  importFailures: [],
+};
+
 /**
  * Convert Next.js dynamic segments [id] → Express :id
  */
@@ -89,6 +96,7 @@ export async function buildAutoRouter(): Promise<Router> {
     return compareRoutePaths(relA, relB);
   });
   let mounted = 0;
+  const mountedList: string[] = [];
   const importFailures: string[] = [];
 
   for (const file of routeFiles) {
@@ -172,6 +180,7 @@ export async function buildAutoRouter(): Promise<Router> {
           }
         });
         mounted++;
+        mountedList.push(method + " " + String(expressPath));
       }
     }
   }
@@ -197,6 +206,10 @@ export async function buildAutoRouter(): Promise<Router> {
       return '/' + pp.split('/').map(nextToExpress).join('/');
     }));
   }
+  routerDebugState.routeFiles = routeFiles.length;
+  routerDebugState.mountedCount = mounted;
+  routerDebugState.mounted = mountedList;
+  routerDebugState.importFailures = importFailures;
   console.log(`[router] Mounted ${mounted} handlers from ${routeFiles.length} route files`);
   return router;
 }

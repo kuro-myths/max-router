@@ -39,6 +39,23 @@ app.get("/api/diagnostics", (_req, res) => {
   res.json({ status: "ok", service: "max-router", version: "3.0.0", runtime: "vercel-functions", timestamp: new Date().toISOString() });
 });
 
+app.get("/api/debug/routes", async (_req, res) => {
+  try {
+    const { buildAutoRouter, routerDebugState } = await import("./autoRouter.js");
+    await buildAutoRouter();
+    res.set("Cache-Control", "no-store");
+    res.json({
+      routeFiles: routerDebugState.routeFiles,
+      mountedCount: routerDebugState.mountedCount,
+      importFailures: routerDebugState.importFailures,
+      mounted: routerDebugState.mounted,
+    });
+  } catch (error) {
+    console.error("[vercel] debug routes failed:", error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 app.use((req, res, next) => {
   if (req.path === "/api" || req.path.startsWith("/api/") ||
       req.path === "/v1" || req.path.startsWith("/v1/") ||
