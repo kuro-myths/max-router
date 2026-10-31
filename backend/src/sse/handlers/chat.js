@@ -8,7 +8,7 @@ import {
   isValidApiKey,
 } from "../services/auth.js";
 import { cacheClaudeHeaders } from "open-sse/utils/claudeHeaderCache.js";
-import { getSettings, getApiKeyByValue } from "../../lib/localDb.js";
+import { getSettings, getApiKeyByValue, getProviderConnections, getProviderNodes } from "../../lib/localDb.js";
 import { getModelInfo, getComboModels } from "../services/model.js";
 import { handleChatCore } from "open-sse/handlers/chatCore.js";
 import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
@@ -117,6 +117,48 @@ export async function handleChat(request, clientRawRequest = null) {
 }
 
 /**
+ * Global model fallback: model polos tanpa prefix penyedia dicoba ke semua
+ * penyedia yang memiliki koneksi aktif (online maupun lokal), berurutan
+ * sesuai prioritas koneksi, sampai ada penyedia yang berhasil melayani.
+ */
+async function handleGlobalModelFallback(body, modelStr, clientRawRequest = null, request = null, apiKey = null, apiKeyId = null) {
+  const connections = await getProviderConnections({ isActive: true });
+  if (!connections.length) {
+    log.warn("CHAT", "Tidak ada koneksi aktif untuk model global", { model: modelStr });
+    return errorResponse(HTTP_STATUS.NOT_FOUND, "No active credentials found for model: " + modelStr);
+  }
+
+  // Kumpulkan penyedia unik sesuai urutan prioritas koneksi
+  const seen = new Set();
+  const providers = [];
+  for (const conn of connections) {
+    if (conn.provider && !seen.has(conn.provider)) {
+      seen.add(conn.provider);
+      providers.push(conn.provider);
+    }
+  }
+
+  // Penyedia kompatibel dialamatkan lewat prefix node, bukan id mentah
+  const nodes = await getProviderNodes();
+  const prefixById = new Map(nodes.map((node) => [node.id, node.prefix || node.id]));
+  const routed = providers.map((provider) => prefixById.get(provider) || provider);
+
+  log.info("ROUTING", 'Model "' + modelStr + '" global → mencoba ' + routed.length + ' penyedia: ' + routed.join(", "));
+
+  let lastResponse = null;
+  for (const providerAlias of routed) {
+    const res = await handleSingleModelChat(body, providerAlias + "/" + modelStr, clientRawRequest, request, apiKey, apiKeyId);
+    if (res && res.ok) {
+      log.info("ROUTING", 'Model "' + modelStr + '" berhasil dilayani oleh ' + providerAlias);
+      return res;
+    }
+    if (res) lastResponse = res;
+  }
+
+  return lastResponse || errorResponse(HTTP_STATUS.NOT_FOUND, "No provider could serve model: " + modelStr);
+}
+
+/**
  * Handle single model chat request
  */
 async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, apiKeyId = null) {
@@ -144,8 +186,14 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         comboStickyLimit
       });
     }
-    log.warn("CHAT", "Invalid model format", { model: modelStr });
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+    if (modelStr.includes("/")) {
+      log.warn("CHAT", "Invalid model format", { model: modelStr });
+      return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
+    }
+
+    // Model polos (tanpa prefix/alias): rutekan otomatis ke SEMUA penyedia
+    // dengan koneksi aktif — layanan online maupun lokal — memakai key utama router.
+    return handleGlobalModelFallback(body, modelStr, clientRawRequest, request, apiKey, apiKeyId);
   }
 
   const { provider, model } = modelInfo;
