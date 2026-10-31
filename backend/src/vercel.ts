@@ -60,10 +60,7 @@ app.use(async (req, res, next) => {
   if (!isApi && !isV1 && !isV1beta) return next();
   try {
     const router = await getRouter();
-    // The auto-router defines ordinary API routes relative to /api, while
-    // OpenAI/Gemini compatibility routes are defined with /v1 and /v1beta.
-    // Vercel rewrites those public prefixes through this single function.
-    if (isApi) req.url = req.url.replace(/^\\/api(?=\\/|$)/, "") || "/";
+    if (isApi) req.url = req.url.replace(/^\/api(?=\/|$)/, "") || "/";
     return router(req, res, next);
   } catch (error) {
     console.error("[vercel] route initialization failed:", error);
