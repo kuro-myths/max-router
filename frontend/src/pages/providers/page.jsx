@@ -376,6 +376,7 @@ export default function ProvidersPage() {
   }
 
   const availableAuthTypes = [...new Set(savedProviderEntries.map((entry) => entry.authType || "apikey"))];
+  const totalSavedKeys = savedProviderEntries.reduce((sum, entry) => sum + getProviderStats(entry.id, entry.authType).total, 0);
   const visibleProviderEntries = savedProviderEntries.filter((entry) => {
     if (authFilter !== "all" && (entry.authType || "apikey") !== authFilter) return false;
     const stats = getProviderStats(entry.id, entry.authType);
@@ -393,8 +394,12 @@ export default function ProvidersPage() {
         <div>
           <h1 className="text-xl font-semibold">Penyedia</h1>
           <p className="text-sm text-text-muted">Kelola API Base URL dan API key untuk penyedia kompatibel, atau tambahkan URL masuk layanan AI.</p>
+          <p className="text-xs text-text-muted">{savedProviderEntries.length} penyedia · {totalSavedKeys} kunci API tersimpan</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button icon="science" onClick={() => handleBatchTest("all")} disabled={!!testingMode}>
+            {testingMode === "all" ? "Menguji Semua..." : "Uji Semua Penyedia"}
+          </Button>
           <Button icon="add" onClick={() => setIsAddCompatibleOpen(true)}>
             Tambah Kompatibel
           </Button>
@@ -646,6 +651,9 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                   <Badge variant="success" size="sm" dot>Siap</Badge>
                 ) : (
                   <>
+                    <Badge variant="default" size="sm">
+                      {stats.total} Key
+                    </Badge>
                     {getStatusDisplay(connected, error, errorCode)}
                     {errorTime && (
                       <span className="text-text-muted">{errorTime}</span>
@@ -775,6 +783,9 @@ function ApiKeyProviderCard({
                   </Badge>
                 ) : (
                   <>
+                    <Badge variant="default" size="sm">
+                      {stats.total} Key
+                    </Badge>
                     {getStatusDisplay(connected, error, errorCode)}
                     {isCompatible && (
                       <Badge variant="default" size="sm">
