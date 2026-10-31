@@ -4,7 +4,6 @@ import { DashboardLayout } from "@/shared/components/layouts";
 
 // Lazy-loaded pages (code splitting — loads each page only when needed)
 const Landing         = lazy(() => import("./pages/landing/page"));
-const Login           = lazy(() => import("./pages/login/page"));
 const Callback        = lazy(() => import("./pages/callback/page"));
 const Dashboard       = lazy(() => import("./pages/page"));
 const Providers       = lazy(() => import("./pages/providers/page"));
@@ -28,34 +27,7 @@ const AmmailTutorial     = lazy(() => import("./pages/automation/ammail-tutorial
 // Auth guard — cookie 9r_session bersifat HttpOnly sehingga tidak boleh dibaca
 // dari JavaScript. Validasi sesi selalu dilakukan oleh server.
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<"checking" | "valid" | "invalid">("checking");
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/auth/status", {
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    })
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!active) return;
-        if (res.ok && (data.requireLogin !== true || data.isLoggedIn === true)) {
-          localStorage.setItem("9r_authed", "1");
-          setState("valid");
-        } else {
-          localStorage.removeItem("9r_authed");
-          setState("invalid");
-        }
-      })
-      .catch(() => {
-        if (active) setState("invalid");
-      });
-    return () => { active = false; };
-  }, []);
-
-  if (state === "checking") return <LoadingFallback />;
-  if (state === "invalid") return <Navigate to="/login?force=1" replace />;
+  // Dashboard login is intentionally disabled for this deployment.
   return <>{children}</>;
 }
 
@@ -112,8 +84,8 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/"       element={<Navigate to="/dashboard" replace />} />
-          <Route path="/login"  element={<Login />} />
-          <Route path="/callback" element={<Callback />} />
+          <Route path="/login"  element={<Navigate to="/dashboard" replace />} />
+          <Route path="/callback" element={<Navigate to="/dashboard" replace />} />
 
           {/* Protected dashboard */}
           <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
