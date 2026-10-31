@@ -174,25 +174,13 @@ async function runVersionedMigrations(client) {
   }
 
   if (version < 3) {
-    const providers = [
-      "claude", "antigravity", "codex", "github", "cursor", "xai",
-      "kimi-coding", "kilocode", "cline", "kiro", "gemini-cli",
-      "codebuddy", "qoder", "opencode", "openrouter", "nvidia", "ollama",
-      "vertex", "gemini", "cloudflare-ai", "byteplus", "alicode",
-      "alibaba-intl", "anthropic", "azure", "blackbox", "cerebras",
-      "chutes", "cohere", "command-code", "deepseek", "fireworks", "glm",
-      "glm-cn", "groq", "hyperbolic", "kimi", "minimax", "minimax-cn",
-      "mistral", "nebius", "grok-web", "perplexity-web", "leonardo"
-    ];
-    const placeholders = providers.map((_, i) => "$" + (i + 1)).join(", ");
-    await client.query("DELETE FROM providerConnections WHERE provider IN (" + placeholders + ")", providers);
-    await client.query("DELETE FROM usageHistory WHERE provider IN (" + placeholders + ")", providers);
-    await client.query("DELETE FROM requestDetails WHERE provider IN (" + placeholders + ")", providers);
-    await client.query("DELETE FROM codebuddyAccounts WHERE provider = $1", ["codebuddy"]);
-    await client.query("DELETE FROM codebuddyJobs");
+    // PostgreSQL migration #3 used to DELETE provider connections, usage history,
+    // request details, and all CodeBuddy jobs. That cleanup is destructive and is
+    // not required to create or upgrade the schema. Preserve existing user data.
+    // Keep the schema version marker so deployments do not retry the old cleanup.
     await client.query(`INSERT INTO _meta(key, value) VALUES ('schemaVersion', '3') ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value`);
     version = 3;
-    console.log("[DB][postgres-migrate] applied #3 remove-legacy-provider-services");
+    console.log("[DB][postgres-migrate] applied #3 safe-no-data-deletion");
   }
   return version;
 }
