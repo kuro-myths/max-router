@@ -4,6 +4,34 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { authMiddleware } from "./middleware/auth.js";
 import { buildAutoRouter } from "./autoRouter.js";
+import { register } from "node:module";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+// Daftarkan resolver alias "@/..." SEBELUM modul yang memakai alias dimuat.
+// Lokal: sudah via --import ./bin/register-alias.mjs. Di Vercel serverless: belum,
+// sehingga route dengan import "@/lib/..." gagal dimuat (autoRouter melewatkannya).
+// Guard try/catch memastikan server tetap hidup bila registrasi gagal.
+if (!(globalThis as any).__9rAliasRegistered) {
+  try {
+    const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+    const candidates = [
+      path.join(backendRoot, "bin", "alias-loader.mjs"),
+      path.resolve(backendRoot, "..", "api", "vercel-alias.mjs"),
+    ];
+    const loaderPath = candidates.find((candidate) => fs.existsSync(candidate));
+    if (loaderPath) {
+      register(pathToFileURL(loaderPath).href);
+      (globalThis as any).__9rAliasRegistered = true;
+      console.log("[vercel] alias loader terdaftar:", loaderPath);
+    } else {
+      console.warn("[vercel] alias loader tidak ditemukan - route dengan import @/ akan gagal dimuat");
+    }
+  } catch (error) {
+    console.error("[vercel] gagal mendaftarkan alias loader:", error instanceof Error ? error.message : error);
+  }
+}
 
 const app = express();
 app.set("trust proxy", 1);
