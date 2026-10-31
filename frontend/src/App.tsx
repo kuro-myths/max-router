@@ -40,7 +40,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!active) return;
-        if (res.ok && data.isLoggedIn === true) {
+        if (res.ok && (data.requireLogin !== true || data.isLoggedIn === true)) {
           localStorage.setItem("9r_authed", "1");
           setState("valid");
         } else {
@@ -111,7 +111,7 @@ export default function App() {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* Public */}
-          <Route path="/"       element={<Landing />} />
+          <Route path="/"       element={<Navigate to="/dashboard" replace />} />
           <Route path="/login"  element={<Login />} />
           <Route path="/callback" element={<Callback />} />
 
