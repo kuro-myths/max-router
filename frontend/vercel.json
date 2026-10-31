@@ -1,26 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://max-router-production-5c5e.up.railway.app/api/:path*"
-    },
-    {
-      "source": "/v1/:path*",
-      "destination": "https://max-router-production-5c5e.up.railway.app/v1/:path*"
-    },
-    {
-      "source": "/v1beta/:path*",
-      "destination": "https://max-router-production-5c5e.up.railway.app/v1beta/:path*"
-    },
-    {
-      "source": "/ws/:path*",
-      "destination": "https://max-router-production-5c5e.up.railway.app/ws/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "cleanUrls": true
 }
