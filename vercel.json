@@ -12,15 +12,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "destination": "/api/[...path]"
     },
     {
       "source": "/v1/:path*",
-      "destination": "/api/v1/:path*"
+      "destination": "/api/[...path]"
     },
     {
       "source": "/v1beta/:path*",
-      "destination": "/api/v1beta/:path*"
+      "destination": "/api/[...path]"
     },
     {
       "source": "/(.*)",
