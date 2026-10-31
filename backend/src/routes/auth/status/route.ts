@@ -8,7 +8,7 @@ export async function GET(req, res) {
     const settings = await getSettings();
     const token = req.cookies?.["9r_session"];
     const session = await getDashboardAuthSession(token);
-    const requireLogin = process.env.DISABLE_DASHBOARD_AUTH !== "true" && settings?.requireLogin === true;
+    const requireLogin = process.env.DISABLE_DASHBOARD_AUTH !== "true" && settings?.requireLogin !== false;
     const authMode = settings?.authMode || "password";
     const oidcName = String(session?.oidcName || "").trim();
     const oidcEmail = String(session?.oidcEmail || "").trim();
