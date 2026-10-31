@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "installCommand": "npm install --include=dev --ignore-scripts=false",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/[...path].js": {
@@ -10,8 +10,17 @@
     }
   },
   "rewrites": [
-    { "source": "/v1/:path*", "destination": "/api/v1/:path*" },
-    { "source": "/v1beta/:path*", "destination": "/api/v1beta/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/v1/:path*",
+      "destination": "/api/v1/:path*"
+    },
+    {
+      "source": "/v1beta/:path*",
+      "destination": "/api/v1beta/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
