@@ -33,7 +33,12 @@ async function fetchProviderNodeValidation(payload) {
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    return await res.json();
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok || !data) {
+      return { error: (data && data.error) || ("Pemeriksaan gagal (HTTP " + res.status + ").") };
+    }
+    return data;
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -875,6 +880,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
         baseUrl: baseUrl.trim(),
         apiKeys: keys,
       });
+      if (data.error && !data.results) {
+        setMessage(data.error);
+        return;
+      }
       setValidation(data);
       if (data.validCount > 0) {
         setMessage(
@@ -906,7 +915,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
     }
 
     const keys = keyLines();
-    const validResults = validation.results.filter((item) => item.valid && item.baseUrl).map((item) => ({ ...item, apiKey: keys[item.keyIndex] })).filter((item) => item.apiKey);
+    const validResults = validation.results
+      .filter((item) => item.valid && item.baseUrl && item.keyIndex >= 0 && item.keyIndex < keys.length)
+      .map((item) => ({ ...item, apiKey: keys[item.keyIndex] }))
+      .filter((item) => item.apiKey);
     if (!validResults.length) {
       setMessage("Tidak ada key valid untuk disimpan.");
       return;
@@ -954,9 +966,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
             apiType: "chat",
           }),
         });
-        const nodeData = await nodeRes.json();
+        let nodeData = null;
+        try { nodeData = await nodeRes.json(); } catch { nodeData = null; }
         if (!nodeRes.ok || !nodeData?.node?.id) {
-          throw new Error(nodeData?.error || "Gagal membuat provider.");
+          throw new Error(nodeData?.error || ("Gagal membuat provider (HTTP " + nodeRes.status + ")."));
         }
 
         const providerRes = await fetch("/api/providers", {
@@ -971,9 +984,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
             })),
           }),
         });
-        const providerData = await providerRes.json();
+        let providerData = null;
+        try { providerData = await providerRes.json(); } catch { providerData = null; }
         if (!providerRes.ok) {
-          throw new Error(providerData?.error || "Gagal menyimpan API key.");
+          throw new Error(providerData?.error || ("Gagal menyimpan API key (HTTP " + providerRes.status + ")."));
         }
         createdCount += Number(providerData.createdCount || 0);
         skippedDuplicateCount += Number(providerData.skippedDuplicateCount || 0);
@@ -1006,7 +1020,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
         <Input
           label="Base URL"
           value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
+          onChange={(e) => {
+            setBaseUrl(e.target.value);
+            if (validation) { setValidation(null); setMessage("Base URL berubah — jalankan Tes Key ulang sebelum menyimpan."); }
+          }}
           placeholder="https://generativelanguage.googleapis.com/v1beta"
           hint="Google AI Studio akan diarahkan otomatis ke endpoint OpenAI-compatible yang benar. Nama penyedia dideteksi dari alamat."
         />
@@ -1021,7 +1038,10 @@ function AddCompatibleModal({ isOpen, onClose, onCreated }) {
           <label className="text-sm font-medium">Kunci API (satu atau semua)</label>
           <textarea
             value={apiKeys}
-            onChange={(e) => setApiKeys(e.target.value)}
+            onChange={(e) => {
+              setApiKeys(e.target.value);
+              if (validation) { setValidation(null); setMessage("Kunci API berubah — jalankan Tes Key ulang sebelum menyimpan."); }
+            }}
             onKeyDownCapture={(e) => { if (e.key === "Enter") e.stopPropagation(); }}
             rows={7}
             className="w-full rounded-lg border border-border bg-bg px-3 py-2 font-mono text-xs"

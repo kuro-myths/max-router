@@ -17,7 +17,12 @@ async function fetchValidation(payload) {
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    return await res.json();
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok && !data) return { valid: false, error: "Pemeriksaan gagal (HTTP " + res.status + ")." };
+    if (!data) return { valid: false, error: "Respons server tidak valid." };
+    if (!res.ok) return { valid: false, error: data.error || ("Pemeriksaan gagal (HTTP " + res.status + ").") };
+    return data;
   } finally {
     window.clearTimeout(timeoutId);
   }

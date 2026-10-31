@@ -8,7 +8,15 @@ function defaultDir() {
   if (process.platform === "win32") {
     return path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), APP_NAME);
   }
-  return path.join(os.homedir(), `.${APP_NAME}`);
+  // Runtime serverless (Vercel dsb.): hanya /tmp yang writable, home bersifat read-only.
+  if (process.env.VERCEL) return path.join("/tmp", APP_NAME);
+  const homeDir = path.join(os.homedir(), "." + APP_NAME);
+  try {
+    fs.mkdirSync(homeDir, { recursive: true });
+    return homeDir;
+  } catch {
+    return path.join(os.tmpdir(), APP_NAME);
+  }
 }
 
 export function getDataDir() {
