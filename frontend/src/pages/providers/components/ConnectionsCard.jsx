@@ -243,12 +243,16 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
     proxyPoolId: "__none__",
   });
   const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       setFormData({ name: "", apiKey: "", priority: 1, proxyPoolId: "__none__" });
       setResult(null);
+      setSaveError("");
+      setSaving(false);
     }
   }, [isOpen]);
 
@@ -271,14 +275,22 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
   };
 
   const submit = async () => {
-    if (!formData.name || !formData.apiKey) return;
-    await onSave({
-      name: formData.name,
-      apiKey: formData.apiKey,
-      priority: Number(formData.priority) || 1,
-      proxyPoolId: formData.proxyPoolId === "__none__" ? null : formData.proxyPoolId,
-      testStatus: result?.ok ? "active" : "unknown",
-    });
+    if (!formData.name.trim() || !formData.apiKey.trim() || saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      await onSave({
+        name: formData.name.trim(),
+        apiKey: formData.apiKey.trim(),
+        priority: Number(formData.priority) || 1,
+        proxyPoolId: formData.proxyPoolId === "__none__" ? null : formData.proxyPoolId,
+        testStatus: result?.ok ? "active" : "unknown",
+      });
+    } catch (error) {
+      setSaveError(error?.message || "Gagal menyimpan API key. Periksa koneksi dan coba lagi.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -296,6 +308,7 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
           </div>
         </div>
         {result && <Badge variant={result.ok ? "success" : "error"}>{result.text}</Badge>}
+        {saveError && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-500">{saveError}</div>}
         <div>
           <label className="mb-1 block text-xs text-text-muted">Prioritas</label>
           <input type="number" min="0" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
@@ -307,8 +320,8 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
           options={[{ value: "__none__", label: "Tanpa proxy" }, ...proxyPools.map((pool) => ({ value: pool.id, label: pool.name }))]}
         />
         <div className="flex gap-2">
-          <Button fullWidth onClick={submit} disabled={!formData.name || !formData.apiKey}>Simpan</Button>
-          <Button fullWidth variant="ghost" onClick={onClose}>Batal</Button>
+          <Button fullWidth onClick={submit} disabled={!formData.name.trim() || !formData.apiKey.trim() || saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
+          <Button fullWidth variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
         </div>
       </div>
     </Modal>
@@ -499,19 +512,21 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
   };
 
   const handleSaveApiKey = async (formData) => {
-    try {
-      const res = await fetch("/api/providers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: providerId, ...formData }),
-      });
-      if (res.ok) {
-        await fetch_();
-        setShowAddModal(false);
-      }
-    } catch (error) {
-      console.error("save connection error:", error);
+    const res = await fetch("/api/providers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: providerId, ...formData }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || data.message || `Gagal menyimpan API key (HTTP ${res.status}).`);
     }
+    if (data.createdCount === 0 && data.skippedDuplicateCount > 0) {
+      throw new Error(data.message || "API key ini sudah tersimpan untuk provider tersebut.");
+    }
+    await fetch_();
+    setShowAddModal(false);
+    return data;
   };
 
   const toggleSelect = (id) => {
