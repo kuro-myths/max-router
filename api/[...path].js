@@ -1,11 +1,4 @@
-import { register } from "node:module";
-
 export const config = { maxDuration: 60, api: { bodyParser: false } };
-
-// Daftarkan resolver alias "@/..." -> backend/dist SEBELUM backend diimpor.
-// Tanpa ini, semua route yang mengimpor "@/lib/..." gagal dimuat di runtime
-// Vercel (autoRouter melewatkannya -> endpoint 404 "Not found").
-register("./vercel-alias.mjs", import.meta.url);
 
 let appPromise;
 
