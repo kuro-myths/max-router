@@ -1,5 +1,6 @@
 // Re-export from open-sse with localDb integration
-import { getModelAliases, getComboByName, getProviderNodes } from "../../lib/localDb.js";
+import { getModelAliases, getComboByName, getProviderNodes, getProviderConnections } from "../../lib/localDb.js";
+import { OPENAI_COMPATIBLE_PREFIX, ANTHROPIC_COMPATIBLE_PREFIX } from "../../shared/constants/providers.js";
 import { parseModel as parseModelCore, resolveModelAliasFromMap, getModelInfoCore } from "open-sse/services/model.js";
 
 // Local provider alias overrides (HMR-friendly, applied on top of open-sse map)
@@ -22,6 +23,35 @@ export function parseModel(modelStr) {
 export async function resolveModelAlias(alias) {
   const aliases = await getModelAliases();
   return resolveModelAliasFromMap(alias, aliases);
+}
+
+/**
+ * Cari model di katalog model koneksi kompatibel aktif (mis. xKiro).
+ * Model dari penyedia kompatibel sering berformat "vendor/model" (mis.
+ * "qwen/qwen3-...", "google/gemini-..."). Tanpa pemetaan ini router salah
+ * mengira "vendor" sebagai penyedia bawaan sehingga gagal dengan
+ * "No active credentials for provider: vendor".
+ */
+async function findModelInCompatibleCatalogs(model) {
+  if (!model) return null;
+  try {
+    const connections = await getProviderConnections({ isActive: true });
+    const needle = String(model);
+    for (const conn of connections) {
+      const providerId = String(conn.provider || "");
+      if (!providerId.startsWith(OPENAI_COMPATIBLE_PREFIX) && !providerId.startsWith(ANTHROPIC_COMPATIBLE_PREFIX)) continue;
+      const catalog = conn.providerSpecificData?.modelCatalog?.models;
+      if (!Array.isArray(catalog) || catalog.length === 0) continue;
+      const ids = catalog.map((m) => (typeof m === "string" ? m : (m?.id || m?.name || ""))).filter(Boolean);
+      const exact = ids.find((id) => id === needle);
+      if (exact) return { provider: providerId, model: exact };
+      const suffix = ids.find((id) => id.endsWith("/" + needle));
+      if (suffix) return { provider: providerId, model: suffix };
+    }
+  } catch (error) {
+    console.log("[model] catalog fallback error:", error?.message || error);
+  }
+  return null;
 }
 
 /**
@@ -49,6 +79,10 @@ export async function getModelInfo(modelStr) {
     if (matchedEmbedding) {
       return { provider: matchedEmbedding.id, model: parsed.model };
     }
+    const catalogHit = await findModelInCompatibleCatalogs(modelStr);
+    if (catalogHit) {
+      return { provider: catalogHit.provider, model: catalogHit.model };
+    }
     return {
       provider: parsed.provider,
       model: parsed.model
@@ -64,6 +98,10 @@ export async function getModelInfo(modelStr) {
     return { provider: null, model: parsed.model };
   }
 
+  const catalogAliasHit = await findModelInCompatibleCatalogs(parsed.model);
+  if (catalogAliasHit) {
+    return { provider: catalogAliasHit.provider, model: catalogAliasHit.model };
+  }
   return getModelInfoCore(modelStr, getModelAliases);
 }
 
