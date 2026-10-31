@@ -204,12 +204,14 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST" });
-      if (res.ok) {
-        localStorage.removeItem("9r_authed");
-        navigate("/login?force=true");
-        navigate(0);
-      }
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Server menolak permintaan keluar.");
+      localStorage.removeItem("9r_authed");
+      window.location.replace("/login?force=true");
     } catch (err) {
       console.error("Gagal keluar:", err);
     }
