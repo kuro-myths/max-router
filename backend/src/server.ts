@@ -99,19 +99,6 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// Minimal public diagnostics only. Runtime errors, stack traces, host details,
-// process identifiers and memory statistics stay in protected server logs.
-app.get("/api/diagnostics", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.status(200).json({
-    status: startupReady ? "ok" : "starting",
-    service: "max-router",
-    version: "3.0.0",
-    uptimeSeconds: Math.round(process.uptime()),
-    timestamp: new Date().toISOString(),
-    ready: startupReady,
-  });
-});
 
 // ─── Auth Middleware ───────────────────────────────────────────────────────────
 // Authentication only applies to API/proxy traffic. Applying it globally would

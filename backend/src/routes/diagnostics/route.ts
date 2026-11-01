@@ -24,7 +24,7 @@ function walk(dir, test, out = []) {
 
 
 async function scanRemoteGithub() {
-  const repo = process.env.GITHUB_REPOSITORY || "rizki-habibi/max-router";
+  const repo = process.env.GITHUB_REPOSITORY || "kuro-myths/max-router";
   const result = [];
   try {
     const headers = { Accept: "application/vnd.github+json", "User-Agent": "Max-Router-Diagnostics" };
@@ -129,7 +129,10 @@ function scanEnvironment() {
     for (const key of ["JWT_SECRET"]) {
       if (!String(process.env[key] || "").trim()) result.push(issue("ENV-001","Environment","error",key + " belum dikonfigurasi","Variable wajib production tidak tersedia.",key,"Set sebagai environment secret."));
     }
-    if (!String(process.env.MYSQL_URL || "").trim() && !/^mysql(?:s)?:\/\//i.test(String(process.env.DATABASE_URL || "")) && !/^mariadb:\/\//i.test(String(process.env.DATABASE_URL || ""))) result.push(issue("ENV-002","Environment","error","MYSQL_URL belum dikonfigurasi","Production harus menggunakan MySQL persisten.","NODE_ENV=production","Set MYSQL_URL ke layanan MySQL Railway."));
+    const databaseUrl = String(process.env.DATABASE_URL || "").trim();
+    const hasPostgres = Boolean(String(process.env.SUPABASE_DATABASE_URL || "").trim()) || /^postgres(?:ql)?:\/\//i.test(databaseUrl);
+    const hasMysql = Boolean(String(process.env.MYSQL_URL || "").trim()) || /^mysql(?:s)?:\/\//i.test(databaseUrl) || /^mariadb:\/\//i.test(databaseUrl);
+    if (!hasPostgres && !hasMysql) result.push(issue("ENV-002","Environment","error","Database URL belum dikonfigurasi","Production membutuhkan SUPABASE_DATABASE_URL (PostgreSQL), DATABASE_URL (PostgreSQL/MySQL), atau MYSQL_URL.","NODE_ENV=production","Konfigurasikan koneksi database persisten pada environment Vercel."));
   }
   return result;
 }

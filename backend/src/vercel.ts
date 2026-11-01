@@ -62,10 +62,6 @@ app.get("/api/health", (_req, res) => res.status(200).json({
   status: "ok", ready: true, service: "max-router", version: "3.0.0",
   runtime: "vercel-functions", timestamp: new Date().toISOString(),
 }));
-app.get("/api/diagnostics", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ status: "ok", service: "max-router", version: "3.0.0", runtime: "vercel-functions", timestamp: new Date().toISOString() });
-});
 
 app.get("/api/debug/routes", async (_req, res) => {
   try {
