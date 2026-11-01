@@ -1,14 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
 
-/**
- * Halaman "Perangkat Kiro" — kendali online untuk device Kiro di komputer.
- * Menampilkan daftar perangkat yang menjalankan Max Router Kiro Bridge,
- * plus tombol: Buka Kiro, Tutup Kiro, Start/Stop MITM, Buka URL.
- */
+type DeviceResult = {
+  commandId?: string;
+  type: string;
+  ok: boolean;
+  error?: string;
+  data?: { port?: number };
+};
+
+type KiroDevice = {
+  id: string;
+  name?: string;
+  platform?: string;
+  bridgeVersion?: string;
+  online: boolean;
+  kiroRunning: boolean;
+  mitmActive: boolean;
+  mitmPort?: number;
+  lastSeenAt?: number | null;
+  results?: DeviceResult[];
+};
+
+type StatusBadgeProps = {
+  ok: boolean;
+  labelOk: string;
+  labelOff: string;
+  pulse?: boolean;
+};
+
+type CommandType = "launch-kiro" | "close-kiro" | "start-mitm" | "stop-mitm" | "open-url";
 
 const REFRESH_MS = 5000;
 
-function StatusBadge({ ok, labelOk, labelOff, pulse = false }) {
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function StatusBadge({ ok, labelOk, labelOff, pulse = false }: StatusBadgeProps) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
@@ -21,7 +49,7 @@ function StatusBadge({ ok, labelOk, labelOff, pulse = false }) {
   );
 }
 
-function formatLastSeen(ts) {
+function formatLastSeen(ts?: number | null): string {
   if (!ts) return "belum pernah";
   const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
   if (diff < 60) return `${diff} dtk lalu`;
@@ -30,31 +58,31 @@ function formatLastSeen(ts) {
 }
 
 export default function KiroDevicesPage() {
-  const [devices, setDevices] = useState(null);
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState({}); // deviceId -> commandType
-  const [urlDraft, setUrlDraft] = useState({}); // deviceId -> url
+  const [devices, setDevices] = useState<KiroDevice[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Record<string, CommandType | null>>({});
+  const [urlDraft, setUrlDraft] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/kiro-devices", { credentials: "same-origin", cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setDevices(data.devices || []);
+      const data = (await res.json()) as { devices?: KiroDevice[] };
+      setDevices(Array.isArray(data.devices) ? data.devices : []);
       setError(null);
-    } catch (err) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     }
   }, []);
 
   useEffect(() => {
-    load();
-    const timer = setInterval(load, REFRESH_MS);
+    void load();
+    const timer = setInterval(() => void load(), REFRESH_MS);
     return () => clearInterval(timer);
   }, [load]);
 
-  const sendCommand = useCallback(async (device, type, payload = {}) => {
-    setBusy((b) => ({ ...b, [device.id]: type }));
+  const sendCommand = useCallback(async (device: KiroDevice, type: CommandType, payload: Record<string, string> = {}) => {
+    setBusy((current) => ({ ...current, [device.id]: type }));
     try {
       const res = await fetch(`/api/kiro-devices/${encodeURIComponent(device.id)}/commands`, {
         method: "POST",
@@ -62,17 +90,16 @@ export default function KiroDevicesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, payload }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         alert(data.error || `Gagal mengirim perintah (${res.status})`);
         return;
       }
-      // Tampilkan hasil setelah bridge sempat memproses.
-      setTimeout(load, REFRESH_MS + 1500);
-    } catch (err) {
-      alert(`Gagal mengirim perintah: ${err.message}`);
+      window.setTimeout(() => void load(), REFRESH_MS + 1500);
+    } catch (err: unknown) {
+      alert(`Gagal mengirim perintah: ${errorMessage(err)}`);
     } finally {
-      setBusy((b) => ({ ...b, [device.id]: null }));
+      setBusy((current) => ({ ...current, [device.id]: null }));
     }
   }, [load]);
 
@@ -85,12 +112,11 @@ export default function KiroDevicesPage() {
             Kendalikan Kiro di komputer kamu langsung dari dashboard online.
           </p>
         </div>
-        <button type="button" onClick={load} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-main hover:bg-surface-2">
+        <button type="button" onClick={() => void load()} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-main hover:bg-surface-2">
           Muat Ulang
         </button>
       </div>
 
-      {/* Kartu setup bridge */}
       <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-text-main mb-2">Hubungkan komputer kamu (satu kali saja)</h2>
         <ol className="list-decimal list-inside space-y-1.5 text-sm text-text-muted">
@@ -136,28 +162,13 @@ export default function KiroDevicesPage() {
             <p className="text-xs text-text-muted">Terakhir terlihat: {formatLastSeen(device.lastSeenAt)}</p>
 
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!device.online || busy[device.id]}
-                onClick={() => sendCommand(device, "launch-kiro")}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40"
-              >
+              <button type="button" disabled={!device.online || Boolean(busy[device.id])} onClick={() => void sendCommand(device, "launch-kiro")} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40">
                 {busy[device.id] === "launch-kiro" ? "Mengirim…" : "Buka Kiro"}
               </button>
-              <button
-                type="button"
-                disabled={!device.online || busy[device.id]}
-                onClick={() => sendCommand(device, "close-kiro")}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-main hover:bg-surface-2 disabled:opacity-40"
-              >
+              <button type="button" disabled={!device.online || Boolean(busy[device.id])} onClick={() => void sendCommand(device, "close-kiro")} className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-main hover:bg-surface-2 disabled:opacity-40">
                 Tutup Kiro
               </button>
-              <button
-                type="button"
-                disabled={!device.online || busy[device.id]}
-                onClick={() => sendCommand(device, device.mitmActive ? "stop-mitm" : "start-mitm")}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-main hover:bg-surface-2 disabled:opacity-40"
-              >
+              <button type="button" disabled={!device.online || Boolean(busy[device.id])} onClick={() => void sendCommand(device, device.mitmActive ? "stop-mitm" : "start-mitm")} className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-main hover:bg-surface-2 disabled:opacity-40">
                 {busy[device.id] === "start-mitm" || busy[device.id] === "stop-mitm" ? "…" : device.mitmActive ? "Stop MITM" : "Start MITM"}
               </button>
             </div>
@@ -167,13 +178,13 @@ export default function KiroDevicesPage() {
                 type="url"
                 placeholder="https://… (buka di komputer)"
                 value={urlDraft[device.id] || ""}
-                onChange={(e) => setUrlDraft((u) => ({ ...u, [device.id]: e.target.value }))}
+                onChange={(event) => setUrlDraft((current) => ({ ...current, [device.id]: event.target.value }))}
                 className="min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 py-1.5 text-sm text-text-main placeholder:text-text-muted/60"
               />
               <button
                 type="button"
-                disabled={!device.online || busy[device.id] || !(urlDraft[device.id] || "").trim()}
-                onClick={() => sendCommand(device, "open-url", { url: (urlDraft[device.id] || "").trim() })}
+                disabled={!device.online || Boolean(busy[device.id]) || !(urlDraft[device.id] || "").trim()}
+                onClick={() => void sendCommand(device, "open-url", { url: (urlDraft[device.id] || "").trim() })}
                 className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-main hover:bg-surface-2 disabled:opacity-40"
               >
                 Buka
@@ -184,12 +195,12 @@ export default function KiroDevicesPage() {
               <div className="rounded-lg border border-border-subtle bg-bg/50 p-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">Riwayat perintah</p>
                 <ul className="space-y-1 text-xs">
-                  {device.results.slice(0, 5).map((r, i) => (
-                    <li key={r.commandId || i} className="flex items-center gap-2">
-                      <span className={r.ok ? "text-green-500" : "text-red-500"}>{r.ok ? "✓" : "✗"}</span>
-                      <span className="text-text-main">{r.type}</span>
-                      {!r.ok && r.error && <span className="text-text-muted truncate">— {r.error}</span>}
-                      {r.ok && r.type === "start-mitm" && r.data?.port && <span className="text-text-muted">port {r.data.port}</span>}
+                  {device.results.slice(0, 5).map((result, index) => (
+                    <li key={result.commandId || index} className="flex items-center gap-2">
+                      <span className={result.ok ? "text-green-500" : "text-red-500"}>{result.ok ? "✓" : "✗"}</span>
+                      <span className="text-text-main">{result.type}</span>
+                      {!result.ok && result.error && <span className="text-text-muted truncate">— {result.error}</span>}
+                      {result.ok && result.type === "start-mitm" && result.data?.port && <span className="text-text-muted">port {result.data.port}</span>}
                     </li>
                   ))}
                 </ul>
