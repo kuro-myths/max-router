@@ -23,6 +23,8 @@ const Profile         = lazy(() => import("./pages/profile/page"));
 const ConsoleLog      = lazy(() => import("./pages/console-log/page"));
 const WeavyPool       = lazy(() => import("./pages/providers/weavy/pool/page"));
 const AmmailTutorial  = lazy(() => import("./pages/automation/ammail-tutorial/page"));
+const KiroDevices     = lazy(() => import("./pages/kiro-devices/page"));
+const McpManager     = lazy(() => import("./pages/mcp/page"));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -135,6 +137,8 @@ export default function App() {
               <Route path="automation/ammail-tutorial" element={<AmmailTutorial />} />
               <Route path="chat" element={<CompatibleChat />} />
               <Route path="model-detection" element={<ModelDetection />} />
+              <Route path="kiro-devices" element={<KiroDevices />} />
+              <Route path="mcp" element={<McpManager />} />
               <Route path="profile" element={<Profile />} />
               <Route path="console-log" element={<ConsoleLog />} />
             </Route>

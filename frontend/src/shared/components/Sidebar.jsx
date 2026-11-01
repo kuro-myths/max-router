@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe } from "lucide-react";
+import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Boxes } from "lucide-react";
 import PropTypes from "prop-types";
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -13,7 +12,7 @@ import { ConfirmModal } from "./Modal";
 const NAV_ICONS = {
   home: Home, api: Activity, dns: Server, manage_search: Search,
   layers: Layers, bar_chart: BarChart3, tune: SlidersHorizontal,
-  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe,
+  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, extension: Boxes,
 };
 function NavIcon({ name, active = false }) {
   const Icon = NAV_ICONS[name] || Activity;
@@ -31,6 +30,8 @@ const navItems = [
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
   { href: "/dashboard/max-browser", label: "Browser", icon: "browser" },
+  { href: "/dashboard/kiro-devices", label: "Perangkat Kiro", icon: "lan" },
+  { href: "/dashboard/mcp", label: "MCP Manager", icon: "extension" },
   { href: "/dashboard/usage", label: "Penggunaan", icon: "bar_chart" },
   { href: "/dashboard/parameters", label: "Parameter", icon: "tune" },
 ];
@@ -101,7 +102,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
 
   return (
     <>
-      <aside className={cn("mr-comic-sidebar flex shrink-0 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl min-h-full overflow-hidden transition-[width] duration-300 ease-in-out will-change-[width]", collapsed ? "mr-comic-sidebar-collapsed w-[64px]" : "w-[232px]")}>
+      <aside className={cn("mr-comic-sidebar flex shrink-0 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl min-h-full overflow-hidden transition-[width] duration-300 ease-out will-change-[width]", collapsed ? "mr-comic-sidebar-collapsed w-[64px]" : "w-[232px]")}>
         {/* Sidebar controls */}
         <div className={cn("flex items-center pt-4 pb-2", collapsed ? "flex-col gap-3 px-3" : "justify-between px-5")}>
           <div className="flex items-center gap-2" aria-label="Status Max Router">

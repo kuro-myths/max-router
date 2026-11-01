@@ -1,14 +1,25 @@
-# Deploy Dashboard ke Vercel
+# Deploy Max Router ke Vercel (Full-Stack, tanpa VPS)
 
-Frontend (Vite + React) di-hosting di Vercel; API diteruskan (proxy) ke backend Max Router di Railway.
+Dashboard **dan** API berjalan bersama di Vercel: frontend statis (Vite + React)
+plus API serverless (`api/[...path].js` → `backend/dist/vercel.js`).
 
 ## Setup
 1. Buka https://vercel.com/new lalu import repo ini (`kuro-myths/max-router`), branch `master`.
-2. Di **Root Directory** isi: `frontend` (Vercel otomatis mendeteksi Vite; build `npm run build`, output `dist`).
-3. Sebelum deploy: ganti `https://GANTI-DENGAN-URL-RAILWAY.up.railway.app` di `vercel.json` dengan domain publik backend Railway kamu.
-4. Klik **Deploy**.
+2. Klik **Deploy** (build: `npm run build`, output: `frontend/dist`, function: `api/[...path].js`).
+3. Di **Settings → Environment Variables**, isi minimal:
+   - `SUPABASE_DATABASE_URL` — connection string PostgreSQL Supabase
+     (Vercel Functions punya filesystem read-only, jadi database eksternal wajib).
+   Opsional: `FRONTEND_ORIGIN` / `PUBLIC_BASE_URL` (default `https://max-router.vercel.app`), `CORS_ORIGINS`, `JSON_BODY_LIMIT`.
 
-## Catatan
-- `vercel.json` meneruskan `/api/*`, `/v1/*`, `/v1beta/*`, `/ws/*` ke backend, dan fallback SPA ke `index.html`.
-- Backend, database, dan otomasi browser TIDAK jalan di Vercel - tetap di Railway/VPS/Docker sesuai README utama.
-- Cookie login dashboard tetap berfungsi karena frontend dan API tampak same-origin lewat proxy ini.
+## Yang berjalan di Vercel
+- Dashboard lengkap (login, provider, model, combos, usage, Perangkat Kiro, dll).
+- API gateway `/v1/*`, `/v1beta/*`, `/api/*` (serverless, `maxDuration` 60 dtk).
+- Kiro Device Bridge control: `/api/kiro-devices` (lihat `docs/KIRO-DEVICE.md`).
+
+## Yang TIDAK berjalan di Vercel
+- Listener/proxy MITM lokal (butuh proses permanen + akses OS komputer) —
+  gunakan `scripts/kiro-device-bridge.mjs` di PC kamu, dikendalikan dari dashboard.
+- Otomasi browser headless lama — tetap perlu Railway/VPS/Docker bila dipakai.
+
+## Cookie login
+Frontend dan API same-origin lewat rewrite `/api/*` → function, jadi cookie `9r_session` berfungsi normal.
