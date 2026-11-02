@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowUpRight, Check, ChevronDown, Cloud, Code2, Database, ExternalLink,
-  Github, Globe, Mail, MessageSquare, Puzzle, Search, Settings2, ShieldCheck, Sparkles,
+  Globe, Mail, MessageSquare, Puzzle, Search, Settings2, ShieldCheck, Sparkles,
   X, Zap,
 } from "lucide-react";
 
@@ -9,7 +9,7 @@ const CATALOG = [
   { id: "gmail", name: "Gmail", category: "Produktivitas", description: "Akses pesan, pencarian email, dan penyusunan draft.", detail: "OAuth Google diperlukan. Aplikasi harus memiliki OAuth Client ID dan izin Gmail API.", auth: "Google OAuth 2.0", scopes: "gmail.readonly, gmail.compose", icon: Mail, color: "text-red-500", popular: true },
   { id: "google-drive", name: "Google Drive", category: "Produktivitas", description: "Cari, baca, dan kelola dokumen di Drive.", detail: "OAuth Google diperlukan. Aktifkan Google Drive API pada Google Cloud Project.", auth: "Google OAuth 2.0", scopes: "drive.readonly", icon: Cloud, color: "text-emerald-500", popular: true },
   { id: "google-calendar", name: "Google Calendar", category: "Produktivitas", description: "Baca kalender dan kelola jadwal.", detail: "OAuth Google diperlukan. Aktifkan Google Calendar API dan atur redirect URI.", auth: "Google OAuth 2.0", scopes: "calendar.events", icon: Activity, color: "text-blue-500", popular: true },
-  { id: "github", name: "GitHub", category: "Developer", description: "Repositori, issue, pull request, dan commit.", detail: "Gunakan GitHub App atau OAuth App. Simpan client secret hanya di backend.", auth: "GitHub OAuth / App", scopes: "repo, read:user", icon: Github, color: "text-text-main", popular: true },
+  { id: "github", name: "GitHub", category: "Developer", description: "Repositori, issue, pull request, dan commit.", detail: "Gunakan GitHub App atau OAuth App. Simpan client secret hanya di backend.", auth: "GitHub OAuth / App", scopes: "repo, read:user", icon: Code2, color: "text-text-main", popular: true },
   { id: "slack", name: "Slack", category: "Produktivitas", description: "Pesan tim, channel, dan notifikasi.", detail: "Buat Slack App dan konfigurasi OAuth V2 serta bot scopes.", auth: "Slack OAuth V2", scopes: "channels:read, chat:write", icon: MessageSquare, color: "text-fuchsia-500" },
   { id: "notion", name: "Notion", category: "Produktivitas", description: "Cari dan kelola halaman serta database Notion.", detail: "Buat integrasi Notion dan berikan akses ke halaman yang diperlukan.", auth: "Notion OAuth", scopes: "read content, update content" , icon: Puzzle, color: "text-text-main" },
   { id: "supabase", name: "Supabase", category: "Developer", description: "Database, Auth, Storage, dan Edge Functions.", detail: "Hubungkan project URL dan service role key melalui backend secret. Jangan gunakan service role key di browser.", auth: "Project URL + server secret", scopes: "database, auth, storage", icon: Database, color: "text-emerald-500" },
