@@ -12,7 +12,7 @@ function baseUrl(req) {
 }
 
 function clearGoogleCookies(res) {
-  const options = { httpOnly: true, secure: process.env.NODE_ENV === "production" || shouldUseSecureCookie, sameSite: "lax", path: "/api/auth/google" };
+  const options = { httpOnly: true, secure: shouldUseSecureCookie(req), sameSite: "lax", path: "/api/auth/google" };
   for (const name of ["google_oauth_state", "google_oauth_nonce", "google_oauth_verifier"]) {
     res.clearCookie(name, options);
   }
