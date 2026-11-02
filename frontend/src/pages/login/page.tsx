@@ -47,7 +47,7 @@ export default function LoginPage() {
           setPasswordConfigured(data.passwordConfigured !== false);
           setAuthMode(data.authMode || "password");
           setOidcConfigured(data.oidcConfigured === true);
-          setOidcLoginLabel(data.oidcLoginLabel || "Masuk dengan OIDC");
+          setOidcLoginLabel(data.oidcLoginLabel || "Masuk dengan Google");
         } else {
           setHasPassword(true);
         }
@@ -98,7 +98,7 @@ export default function LoginPage() {
   };
 
   const handleOidcLogin = () => {
-    window.location.href = "/api/auth/oidc/start";
+    window.location.href = "/api/auth/google/start";
   };
 
   const oidcAvailable = oidcConfigured && ["oidc", "both"].includes(authMode);
