@@ -30,6 +30,10 @@ export async function POST_handler(req, res) {
 
     const { password } = req.body;
     const settings = await getSettings();
+    const googleLoginEnforced = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && String(process.env.GOOGLE_ALLOWED_EMAILS || "").trim());
+    if (googleLoginEnforced) {
+      return res.status(403).json({ error: "Password login is disabled. Use Google Sign-In." });
+    }
 
     // Block login via tunnel/tailscale if dashboard access is disabled
     if (isTunnelRequest(req, settings) && settings.tunnelDashboardAccess !== true) {
