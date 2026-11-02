@@ -25,6 +25,8 @@ const PUBLIC_API_PATHS = [
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/status",
+  "/api/auth/google/start",
+  "/api/auth/google/callback",
   "/api/version",
   "/api/settings/require-login",
   "/api/automation/ammail/webhook",
@@ -59,7 +61,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   try {
     const settings = await getSettings();
-    const requireLogin = process.env.DISABLE_DASHBOARD_AUTH !== "true" && settings?.requireLogin !== false;
+    const googleLoginEnforced = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && String(process.env.GOOGLE_ALLOWED_EMAILS || "").trim());
+    const requireLogin = googleLoginEnforced || (process.env.DISABLE_DASHBOARD_AUTH !== "true" && settings?.requireLogin !== false);
 
     const token = req.cookies?.["9r_session"];
     if (token) {
