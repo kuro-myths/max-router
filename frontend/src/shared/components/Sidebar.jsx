@@ -27,7 +27,10 @@ function NavIcon({ name, active = false }) {
 const navItems = [
   { href: "/dashboard", label: "Beranda", icon: "home" },
   { href: "/dashboard/endpoint", label: "Endpoint", icon: "api" },
-  { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },\n  { href: "/dashboard/connectors", label: "Connectors", icon: "puzzle" },\n  { href: "/dashboard/chat", label: "Chat", icon: "chat" },\n  { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
+  { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
+  { href: "/dashboard/connectors", label: "Connectors", icon: "puzzle" },
+  { href: "/dashboard/chat", label: "Chat", icon: "chat" },
+  { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
   { href: "/dashboard/max-browser", label: "Browser", icon: "browser" },
