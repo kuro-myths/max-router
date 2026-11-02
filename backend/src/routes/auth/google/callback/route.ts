@@ -11,7 +11,7 @@ function baseUrl(req) {
   return `${req.protocol}://${req.get("host")}`;
 }
 
-function clearGoogleCookies(res) {
+function clearGoogleCookies(res, req) {
   const options = { httpOnly: true, secure: shouldUseSecureCookie(req), sameSite: "lax", path: "/api/auth/google" };
   for (const name of ["google_oauth_state", "google_oauth_nonce", "google_oauth_verifier"]) {
     res.clearCookie(name, options);
@@ -21,7 +21,7 @@ function clearGoogleCookies(res) {
 export async function GET_handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   const fail = (reason) => {
-    clearGoogleCookies(res);
+    clearGoogleCookies(res, req);
     return res.redirect(`/login?error=${encodeURIComponent(reason)}`);
   };
   try {
