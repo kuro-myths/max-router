@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe } from "lucide-react";
+import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare } from "lucide-react";
 import PropTypes from "prop-types";
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -13,7 +13,7 @@ import { ConfirmModal } from "./Modal";
 const NAV_ICONS = {
   home: Home, api: Activity, dns: Server, manage_search: Search,
   layers: Layers, bar_chart: BarChart3, tune: SlidersHorizontal,
-  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe,
+  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare,
 };
 function NavIcon({ name, active = false }) {
   const Icon = NAV_ICONS[name] || Activity;
@@ -27,7 +27,7 @@ function NavIcon({ name, active = false }) {
 const navItems = [
   { href: "/dashboard", label: "Beranda", icon: "home" },
   { href: "/dashboard/endpoint", label: "Endpoint", icon: "api" },
-  { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
+  { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },\n  { href: "/dashboard/connectors", label: "Connectors", icon: "puzzle" },\n  { href: "/dashboard/chat", label: "Chat", icon: "chat" },\n  { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
   { href: "/dashboard/max-browser", label: "Browser", icon: "browser" },
