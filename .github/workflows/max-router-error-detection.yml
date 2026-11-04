@@ -86,7 +86,10 @@ jobs:
           const source = files.map(f => fs.readFileSync(f, 'utf8')).join('\n');
 
           const diagnosticsRoute = fs.readFileSync('src/routes/diagnostics/route.ts', 'utf8');
-          if (!/export async function GET_handler\\s*\\(/.test(diagnosticsRoute) || !/res\\.json\\(/.test(diagnosticsRoute)) {
+          if (
+            !diagnosticsRoute.includes('export async function GET_handler') ||
+            !diagnosticsRoute.includes('res.json(')
+          ) {
             throw new Error('Audit gagal: diagnostics route handler tidak valid');
           }
           console.log('OK: Diagnostics route handler');
