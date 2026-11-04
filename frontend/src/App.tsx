@@ -18,6 +18,8 @@ const MaxBrowser      = lazy(() => import("./pages/max-browser/page"));
 const Endpoint        = lazy(() => import("./pages/endpoint/page"));
 const Automation      = lazy(() => import("./pages/automation/page"));
 const CompatibleChat  = lazy(() => import("./pages/compatible-chat/page"));
+const VoiceAI         = lazy(() => import("./pages/voice-ai/page"));
+const VtuberStudio    = lazy(() => import("./pages/vtuber-studio/page"));
 const ModelDetection  = lazy(() => import("./pages/model-detection/page"));
 const Parameters      = lazy(() => import("./pages/parameters/page"));
 const Profile         = lazy(() => import("./pages/profile/page"));
@@ -92,7 +94,7 @@ class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { 
   }
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    if (this.state.hasError) return this.props.children;
     return (
       <div className="min-h-screen bg-bg text-text-main flex items-center justify-center p-6">
         <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl">
@@ -136,6 +138,8 @@ export default function App() {
               <Route path="automation" element={<Automation />} />
               <Route path="automation/ammail-tutorial" element={<AmmailTutorial />} />
               <Route path="chat" element={<CompatibleChat />} />
+              <Route path="voice-ai" element={<VoiceAI />} />
+              <Route path="vtuber-studio" element={<VtuberStudio />} />
               <Route path="model-detection" element={<ModelDetection />} />
               <Route path="profile" element={<Profile />} />
               <Route path="console-log" element={<ConsoleLog />} />

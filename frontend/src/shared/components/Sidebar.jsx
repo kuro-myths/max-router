@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare } from "lucide-react";
+import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare, Mic, PersonStanding } from "lucide-react";
 import PropTypes from "prop-types";
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -13,7 +12,7 @@ import { ConfirmModal } from "./Modal";
 const NAV_ICONS = {
   home: Home, api: Activity, dns: Server, manage_search: Search,
   layers: Layers, bar_chart: BarChart3, tune: SlidersHorizontal,
-  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare,
+  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare, mic: Mic, vtuber: PersonStanding,
 };
 function NavIcon({ name, active = false }) {
   const Icon = NAV_ICONS[name] || Activity;
@@ -30,6 +29,8 @@ const navItems = [
   { href: "/dashboard/providers", label: "Penyedia", icon: "dns" },
   { href: "/dashboard/connectors", label: "Connectors", icon: "puzzle" },
   { href: "/dashboard/chat", label: "Chat", icon: "chat" },
+  { href: "/dashboard/voice-ai", label: "Voice AI", icon: "mic" },
+  { href: "/dashboard/vtuber-studio", label: "VTuber Studio", icon: "vtuber" },
   { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
@@ -243,7 +244,7 @@ export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }
         onClose={() => setShowUpdateModal(false)}
         onConfirm={handleUpdate}
         title="Perbarui 9Router V3"
-        message={`Tampilkan perintah instalasi untuk v${updateInfo?.latestVersion || ""}? Perintah dapat disalin, lalu server akan dimatikan untuk instalasi manual.`}
+        message={"Tampilkan perintah instalasi untuk v" + (updateInfo?.latestVersion || "") + "? Perintah dapat disalin, lalu server akan dimatikan untuk instalasi manual."}
         confirmText="Tampilkan Perintah"
         cancelText="Batal"
         variant="primary"
@@ -295,12 +296,12 @@ function ManualUpdatePanel({ latestVersion, installCmd, copied, onCopyAndShutdow
           <Copy size={24} aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold">Perbarui 9Router V3{latestVersion ? ` ke v${latestVersion}` : ""}</h2>
+          <h2 className="text-lg font-semibold">Perbarui 9Router V3{latestVersion ? " ke v" + latestVersion : ""}</h2>
           <p className="text-xs text-white/60">
             {isDisconnected
               ? "Server berhenti. Tempel perintah ke terminal untuk memasang."
               : isCountingDown
-                ? `Perintah tersalin. Server akan berhenti dalam ${countdown} detik...`
+                ? "Perintah tersalin. Server akan berhenti dalam " + countdown + " detik..."
                 : "Klik tombol di bawah untuk menyalin perintah pemasangan dan mematikan server."}
           </p>
         </div>
@@ -312,7 +313,7 @@ function ManualUpdatePanel({ latestVersion, installCmd, copied, onCopyAndShutdow
       </div>
 
       <ol className="text-xs text-white/70 space-y-1 list-decimal list-inside mb-4">
-        <li>Klik <strong>Salin & Matikan</strong> di bawah.</li>
+        <li>Klik <strong>Salin &amp; Matikan</strong> di bawah.</li>
         <li>Tempel perintah ke terminal lalu tekan Enter.</li>
         <li>Jalankan <code className="px-1 rounded bg-white/10 text-green-400">9router</code> lagi setelah pemasangan.</li>
       </ol>
@@ -327,7 +328,7 @@ function ManualUpdatePanel({ latestVersion, installCmd, copied, onCopyAndShutdow
             Batal
           </Button>
           <Button variant="primary" fullWidth onClick={onCopyAndShutdown} disabled={isCountingDown}>
-            {copied ? "✓ Tersalin — mematikan..." : isCountingDown ? `Mematikan dalam ${countdown} detik` : "Salin & Matikan"}
+            {copied ? "✓ Tersalin — mematikan..." : isCountingDown ? "Mematikan dalam " + countdown + " detik" : "Salin & Matikan"}
           </Button>
         </div>
       )}
