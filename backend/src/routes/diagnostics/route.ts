@@ -26,39 +26,134 @@ function walk(dir, test, out = []) {
 async function scanRemoteGithub() {
   const repo = process.env.GITHUB_REPOSITORY || "kuro-myths/max-router";
   const result = [];
+  const token = String(process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "").trim();
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "Max-Router-Diagnostics",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  if (token) headers.Authorization = "Bearer " + token;
+
+  const rateLimitFinding = (response) => {
+    const retryAfter = response.headers.get("retry-after");
+    const reset = Number(response.headers.get("x-ratelimit-reset"));
+    const resetAt = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000).toISOString() : "";
+    const detail = [
+      "GitHub API mengembalikan HTTP " + response.status,
+      response.headers.get("x-ratelimit-remaining") !== null
+        ? "remaining=" + response.headers.get("x-ratelimit-remaining")
+        : "",
+      retryAfter ? "retry-after=" + retryAfter + "s" : "",
+      resetAt ? "reset=" + resetAt : "",
+      token ? "authenticated request" : "anonymous request",
+    ].filter(Boolean).join(" · ");
+    return issue(
+      "GITHUB-RATE-LIMIT",
+      "GitHub Actions",
+      "warning",
+      "Batas permintaan GitHub API tercapai",
+      detail,
+      repo,
+      token
+        ? "Tunggu hingga reset dan periksa scope token; pemindaian lokal tetap tersedia."
+        : "Tambahkan GITHUB_TOKEN sebagai environment secret server-side dengan izin read-only Contents dan Actions, atau tunggu reset rate limit."
+    );
+  };
+
   try {
-    const headers = { Accept: "application/vnd.github+json", "User-Agent": "Max-Router-Diagnostics" };
-    const listRes = await fetch("https://api.github.com/repos/" + repo + "/contents/.github/workflows", { headers });
-    if (!listRes.ok) return [issue("YML-REMOTE", "YML / CI", "warning", "Workflow GitHub tidak dapat dibaca", "GitHub API mengembalikan HTTP " + listRes.status, repo, "Periksa nama repository atau GitHub API rate limit.")];
-    const files = (await listRes.json()).filter(x => /\.(yml|yaml)$/i.test(x.name));
+    const apiTimeout = AbortSignal.timeout(8000);
+    const listRes = await fetch(
+      "https://api.github.com/repos/" + repo + "/contents/.github/workflows",
+      { headers, signal: apiTimeout }
+    );
+    if (listRes.status === 403 || listRes.status === 429) return [rateLimitFinding(listRes)];
+    if (!listRes.ok) {
+      return [issue(
+        "YML-REMOTE",
+        "YML / CI",
+        "warning",
+        "Workflow GitHub tidak dapat dibaca",
+        "GitHub API mengembalikan HTTP " + listRes.status,
+        repo,
+        "Periksa nama repository dan izin read-only GitHub token."
+      )];
+    }
+
+    const files = (await listRes.json()).filter(x => /\\.(yml|yaml)$/i.test(x.name));
     for (const file of files) {
-      const raw = await fetch(file.download_url, { headers: { "User-Agent": "Max-Router-Diagnostics" } });
+      // Do not forward a GitHub bearer token to a raw-content host.
+      const raw = await fetch(file.download_url, {
+        headers: { "User-Agent": "Max-Router-Diagnostics" },
+        signal: AbortSignal.timeout(8000),
+      });
       if (!raw.ok) {
-        result.push(issue("YML-REMOTE-404", "YML / CI", "error", "Workflow gagal dibaca", file.path, "HTTP " + raw.status, "Periksa file workflow di GitHub."));
+        if (raw.status === 403 || raw.status === 429) {
+          result.push(issue(
+            "YML-REMOTE-RATE-LIMIT",
+            "YML / CI",
+            "warning",
+            "Batas permintaan raw GitHub tercapai",
+            file.path + " · HTTP " + raw.status,
+            repo,
+            "Tunggu reset rate limit; file workflow lokal tetap diperiksa."
+          ));
+          break;
+        }
+        result.push(issue("YML-REMOTE-404", "YML / CI", "warning", "Workflow gagal dibaca", file.path, "HTTP " + raw.status, "Periksa file workflow di GitHub."));
         continue;
       }
       const source = await raw.text();
-      const lines = source.split(/\r?\n/);
+      const lines = source.split(/\\r?\\n/);
       lines.forEach((line, index) => {
-        if (/\t/.test(line)) result.push(issue("YML-REMOTE-001", "YML / CI", "error", "Tab ditemukan dalam YAML", file.path, "Baris " + (index + 1), "Ganti tab dengan spasi."));
-        if (/\$\{\{[^}]*$/.test(line)) result.push(issue("YML-REMOTE-002", "YML / CI", "error", "Expression GitHub Actions tidak tertutup", file.path, "Baris " + (index + 1), "Periksa expression GitHub Actions."));
+        if (/\\t/.test(line)) result.push(issue("YML-REMOTE-001", "YML / CI", "error", "Tab ditemukan dalam YAML", file.path, "Baris " + (index + 1), "Ganti tab dengan spasi."));
+        if (/\\$\\{\\{[^}]*$/.test(line)) result.push(issue("YML-REMOTE-002", "YML / CI", "error", "Expression GitHub Actions tidak tertutup", file.path, "Baris " + (index + 1), "Periksa expression GitHub Actions."));
       });
     }
 
-    const runsRes = await fetch("https://api.github.com/repos/" + repo + "/actions/runs?per_page=10", { headers });
+    const runsRes = await fetch(
+      "https://api.github.com/repos/" + repo + "/actions/runs?per_page=10",
+      { headers, signal: AbortSignal.timeout(8000) }
+    );
+    if (runsRes.status === 403 || runsRes.status === 429) {
+      result.push(rateLimitFinding(runsRes));
+      return result;
+    }
     if (runsRes.ok) {
       const runs = await runsRes.json();
       for (const run of runs.workflow_runs || []) {
         if (["failure", "cancelled", "timed_out", "action_required"].includes(run.conclusion)) {
-          result.push(issue("CI-RUN-" + run.id, "GitHub Actions", "error",
+          result.push(issue(
+            "CI-RUN-" + run.id,
+            "GitHub Actions",
+            "error",
             "Workflow gagal: " + run.name,
             "Conclusion: " + run.conclusion + " · " + (run.head_branch || "unknown"),
-            run.html_url || "", "Buka workflow run dan periksa job/log yang gagal."));
+            run.html_url || "",
+            "Buka workflow run dan periksa job/log yang gagal."
+          ));
         }
       }
+    } else {
+      result.push(issue(
+        "CI-RUNS-REMOTE",
+        "GitHub Actions",
+        "warning",
+        "Status workflow tidak dapat dibaca",
+        "GitHub API mengembalikan HTTP " + runsRes.status,
+        repo,
+        "Periksa izin token dan rate limit; hasil pemindaian lokal tetap tersedia."
+      ));
     }
   } catch (error) {
-    result.push(issue("YML-REMOTE-500", "YML / CI", "warning", "Pemeriksaan GitHub gagal", error?.message || String(error), repo, "Periksa koneksi GitHub API."));
+    result.push(issue(
+      "YML-REMOTE-500",
+      "YML / CI",
+      "warning",
+      "Pemeriksaan GitHub gagal",
+      error?.message || String(error),
+      repo,
+      "Periksa koneksi GitHub API; diagnostics tetap menjalankan pemeriksaan lokal."
+    ));
   }
   return result;
 }

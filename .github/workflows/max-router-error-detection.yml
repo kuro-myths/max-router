@@ -85,8 +85,13 @@ jobs:
 
           const source = files.map(f => fs.readFileSync(f, 'utf8')).join('\n');
 
+          const diagnosticsRoute = fs.readFileSync('src/routes/diagnostics/route.ts', 'utf8');
+          if (!/export async function GET_handler\\s*\\(/.test(diagnosticsRoute) || !/res\\.json\\(/.test(diagnosticsRoute)) {
+            throw new Error('Audit gagal: diagnostics route handler tidak valid');
+          }
+          console.log('OK: Diagnostics route handler');
+
           const checks = [
-            ['Diagnostics endpoint', '/api/diagnostics'],
             ['Health endpoint', '/api/health'],
             ['Provider API', '/api/providers'],
             ['PostgreSQL support', 'createPostgresAdapter'],
