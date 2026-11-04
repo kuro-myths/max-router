@@ -227,6 +227,8 @@ jobs:
           NODE_ENV: test
           PORT: 20222
           ALLOW_EPHEMERAL_SQLITE: 'true'
+          INITIAL_PASSWORD: 'ci-test-password-not-production'
+          JWT_SECRET: 'ci-only-secret-not-production'
         run: |
           timeout 30s npm start > /tmp/max-router-start.log 2>&1 &
           PID=$!
@@ -243,10 +245,31 @@ jobs:
           console.log('HEALTH:', healthText);
           if (!health.ok) throw new Error('Health endpoint gagal: HTTP ' + health.status);
 
-          const diagnostics = await fetch('http://127.0.0.1:20222/api/diagnostics');
+          const diagnosticsUrl = 'http://127.0.0.1:20222/api/diagnostics';
+          const anonymousDiagnostics = await fetch(diagnosticsUrl);
+          if (anonymousDiagnostics.status !== 401) {
+            throw new Error('Diagnostics harus menolak request tanpa sesi; HTTP ' + anonymousDiagnostics.status);
+          }
+          console.log('DIAGNOSTICS unauthenticated: HTTP 401 (expected)');
+
+          const login = await fetch('http://127.0.0.1:20222/api/auth/login', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({password: 'ci-test-password-not-production'})
+          });
+          if (!login.ok) throw new Error('Login diagnostics smoke test gagal: HTTP ' + login.status);
+
+          const setCookie = login.headers.get('set-cookie') || '';
+          const sessionToken = setCookie.match(/9r_session=([^;]+)/)?.[1];
+          if (!sessionToken) throw new Error('Cookie sesi tidak diterbitkan untuk diagnostics smoke test');
+
+          const diagnostics = await fetch(diagnosticsUrl, {
+            headers: {cookie: '9r_session=' + sessionToken}
+          });
           const diagnosticsText = await diagnostics.text();
-          console.log('DIAGNOSTICS:', diagnosticsText);
-          if (!diagnostics.ok) throw new Error('Diagnostics endpoint gagal: HTTP ' + diagnostics.status);
+          console.log('DIAGNOSTICS authenticated HTTP:', diagnostics.status);
+          console.log('DIAGNOSTICS response:', diagnosticsText.slice(0, 1200));
+          if (!diagnostics.ok) throw new Error('Diagnostics endpoint gagal setelah login: HTTP ' + diagnostics.status);
           NODE
 
           cat /tmp/max-router-start.log
