@@ -1,11 +1,14 @@
 import { Activity, Bot, Layers, MessageSquare, Search, Server, BarChart3, SlidersHorizontal, Network, Settings, ArrowUpRight, Zap, X, Filter, CircleAlert, CircleDollarSign, CheckCircle2, RefreshCw, KeyRound, Boxes, Wrench, FileText, Globe } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import VtuberAvatar from "@/shared/components/vtuber/VtuberAvatar";
 
 const shortcuts = [
   { title: "Penyedia AI", description: "Tambah dan kelola koneksi penyedia model AI.", href: "/dashboard/providers", icon: Server, tone: "cyan" },
   { title: "Endpoint API", description: "Lihat alamat API untuk menghubungkan aplikasi.", href: "/dashboard/endpoint", icon: Activity, tone: "coral" },
-  { title: "Obrolan Kompatibel", description: "Buka antarmuka obrolan yang kompatibel dengan API.", href: "/dashboard/compatible-chat", icon: MessageSquare, tone: "pink" },
+  { title: "Obrolan AI", description: "Mulai chat, kelola percakapan, dan lanjutkan riwayat lokal.", href: "/dashboard/chat", icon: MessageSquare, tone: "pink" },
+  { title: "Voice AI", description: "Percakapan suara, mikrofon, transkripsi, dan text-to-speech.", href: "/dashboard/voice-ai", icon: Bot, tone: "lavender" },
+  { title: "VTuber Studio", description: "Pilih karakter, ekspresi, dan pengaturan rigging avatar.", href: "/dashboard/vtuber-studio", icon: Sparkles, tone: "purple" },
   { title: "Deteksi Model", description: "Periksa model yang tersedia dari penyedia.", href: "/dashboard/model-detection", icon: Search, tone: "yellow" },
   { title: "Gabungan Model", description: "Atur urutan model dan strategi cadangan.", href: "/dashboard/combos", icon: Layers, tone: "purple" },
   { title: "Penggunaan", description: "Pantau statistik penggunaan dan permintaan API.", href: "/dashboard/usage", icon: BarChart3, tone: "green" },
@@ -207,6 +210,39 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <section className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(260px,.75fr)]">
+        <div className="relative overflow-hidden rounded-2xl border-2 border-[#332746] bg-[#f2eaff] p-4 shadow-[3px_3px_0_rgba(51,39,70,.12)] sm:p-5">
+          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-[#d7c1ff]/60" />
+          <div className="relative flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <span className="inline-flex rounded-full border border-[#bca4df] bg-white/80 px-2.5 py-1 text-[10px] font-black tracking-wide text-[#62458b]">AI WORKSPACE · 9ROUTER V3</span>
+              <h2 className="mt-2 text-lg font-black text-[#302344] sm:text-xl">Satu ruang untuk semua model AI.</h2>
+              <p className="mt-1 max-w-lg text-xs leading-relaxed text-[#6e5c80]">Hubungkan provider, pilih model, lanjutkan percakapan, lalu gunakan suara dan karakter virtual dari satu dashboard.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link to="/dashboard/chat" className="rounded-lg border-2 border-[#332746] bg-[#ffb0d0] px-3 py-2 text-xs font-extrabold text-[#302344] shadow-[2px_2px_0_#332746]">Mulai Chat AI</Link>
+                <Link to="/dashboard/voice-ai" className="rounded-lg border border-[#bca4df] bg-white px-3 py-2 text-xs font-bold text-[#554261]">Buka Voice AI</Link>
+              </div>
+            </div>
+            <div className="hidden shrink-0 sm:block">
+              <VtuberAvatar emotion="happy" palette={{bg:"#35224f",hair:"#ff79b0",hair2:"#f45b9c",skin:"#ffe9da",eye:"#4c1d95",accent:"#ffd6e8",outfit:"#7c3aed",line:"#292343",mouth:"#7f1d3a"}} size={150}/>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[["01","Provider"],["02","Model Router"],["03","Chat / Voice"],["04","Usage & Log"]].map(([n,label]) => <div key={n} className="rounded-lg border border-[#d6c6e8] bg-white/75 px-2.5 py-2"><span className="block text-[10px] font-black text-[#a15d91]">{n}</span><span className="mt-0.5 block text-[11px] font-bold text-[#493656]">{label}</span></div>)}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border-2 border-[#332746] bg-[#e7f7f2] p-4 shadow-[3px_3px_0_rgba(51,39,70,.12)]">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-black tracking-wide text-[#24745c]">VTUBER ASSISTANT</span>
+            <h3 className="mt-1 text-base font-black text-[#302344]">Mika siap membantu!</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[#547166]">Avatar 2D procedural aktif. VRM/GLB rigging 3D masih belum terpasang.</p>
+            <Link to="/dashboard/vtuber-studio" className="mt-3 inline-flex items-center gap-1 text-xs font-extrabold text-[#246c57] underline underline-offset-4">Buka VTuber Studio <ArrowUpRight size={13}/></Link>
+          </div>
+          <div className="shrink-0 sm:hidden"><VtuberAvatar emotion="happy" size={82}/></div>
+          <div className="hidden shrink-0 sm:block"><span className="rounded-xl border border-[#a6d9c8] bg-white/80 p-2"><VtuberAvatar emotion="happy" size={92}/></span></div>
+        </div>
+      </section>
+
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div><h2 className="text-lg font-extrabold text-[#302344]">Ringkasan Layanan</h2><p className="text-xs text-[#766780]">Klik kartu untuk mencari dan memfilter detail.</p></div>
@@ -273,7 +309,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-extrabold text-[#302344]">Akses Cepat</h2>
             <p className="text-xs text-[#766780]">Pilih menu untuk membuka fitur.</p>
           </div>
-          <span className="rounded-full bg-[#e8ddff] px-3 py-1 text-[11px] font-bold text-[#6947a6]">10 fitur</span>
+          <span className="rounded-full bg-[#e8ddff] px-3 py-1 text-[11px] font-bold text-[#6947a6]">{shortcuts.length} fitur</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {shortcuts.map((item) => {
