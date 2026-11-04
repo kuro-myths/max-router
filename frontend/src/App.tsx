@@ -94,17 +94,19 @@ class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { 
   }
 
   render() {
-    if (this.state.hasError) return this.props.children;
-    return (
-      <div className="min-h-screen bg-bg text-text-main flex items-center justify-center p-6">
-        <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl">
-          <h1 className="text-xl font-semibold mb-2">Tampilan mengalami kesalahan</h1>
-          <p className="text-sm text-text-muted mb-4">Halaman gagal dirender. Data aplikasi tetap aman. Muat ulang untuk mencoba lagi.</p>
-          <pre className="mb-4 max-h-32 overflow-auto rounded-lg bg-black/10 p-3 text-xs text-text-muted whitespace-pre-wrap">{this.state.message}</pre>
-          <button type="button" onClick={() => globalThis.location.reload()} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">Muat Ulang</button>
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-bg text-text-main flex items-center justify-center p-6">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl">
+            <h1 className="text-xl font-semibold mb-2">Tampilan mengalami kesalahan</h1>
+            <p className="text-sm text-text-muted mb-4">Halaman gagal dirender. Data aplikasi tetap aman. Muat ulang untuk mencoba lagi.</p>
+            <pre className="mb-4 max-h-32 overflow-auto rounded-lg bg-black/10 p-3 text-xs text-text-muted whitespace-pre-wrap">{this.state.message}</pre>
+            <button type="button" onClick={() => globalThis.location.reload()} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">Muat Ulang</button>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    return this.props.children;
   }
 }
 
