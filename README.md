@@ -289,3 +289,22 @@ Menu CLI:
 CLI meminta API key saat diperlukan dan hanya menyimpannya di memori selama sesi terminal. Buat atau salin API key dari pengaturan Max Router; kata sandi login dashboard belum tentu merupakan API key. Jangan membagikan API key ke orang lain. Jika model tidak muncul atau mendapat HTTP 401/403, periksa API key dan izin yang dikonfigurasi di Max Router.
 
 Klien ini berjalan dari CMD/PowerShell sebagai terminal lokal, tetapi semua permintaan AI dikirim ke layanan online Railway. Koneksi internet dan layanan Railway harus aktif.
+
+
+## OmniRoute AgentBridge (MITM lokal)
+
+Max Router dapat dipasangkan dengan **OmniRoute AgentBridge** sebagai proxy MITM lokal untuk aplikasi coding AI yang didukung. AgentBridge bukan bagian dari proses Vercel: ia harus berjalan pada komputer pengguna karena memerlukan akses lokal ke trust store sertifikat, DNS/hosts, dan port jaringan.
+
+- Panduan integrasi: [docs/OMNIROUTE-AGENTBRIDGE.md](./docs/OMNIROUTE-AGENTBRIDGE.md)
+- Installer Windows: [integrations/omniroute/install-windows.ps1](./integrations/omniroute/install-windows.ps1)
+- Upstream resmi: [cheaper-inference/OmniRoute](https://github.com/cheaper-inference/OmniRoute)
+- Dokumentasi AgentBridge: [AgentBridge setup](https://omniroute.hagicode.com/en-US/frameworks/agentbridge/)
+
+Instalasi cepat dari root repository (PowerShell):
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File .\integrations\omniroute\install-windows.ps1
+omniroute
+```
+
+Setelah dashboard lokal terbuka di `http://localhost:20128`, buka **Tools → AgentBridge**, jalankan wizard, lalu aktifkan hanya aplikasi yang memang ingin diarahkan. Jangan pernah commit CA private key, sertifikat lokal, token OAuth, atau file data OmniRoute ke repository.
