@@ -57,17 +57,42 @@ export default function VtuberAvatar({
             : "translateY(0) scale(1)",
         }}
       />
-      {blink && (
-        <svg
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path d="M31 31 Q40 35 48 31" fill="none" stroke="#352f45" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M52 31 Q60 35 69 31" fill="none" stroke="#352f45" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      )}
+
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {blink && (
+          <g fill="none" stroke="#352f45" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M31 31 Q40 35 48 31" />
+            <path d="M52 31 Q60 35 69 31" />
+          </g>
+        )}
+
+        {speaking && (
+          <g>
+            {/* Tutup garis mulut netral, lalu buka mengikuti level audio dari TTS. */}
+            <ellipse cx="50" cy="45.5" rx="3.1" ry="1.65" fill="#ffe0db" />
+            <ellipse
+              cx="50"
+              cy="45.5"
+              rx={1.75 + level * 0.65}
+              ry={0.65 + level * 1.25}
+              fill="#553344"
+            />
+            <ellipse
+              cx="50"
+              cy={45.5 + 0.35 + level * 0.25}
+              rx={0.85 + level * 0.25}
+              ry={0.25 + level * 0.25}
+              fill="#d98b9b"
+            />
+          </g>
+        )}
+      </svg>
+
       {speaking && (
         <span className="absolute right-[7%] top-[7%] rounded-full border border-white/80 bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-sm">
           LIVE
