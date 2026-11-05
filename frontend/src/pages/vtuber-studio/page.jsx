@@ -18,9 +18,9 @@ const TABS = [
 
 const ADAPTERS = [
   {
-    name: "Prosedural 2D (bawaan)",
+    name: "PSD Sprite 2D (karakter Kuro)",
     status: "AKTIF",
-    detail: "Avatar SVG komik dengan 8 ekspresi, kedipan otomatis, dan lip-sync berbasis level audio. Berjalan tanpa dependensi 3D.",
+    detail: "Karakter PNG/WebP transparan hasil impor PSD. Mendukung kedipan ringan, gerak idle, dan indikator bicara; tidak memerlukan runtime 3D.",
   },
   {
     name: "VRM (@pixiv/three-vrm)",
@@ -33,9 +33,9 @@ const ADAPTERS = [
     detail: "Model 3D dengan skeleton dan animasi. Direncanakan sebagai GlbAdapter terpisah agar tidak saling bergantung dengan VRM.",
   },
   {
-    name: "Live2D (Cubism SDK)",
-    status: "OPSIONAL",
-    detail: "Karakter anime 2D. Membutuhkan lisensi dan SDK terpisah, sehingga tidak diaktifkan secara bawaan.",
+    name: "Live2D Cubism (rig penuh)",
+    status: "BELUM TERPASANG",
+    detail: "PSD sudah dipakai sebagai sprite karakter. Rig Live2D sebenarnya masih memerlukan proses rigging di Cubism Editor, file model3.json/.moc3, tekstur, dan SDK berlisensi.",
   },
   {
     name: "Face Tracking (MediaPipe Tasks Vision)",
@@ -94,7 +94,7 @@ export default function VtuberStudioPage() {
           VTuber Studio
         </h1>
         <p className="text-xs text-text-muted">
-          Kelola karakter virtual Max Router: pilih karakter, uji ekspresi, dan pantau rencana adapter rigging.
+          Kelola karakter Kuro dari PSD: pratinjau karakter, uji gerak bicara, dan lihat status rigging yang benar-benar tersedia.
         </p>
       </div>
 
