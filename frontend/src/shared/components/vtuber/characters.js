@@ -10,44 +10,18 @@ export const EMOTIONS = [
 ];
 
 const MIKA_PALETTE = { bg: "#35224f", hair: "#ff79b0", hair2: "#f45b9c", skin: "#ffe9da", eye: "#4c1d95", accent: "#ffd6e8", outfit: "#7c3aed", line: "#292343", mouth: "#7f1d3a" };
-const KURO_PALETTE = { bg: "#1e1533", hair: "#7c3aed", hair2: "#a855f7", skin: "#ffe9da", eye: "#22d3ee", accent: "#c4b5fd", outfit: "#ff79b0", line: "#292343", mouth: "#7f1d3a" };
-const HANA_PALETTE = { bg: "#0e2a3a", hair: "#22d3ee", hair2: "#38bdf8", skin: "#ffe9da", eye: "#7c3aed", accent: "#a5f3fc", outfit: "#0ea5e9", line: "#292343", mouth: "#7f1d3a" };
 
 export const CHARACTERS = [
   {
     id: "mika",
-    name: "Mika",
+    name: "Kuro — Mahasiswa Magang",
     type: "builtin",
     format: "builtin",
     palette: MIKA_PALETTE,
     license: "Bundled - Max Router",
-    attribution: "Karakter procedural Max Router",
+    attribution: "Aset PSD karakter yang diunggah pemilik Max Router",
     allowedUse: ["use", "modify", "redistribute"],
-    description: "Asisten utama Max Router. Karakter procedural komik VTuber dengan lip-sync audio.",
-    expressions: EMOTIONS.map((e) => e.id),
-  },
-  {
-    id: "kuro",
-    name: "Kuro",
-    type: "builtin",
-    format: "builtin",
-    palette: KURO_PALETTE,
-    license: "Bundled - Max Router",
-    attribution: "Karakter procedural Max Router",
-    allowedUse: ["use", "modify", "redistribute"],
-    description: "Karakter bertema ungu gelap untuk mode malam dan sesi serius.",
-    expressions: EMOTIONS.map((e) => e.id),
-  },
-  {
-    id: "hana",
-    name: "Hana",
-    type: "builtin",
-    format: "builtin",
-    palette: HANA_PALETTE,
-    license: "Bundled - Max Router",
-    attribution: "Karakter procedural Max Router",
-    allowedUse: ["use", "modify", "redistribute"],
-    description: "Karakter bertema cyan untuk sesi kreatif dan brainstorming.",
+    description: "Karakter VTuber 2D kustom bergaya mahasiswa magang dengan jaket biru, mata berkedip, dan animasi bicara ringan.",
     expressions: EMOTIONS.map((e) => e.id),
   },
   {
