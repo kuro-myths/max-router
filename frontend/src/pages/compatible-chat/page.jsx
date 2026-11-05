@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, Bot, MessageSquare, Plus, RefreshCw, Send, Trash2, Download, Clock3 } from "lucide-react";
+import VtuberAvatar from "@/shared/components/vtuber/VtuberAvatar";
 
 const STORAGE_KEY = "max-router.chat.conversations.v1";
 const makeId = () => globalThis.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -181,13 +182,13 @@ export default function CompatibleChatPage() {
         {notice && <div role="status" className="border-b border-[#ead7a6] bg-[#fff8df] px-4 py-2 text-xs text-[#806021]">{notice}</div>}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
           {!messages.length && <div className="flex h-full min-h-[220px] items-center justify-center text-center">
-            <div className="max-w-md"><div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-[#3b2c4b] bg-[#ffe0ef] text-[#8d4673]"><Bot size={27}/></div><h2 className="text-lg font-black text-[#302344]">{modelsLoading ? "Menghubungkan model..." : "Mulai percakapan baru"}</h2><p className="mt-1 text-sm text-[#82748d]">{modelsError || "Pilih model, ketik pesan, dan percakapan akan tersimpan otomatis di browser."}</p><button type="button" onClick={startConversation} className="mt-4 inline-flex items-center gap-2 rounded-lg border-2 border-[#332746] bg-[#ffb0d0] px-4 py-2 text-xs font-bold text-[#302344] shadow-[2px_2px_0_#332746]"><Plus size={14}/>Chat baru</button></div>
+            <div className="max-w-md"><div className="mx-auto mb-2 flex h-40 w-36 items-center justify-center overflow-hidden"><VtuberAvatar size={144} emotion="happy"/></div><h2 className="text-lg font-black text-[#302344]">{modelsLoading ? "Menghubungkan model..." : "Mulai percakapan baru"}</h2><p className="mt-1 text-sm text-[#82748d]">{modelsError || "Pilih model, ketik pesan, dan percakapan akan tersimpan otomatis di browser."}</p><button type="button" onClick={startConversation} className="mt-4 inline-flex items-center gap-2 rounded-lg border-2 border-[#332746] bg-[#ffb0d0] px-4 py-2 text-xs font-bold text-[#302344] shadow-[2px_2px_0_#332746]"><Plus size={14}/>Chat baru</button></div>
           </div>}
           {messages.map((message, index) => <div key={`${message.createdAt || index}-${index}`} className={message.role === "user" ? "ml-auto max-w-[88%] rounded-2xl border-2 border-[#3b2c4b] bg-[#ffb0d0] px-4 py-3 text-sm text-[#302344] shadow-[2px_2px_0_rgba(51,39,70,.12)]" : message.role === "error" ? "max-w-[90%] rounded-2xl border border-[#e8a39a] bg-[#fff0ed] px-4 py-3 text-sm text-[#9b3d32]" : "max-w-[90%] rounded-2xl border border-[#e0d4e7] bg-[#f4effb] px-4 py-3 text-sm text-[#302344]"}>
-            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase opacity-60">{message.role === "user" ? "Anda" : message.role === "assistant" ? "Max Router AI" : "Kesalahan"}{message.createdAt && <span className="font-normal normal-case">{formatDate(message.createdAt)}</span>}</div>
+            <div className="mb-1 flex items-center gap-2 text-[10px] font-black uppercase opacity-60">{message.role === "assistant" && <VtuberAvatar size={30} emotion="neutral"/>}<span>{message.role === "user" ? "Anda" : message.role === "assistant" ? "Max Router AI" : "Kesalahan"}</span>{message.createdAt && <span className="font-normal normal-case">{formatDate(message.createdAt)}</span>}</div>
             <div className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</div>
           </div>)}
-          {busy && <div className="flex items-center gap-2 text-xs text-[#82748d]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#ff79b0]"/>AI sedang menyusun jawaban...</div>}
+          {busy && <div className="flex items-center gap-2 text-xs text-[#82748d]"><VtuberAvatar size={34} emotion="thinking"/><span className="h-2 w-2 animate-pulse rounded-full bg-[#ff79b0]"/>Kuro sedang menyusun jawaban...</div>}
         </div>
         <form onSubmit={sendMessage} className="border-t border-[#e5d8e8] bg-[#fff9fc] p-3 sm:p-4">
           <div className="flex items-end gap-2 rounded-xl border-2 border-[#cbbbd6] bg-white p-2 focus-within:border-[#9b78b8]">
