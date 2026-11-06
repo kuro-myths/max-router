@@ -4,6 +4,7 @@ import { buildModelsList } from "../route.js";
 const KIND_SLUG_MAP = {
   "image": ["image"],
   "video": ["video"],
+  "video": ["video"],
   "tts": ["tts"],
   "stt": ["stt"],
   "embedding": ["embedding"],
@@ -23,7 +24,7 @@ export async function OPTIONS() {
 
 /**
  * GET /v1/models/{kind} - OpenAI-compatible models list filtered by capability.
- * Supported kinds: image, tts, stt, embedding, image-to-text, web.
+ * Supported kinds: image, video, tts, stt, embedding, image-to-text, web.
  */
 export async function GET(_request, { params }) {
   try {
