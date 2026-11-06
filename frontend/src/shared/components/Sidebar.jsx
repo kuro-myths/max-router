@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare, Mic, PersonStanding } from "lucide-react";
+import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare, Mic, PersonStanding, Clapperboard } from "lucide-react";
 import PropTypes from "prop-types";
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -12,7 +12,7 @@ import { ConfirmModal } from "./Modal";
 const NAV_ICONS = {
   home: Home, api: Activity, dns: Server, manage_search: Search,
   layers: Layers, bar_chart: BarChart3, tune: SlidersHorizontal,
-  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare, mic: Mic, vtuber: PersonStanding,
+  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare, mic: Mic, vtuber: PersonStanding, comic: Clapperboard,
 };
 function NavIcon({ name, active = false }) {
   const Icon = NAV_ICONS[name] || Activity;
@@ -31,6 +31,7 @@ const navItems = [
   { href: "/dashboard/chat", label: "Chat", icon: "chat" },
   { href: "/dashboard/voice-ai", label: "Voice AI", icon: "mic" },
   { href: "/dashboard/vtuber-studio", label: "VTuber Studio", icon: "vtuber" },
+  { href: "/dashboard/comic-studio", label: "Comic Studio", icon: "comic" },
   { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
   { href: "/dashboard/model-detection", label: "Deteksi Model", icon: "manage_search" },
   { href: "/dashboard/combos", label: "Gabungan", icon: "layers" },
