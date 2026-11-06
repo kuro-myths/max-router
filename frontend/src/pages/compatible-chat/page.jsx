@@ -33,6 +33,7 @@ function formatDate(value) {
 
 export default function CompatibleChatPage() {
   const [conversations, setConversations] = useState(readConversations);
+  const [serverReady, setServerReady] = useState(false);
   const [activeId, setActiveId] = useState(() => readConversations()[0]?.id || "");
   const [models, setModels] = useState([]);
   const [serviceModels, setServiceModels] = useState([]);
@@ -50,9 +51,58 @@ export default function CompatibleChatPage() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); }
-    catch { setNotice("Penyimpanan browser penuh atau dinonaktifkan. Ekspor percakapan agar tidak hilang."); }
-  }, [conversations]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/chat/conversations", { credentials: "include", cache: "no-store", headers: { Accept: "application/json" } });
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : {};
+        if (!response.ok) throw new Error(data?.error || "Gagal mengambil riwayat dari database.");
+        const remote = Array.isArray(data.data) ? data.data : [];
+        const legacy = readConversations();
+        if (cancelled) return;
+        if (remote.length) {
+          setConversations(remote);
+          setActiveId(remote[0]?.id || "");
+          setMessages(remote[0]?.messages || []);
+          setNotice("Riwayat percakapan berhasil disinkronkan dari database.");
+        } else if (legacy.length) {
+          setConversations(legacy);
+          setActiveId(legacy[0]?.id || "");
+          setMessages(legacy[0]?.messages || []);
+          const migrated = await fetch("/api/chat/conversations", {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ conversations: legacy }),
+          });
+          if (!migrated.ok) throw new Error("Riwayat lama ditemukan, tetapi migrasi ke database gagal.");
+          setNotice("Riwayat browser lama berhasil dipindahkan ke database.");
+        }
+      } catch (error) {
+        if (!cancelled) setNotice((error instanceof Error ? error.message : "Sinkronisasi riwayat gagal.") + " Riwayat lokal tetap dipertahankan.");
+      } finally {
+        if (!cancelled) setServerReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!serverReady) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+    fetch("/api/chat/conversations", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ conversations }),
+    }).then(async (response) => {
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || "Database menolak penyimpanan percakapan.");
+      }
+    }).catch((error) => {
+      setNotice(error instanceof Error ? error.message : "Gagal menyimpan ke database. Salinan lokal tetap tersedia.");
+    });
+  }, [conversations, serverReady]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -250,7 +300,7 @@ export default function CompatibleChatPage() {
     <div className="grid h-[calc(100vh-8rem)] min-h-[560px] grid-cols-1 gap-3 overflow-hidden lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border-2 border-[#3b2c4b] bg-[#302344] text-white">
         <div className="flex items-center justify-between gap-2 border-b border-white/15 p-3">
-          <div><p className="text-sm font-black">Percakapan</p><p className="text-[10px] text-white/60">{conversations.length} tersimpan di browser</p></div>
+          <div><p className="text-sm font-black">Percakapan</p><p className="text-[10px] text-white/60">{conversations.length} tersimpan · {serverReady ? "database tersambung" : "menyinkronkan..."}</p></div>
           <button type="button" onClick={startConversation} disabled={busy} aria-label="Percakapan baru" className="rounded-lg border border-white/20 bg-[#ff9fc9] p-2 text-[#302344] hover:bg-[#ffc1dc] disabled:opacity-40"><Plus size={17}/></button>
         </div>
         <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
@@ -265,7 +315,7 @@ export default function CompatibleChatPage() {
             </div>
           ))}
         </div>
-        <div className="border-t border-white/15 p-3 text-[10px] leading-relaxed text-white/55">Riwayat disimpan lokal pada browser ini, bukan disinkronkan ke server.</div>
+        <div className="border-t border-white/15 p-3 text-[10px] leading-relaxed text-white/55">Riwayat disinkronkan ke database Max Router dan dicadangkan di browser ini.</div>
       </aside>
 
       <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-[#3b2c4b] bg-[#fffdf8] shadow-[3px_3px_0_rgba(51,39,70,.10)]">
@@ -293,7 +343,7 @@ export default function CompatibleChatPage() {
         </div>}
         <div className={"min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5 " + (modelCategory === "layanan" ? "hidden" : "")}>
           {!messages.length && <div className="flex h-full min-h-[220px] items-center justify-center text-center">
-            <div className="max-w-md"><div className="mx-auto mb-2 flex h-40 w-36 items-center justify-center overflow-hidden"><VtuberAvatar size={144} emotion="happy"/></div><h2 className="text-lg font-black text-[#302344]">{modelsLoading ? "Menghubungkan model..." : "Mulai percakapan baru"}</h2><p className="mt-1 text-sm text-[#82748d]">{modelsError || "Pilih model, ketik pesan, dan percakapan akan tersimpan otomatis di browser."}</p><button type="button" onClick={startConversation} className="mt-4 inline-flex items-center gap-2 rounded-lg border-2 border-[#332746] bg-[#ffb0d0] px-4 py-2 text-xs font-bold text-[#302344] shadow-[2px_2px_0_#332746]"><Plus size={14}/>Chat baru</button></div>
+            <div className="max-w-md"><div className="mx-auto mb-2 flex h-40 w-36 items-center justify-center overflow-hidden"><VtuberAvatar size={144} emotion="happy"/></div><h2 className="text-lg font-black text-[#302344]">{modelsLoading ? "Menghubungkan model..." : "Mulai percakapan baru"}</h2><p className="mt-1 text-sm text-[#82748d]">{modelsError || "Pilih model, ketik pesan, dan percakapan akan tersimpan otomatis ke database."}</p><button type="button" onClick={startConversation} className="mt-4 inline-flex items-center gap-2 rounded-lg border-2 border-[#332746] bg-[#ffb0d0] px-4 py-2 text-xs font-bold text-[#302344] shadow-[2px_2px_0_#332746]"><Plus size={14}/>Chat baru</button></div>
           </div>}
           {messages.map((message, index) => <div key={`${message.createdAt || index}-${index}`} className={message.role === "user" ? "ml-auto max-w-[88%] rounded-2xl border-2 border-[#3b2c4b] bg-[#ffb0d0] px-4 py-3 text-sm text-[#302344] shadow-[2px_2px_0_rgba(51,39,70,.12)]" : message.role === "error" ? "max-w-[90%] rounded-2xl border border-[#e8a39a] bg-[#fff0ed] px-4 py-3 text-sm text-[#9b3d32]" : "max-w-[90%] rounded-2xl border border-[#e0d4e7] bg-[#f4effb] px-4 py-3 text-sm text-[#302344]"}>
             <div className="mb-1 flex items-center gap-2 text-[10px] font-black uppercase opacity-60">{message.role === "assistant" && <VtuberAvatar size={30} emotion="neutral"/>}<span>{message.role === "user" ? "Anda" : message.role === "assistant" ? "Max Router AI" : "Kesalahan"}</span>{message.createdAt && <span className="font-normal normal-case">{formatDate(message.createdAt)}</span>}</div>
