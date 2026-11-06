@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Plus, RefreshCw, Send, Trash2, Download, Clock3, Paperclip, FileText, ImagePlus, Github, X, Sparkles } from "lucide-react";
+import { Bot, Plus, RefreshCw, Send, Trash2, Download, Clock3, Paperclip, FileText, Github, X, Sparkles } from "lucide-react";
 import VtuberAvatar from "@/shared/components/vtuber/VtuberAvatar";
 
 
@@ -91,11 +91,12 @@ export default function CompatibleChatPage() {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
           reader.onerror = reject;
-          reader.readAsDataURL(file);
+          if (isImage) reader.readAsDataURL(file);
+          else reader.readAsText(file);
         });
         accepted.push(isImage
           ? { id: makeId(), name: file.name, type: file.type, size: file.size, dataUrl: data }
-          : { id: makeId(), name: file.name, type: file.type, size: file.size, text: atob(String(data).split(",")[1] || "") });
+          : { id: makeId(), name: file.name, type: file.type, size: file.size, text: String(data) });
       } catch { setNotice(`Gagal membaca ${file.name}.`); }
     }
     if (accepted.length) {
@@ -162,7 +163,7 @@ export default function CompatibleChatPage() {
       setConversations((current) => [item, ...current]);
       setActiveId(item.id);
     }
-    const next = [...messages, { role: "user", content: text, createdAt: new Date().toISOString() }];
+    const next = [...messages, { role: "user", content: text, attachments: attachments.map(({ id, name, type, size }) => ({ id, name, type, size })), createdAt: new Date().toISOString() }];
     const history = next.filter((message) => message.role === "user" || message.role === "assistant").map(({ role, content }) => ({ role, content }));
     const currentAttachments = attachments;
     const textFiles = currentAttachments.filter((item) => item.text).map((item) => `\\n\\n[Isi file: ${item.name}]\\n${item.text}`).join("");
