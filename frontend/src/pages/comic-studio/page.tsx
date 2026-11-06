@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDown, ArrowUp, Clapperboard, Download, Film, ImagePlus, LoaderCircle,
-  Play, Plus, Sparkles, Trash2, Upload, WandSparkles, X,
+  Play, Sparkles, Trash2, Upload, WandSparkles, X,
 } from "lucide-react";
 
 type Panel = {
@@ -286,7 +286,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   return <div className="rounded-xl border border-border bg-bg/70 p-3"><p className="text-[11px] text-text-muted">{label}</p><p className="mt-1 text-lg font-bold tabular-nums">{value}</p></div>;
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${active ? "bg-primary text-white" : "text-text-muted hover:bg-surface-2"}`}>{children}</button>;
 }
 
