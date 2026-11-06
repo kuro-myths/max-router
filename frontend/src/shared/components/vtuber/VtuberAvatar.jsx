@@ -1,5 +1,10 @@
 import { cn } from "@/shared/utils/cn";
 
+// PSD-derived raster exported from the uploaded character artwork.
+// Keep the data URI in the component so nested routes and Vercel base paths
+// cannot break the public asset URL.
+const KURO_AVATAR_SRC = "data:image/jpeg;base64,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";
+
 export default function VtuberAvatar({
   emotion = "neutral",
   speaking = false,
@@ -9,7 +14,6 @@ export default function VtuberAvatar({
 }) {
   const level = speaking ? Math.max(0, Math.min(1, Number(audioLevel) || 0)) : 0;
   const dimension = typeof size === "number" ? `${size}px` : size;
-  const mouthHeight = 2 + level * 5;
 
   return (
     <div
@@ -20,31 +24,22 @@ export default function VtuberAvatar({
       data-vtuber-emotion={emotion}
     >
       <img
-        src="/vtuber/kuro-avatar.svg"
-        alt=""
+        src={KURO_AVATAR_SRC}
+        alt="Kuro, karakter VTuber dari PSD"
         draggable={false}
         decoding="async"
         loading="eager"
         className="h-full w-full select-none object-contain transition-transform duration-200"
         style={{ transform: speaking ? `translateY(${level * 1.5}px) scale(${1 + level * 0.008})` : "none" }}
+        onError={(event) => {
+          event.currentTarget.alt = "Gambar karakter Kuro gagal dimuat";
+          event.currentTarget.dataset.imageError = "true";
+        }}
       />
       {speaking && (
-        <>
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 rounded-[50%] bg-[#572b3d] shadow-inner"
-            style={{
-              top: "43.5%",
-              width: `${4 + level * 2}%`,
-              height: `${mouthHeight}%`,
-              transform: "translateX(-50%)",
-              opacity: 0.92,
-            }}
-          />
-          <span className="absolute right-[7%] top-[7%] rounded-full border border-white/80 bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-sm">
-            LIVE
-          </span>
-        </>
+        <span className="absolute right-[7%] top-[7%] rounded-full border border-white/80 bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-sm">
+          LIVE
+        </span>
       )}
     </div>
   );
