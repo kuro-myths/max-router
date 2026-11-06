@@ -27,6 +27,7 @@ const PUBLIC_API_PATHS = [
   "/api/auth/status",
   "/api/auth/google/start",
   "/api/auth/google/callback",
+  "/api/connectors/github/oauth/callback",
   "/api/version",
   "/api/settings/require-login",
   "/api/automation/ammail/webhook",
