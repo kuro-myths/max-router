@@ -234,8 +234,8 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3 rounded-2xl border-2 border-[#332746] bg-[#e7f7f2] p-4 shadow-[3px_3px_0_rgba(51,39,70,.12)]">
           <div className="min-w-0 flex-1">
             <span className="text-[10px] font-black tracking-wide text-[#24745c]">VTUBER ASSISTANT</span>
-            <h3 className="mt-1 text-base font-black text-[#302344]">Mika siap membantu!</h3>
-            <p className="mt-1 text-xs leading-relaxed text-[#547166]">Avatar 2D procedural aktif. VRM/GLB rigging 3D masih belum terpasang.</p>
+            <h3 className="mt-1 text-base font-black text-[#302344]">Kuro siap membantu!</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[#547166]">Karakter Kuro dari PSD sudah aktif di dashboard, Chat, dan Voice AI. Animasi Live2D penuh masih memerlukan rigging Cubism.</p>
             <Link to="/dashboard/vtuber-studio" className="mt-3 inline-flex items-center gap-1 text-xs font-extrabold text-[#246c57] underline underline-offset-4">Buka VTuber Studio <ArrowUpRight size={13}/></Link>
           </div>
           <div className="shrink-0 sm:hidden"><VtuberAvatar emotion="happy" size={82}/></div>
