@@ -353,6 +353,7 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
   const [sortBy, setSortBy] = useState("priority");
   const [selectedIds, setSelectedIds] = useState([]);
   const [testingIds, setTestingIds] = useState([]);
+  const [testError, setTestError] = useState("");
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -402,22 +403,55 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
     }
   };
 
-  const handleTest = async (id) => {
+  // Jalankan satu uji koneksi dan kembalikan { ok, message }.
+  // Sebelumnya error HTTP (401/404/500) ditelan diam-diam sehingga tombol
+  // "Uji"/"Tes Semua" tampak tidak berfungsi di deployment serverless.
+  const runTest = async (id) => {
     setTestingIds((prev) => [...new Set([...prev, id])]);
     try {
-      await fetch(`/api/providers/${id}/test`, { method: "POST" });
+      const res = await fetch(`/api/providers/${id}/test`, { method: "POST" });
+      if (!res.ok) {
+        let data = null;
+        try { data = await res.json(); } catch { data = null; }
+        const serverMessage = data?.error?.message || data?.error || data?.reason || `HTTP ${res.status}`;
+        let message = `Uji koneksi gagal: ${serverMessage}`;
+        if (res.status === 401) {
+          message = "Sesi login berakhir (401). Muat ulang halaman lalu masuk kembali.";
+        } else if (res.status === 404) {
+          message = "Koneksi tidak ditemukan di server (404). Data kemungkinan hilang saat instance serverless dinginkan — tambahkan ulang koneksi, atau konfigurasikan database eksternal (SUPABASE_DATABASE_URL / DATABASE_URL / MYSQL_URL).";
+        }
+        return { ok: false, message };
+      }
       await fetch_();
+      return { ok: true, message: "" };
     } catch (error) {
       console.error("test connection error:", error);
+      return { ok: false, message: "Uji koneksi gagal: " + (error?.message || "kesalahan jaringan.") };
     } finally {
       setTestingIds((prev) => prev.filter((item) => item !== id));
     }
   };
 
+  const handleTest = async (id) => {
+    setTestError("");
+    const result = await runTest(id);
+    if (!result.ok) setTestError(result.message);
+  };
+
   const handleTestAll = async () => {
     if (testingIds.length || connections.length === 0) return;
+    setTestError("");
+    let failed = 0;
+    let lastMessage = "";
     for (const connection of connections) {
-      await handleTest(connection.id);
+      const result = await runTest(connection.id);
+      if (!result.ok) {
+        failed += 1;
+        lastMessage = result.message;
+      }
+    }
+    if (failed > 0) {
+      setTestError(`${failed} dari ${connections.length} koneksi gagal diuji. ${lastMessage}`);
     }
   };
 
@@ -597,6 +631,15 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
   return (
     <>
       <Card>
+        {testError && (
+          <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400">
+            <span className="material-symbols-outlined text-[16px]">error</span>
+            <span className="min-w-0 flex-1 break-words">{testError}</span>
+            <button type="button" onClick={() => setTestError("")} aria-label="Tutup pesan error" className="shrink-0 rounded p-0.5 hover:bg-red-500/10">
+              <span className="material-symbols-outlined text-[14px]">close</span>
+            </button>
+          </div>
+        )}
         <div className="mb-4 flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -741,3 +784,4 @@ ConnectionsCard.propTypes = {
   isOAuth: PropTypes.bool,
   providerName: PropTypes.string,
 };
+
