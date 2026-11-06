@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, Bot, MessageSquare, Plus, RefreshCw, Send, Trash2, Download, Clock3 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bot, Plus, RefreshCw, Send, Trash2, Download, Clock3, Paperclip, FileText, ImagePlus, Github, X, Sparkles } from "lucide-react";
 import VtuberAvatar from "@/shared/components/vtuber/VtuberAvatar";
 
 
@@ -42,7 +42,7 @@ export default function CompatibleChatPage() {
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState("");
   const [notice, setNotice] = useState("");
-  const [githubToolsEnabled, setGithubToolsEnabled] = useState(false);
+  const [githubToolsEnabled, setGithubToolsEnabled] = useState(false);\n  const [composerMenuOpen, setComposerMenuOpen] = useState(false);\n  const [attachments, setAttachments] = useState([]);\n  const fileInputRef = useRef(null);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); }
@@ -76,7 +76,39 @@ export default function CompatibleChatPage() {
 
   useEffect(() => { loadModels(); }, [loadModels]);
 
-  const canSend = useMemo(() => Boolean(input.trim() && model && !busy), [input, model, busy]);
+  const canSend = useMemo(() => Boolean((input.trim() || attachments.length) && model && !busy), [input, attachments, model, busy]);
+
+  async function addAttachments(fileList) {
+    const files = Array.from(fileList || []);
+    const accepted = [];
+    for (const file of files) {
+      if (file.size > 4 * 1024 * 1024) { setNotice(`${file.name}: ukuran maksimal 4 MB.`); continue; }
+      const isImage = file.type.startsWith("image/") && ["image/png","image/jpeg","image/webp","image/gif"].includes(file.type);
+      const isText = /^(text\/|application\/(json|xml|javascript))/.test(file.type) || /\.(txt|md|json|csv|log|xml|html|css|js|jsx|ts|tsx|py|sql|yml|yaml)$/i.test(file.name);
+      if (!isImage && !isText) { setNotice(`${file.name}: format belum didukung. Gunakan gambar atau file teks/kode.`); continue; }
+      try {
+        const data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        accepted.push(isImage
+          ? { id: makeId(), name: file.name, type: file.type, size: file.size, dataUrl: data }
+          : { id: makeId(), name: file.name, type: file.type, size: file.size, text: atob(String(data).split(",")[1] || "") });
+      } catch { setNotice(`Gagal membaca ${file.name}.`); }
+    }
+    if (accepted.length) {
+      setAttachments((current) => [...current, ...accepted].slice(0, 6));
+      setNotice(`${accepted.length} lampiran ditambahkan. Maksimal 6 file per pesan.`);
+    }
+    setComposerMenuOpen(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeAttachment(id) {
+    setAttachments((current) => current.filter((item) => item.id !== id));
+  }
   const activeConversation = conversations.find((item) => item.id === activeId);
 
   function startConversation() {
@@ -132,6 +164,12 @@ export default function CompatibleChatPage() {
     }
     const next = [...messages, { role: "user", content: text, createdAt: new Date().toISOString() }];
     const history = next.filter((message) => message.role === "user" || message.role === "assistant").map(({ role, content }) => ({ role, content }));
+    const currentAttachments = attachments;
+    const textFiles = currentAttachments.filter((item) => item.text).map((item) => `\\n\\n[Isi file: ${item.name}]\\n${item.text}`).join("");
+    const imageParts = currentAttachments.filter((item) => item.dataUrl).map((item) => ({ type: "image_url", image_url: { url: item.dataUrl } }));
+    const promptText = text + textFiles;
+    history[history.length - 1] = { role: "user", content: imageParts.length ? [{ type: "text", text: promptText }, ...imageParts] : promptText };
+    setAttachments([]);
     setMessages(next);
     setInput("");
     setBusy(true);
@@ -225,19 +263,24 @@ export default function CompatibleChatPage() {
           </div>}
           {messages.map((message, index) => <div key={`${message.createdAt || index}-${index}`} className={message.role === "user" ? "ml-auto max-w-[88%] rounded-2xl border-2 border-[#3b2c4b] bg-[#ffb0d0] px-4 py-3 text-sm text-[#302344] shadow-[2px_2px_0_rgba(51,39,70,.12)]" : message.role === "error" ? "max-w-[90%] rounded-2xl border border-[#e8a39a] bg-[#fff0ed] px-4 py-3 text-sm text-[#9b3d32]" : "max-w-[90%] rounded-2xl border border-[#e0d4e7] bg-[#f4effb] px-4 py-3 text-sm text-[#302344]"}>
             <div className="mb-1 flex items-center gap-2 text-[10px] font-black uppercase opacity-60">{message.role === "assistant" && <VtuberAvatar size={30} emotion="neutral"/>}<span>{message.role === "user" ? "Anda" : message.role === "assistant" ? "Max Router AI" : "Kesalahan"}</span>{message.createdAt && <span className="font-normal normal-case">{formatDate(message.createdAt)}</span>}</div>
-            <div className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</div>
+            <div className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</div>\n            {message.attachments?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{message.attachments.map((item) => <span key={item.id} className="inline-flex items-center gap-1 rounded-lg border border-[#cbbbd6] bg-white/70 px-2 py-1 text-[10px]"><FileText size={12}/>{item.name}</span>)}</div>}
           </div>)}
           {busy && <div className="flex items-center gap-2 text-xs text-[#82748d]"><VtuberAvatar size={34} emotion="thinking"/><span className="h-2 w-2 animate-pulse rounded-full bg-[#ff79b0]"/>Kuro sedang menyusun jawaban...</div>}
         </div>
         <form onSubmit={sendMessage} className="border-t border-[#e5d8e8] bg-[#fff9fc] p-3 sm:p-4">
-          <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#554261]">
-            <input type="checkbox" checked={githubToolsEnabled} onChange={(e) => setGithubToolsEnabled(e.target.checked)} disabled={busy}/>
-            <Bot size={14}/> Aktifkan GitHub AI Tools
-            <span className="font-normal text-[#93859b]">· Operasi tulis memerlukan persetujuan.</span>
-          </label>
-          <div className="flex items-end gap-2 rounded-xl border-2 border-[#cbbbd6] bg-white p-2 focus-within:border-[#9b78b8]">
+          <input ref={fileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.json,.csv,.log,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.sql,.yml,.yaml" className="hidden" onChange={(e) => addAttachments(e.target.files)}/>
+          {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-2">{attachments.map((item) => <span key={item.id} className="inline-flex max-w-full items-center gap-2 rounded-xl border border-[#d9c9e2] bg-white px-2.5 py-1.5 text-[11px] text-[#554261]"><span className="truncate">{item.name}</span><button type="button" onClick={() => removeAttachment(item.id)} aria-label={`Hapus lampiran ${item.name}`} className="rounded-full p-0.5 hover:bg-[#ffe3ef]"><X size={12}/></button></span>)}</div>}
+          <div className="relative flex items-end gap-2 rounded-2xl border-2 border-[#cbbbd6] bg-white p-2 shadow-[0_4px_18px_rgba(59,44,75,.06)] focus-within:border-[#9b78b8]">
+            <button type="button" onClick={() => setComposerMenuOpen((value) => !value)} disabled={busy} aria-label="Buka menu tambah" aria-expanded={composerMenuOpen} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-[#332746] transition-all ${composerMenuOpen ? "rotate-45 bg-[#302344] text-white" : "bg-[#ffb0d0] text-[#302344] shadow-[2px_2px_0_#332746] hover:-translate-y-0.5 hover:bg-[#ffc6df]"}`}><Plus size={21}/></button>
+            {composerMenuOpen && <div className="absolute bottom-[calc(100%+12px)] left-0 z-30 w-[min(340px,calc(100vw-36px))] overflow-hidden rounded-2xl border border-[#d8c7e1] bg-[#fffdf8] p-2 shadow-[0_16px_50px_rgba(42,29,59,.22)]">
+              <div className="flex items-center justify-between px-3 pb-2 pt-1"><div><p className="text-xs font-black text-[#302344]">Tambahkan ke percakapan</p><p className="text-[10px] text-[#8d7d98]">Lampiran, konteks, dan alat kerja</p></div><Sparkles size={17} className="text-[#e879aa]"/></div>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#fff0f7]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ffe2ef] text-[#a83d70]"><Paperclip size={17}/></span><span className="min-w-0"><b className="block text-xs text-[#302344]">Lampirkan file atau gambar</b><small className="text-[10px] text-[#8d7d98]">PNG, JPG, WebP, GIF, teks, kode · maks. 4 MB/file</small></span></button>
+              <button type="button" onClick={() => { setGithubToolsEnabled((value) => !value); setComposerMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#fff0f7]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#eee8f8] text-[#554261]"><Github size={18}/></span><span className="min-w-0 flex-1"><b className="block text-xs text-[#302344]">GitHub AI Tools</b><small className="text-[10px] text-[#8d7d98]">Baca repository, edit file, branch, dan PR</small></span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${githubToolsEnabled ? "bg-[#d9f5e7] text-[#18734a]" : "bg-[#eee8f8] text-[#766781]"}`}>{githubToolsEnabled ? "AKTIF" : "NONAKTIF"}</span></button>
+              <a href="/dashboard/connectors" onClick={() => setComposerMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#fff0f7]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f5ff] text-[#2672a6]"><Bot size={17}/></span><span><b className="block text-xs text-[#302344]">Kelola konektor</b><small className="text-[10px] text-[#8d7d98]">Hubungkan GitHub dan layanan lain</small></span></a>
+              <div className="mx-2 mt-1 border-t border-[#eee5f1] px-1 pt-2 text-[9px] text-[#9a8ca3]">Fitur yang belum tersedia tidak ditampilkan sebagai tombol aktif.</div>
+            </div>}
             <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder={model ? "Tulis pesan... (Enter untuk kirim, Shift+Enter untuk baris baru)" : "Pilih provider/model terlebih dahulu..."} className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-[#302344] outline-none placeholder:text-[#a397ac]" disabled={!model || busy || modelsLoading}/>
-            <button type="submit" disabled={!canSend} className="inline-flex items-center gap-2 rounded-lg border-2 border-[#332746] bg-[#ff9fc9] px-4 py-3 text-xs font-black text-[#302344] shadow-[2px_2px_0_#332746] disabled:opacity-40"><Send size={14}/>Kirim</button>
+            <button type="submit" disabled={!canSend} className="inline-flex items-center gap-2 rounded-xl border-2 border-[#332746] bg-[#ff9fc9] px-4 py-3 text-xs font-black text-[#302344] shadow-[2px_2px_0_#332746] transition hover:-translate-y-0.5 hover:bg-[#ffc1dc] disabled:opacity-40"><Send size={14}/>Kirim</button>
           </div>
           <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-[#93859b]"><span>Jangan masukkan password atau API key ke percakapan.</span><span>{messages.length} pesan</span></div>
         </form>
