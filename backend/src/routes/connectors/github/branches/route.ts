@@ -19,7 +19,8 @@ export async function POST_handler(req, res) {
     return res.status(400).json({ error: "owner, repo, dan nama branch tidak valid." });
   }
   try {
-    const base = await githubFetch(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(String(from || "HEAD"))}`);
+    const baseRef = String(from || "main").split("/").map(encodeURIComponent).join("/");
+    const base = await githubFetch(`/repos/${owner}/${repo}/git/ref/heads/${baseRef}`);
     const result = await githubFetch(`/repos/${owner}/${repo}/git/refs`, {
       method: "POST", body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: base.object.sha }),
     });
