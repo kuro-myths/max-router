@@ -2,9 +2,9 @@ name: CI — Build, Typecheck, and Security
 
 on:
   push:
-    branches: [master, main]
+    branches: [main]
   pull_request:
-    branches: [master, main]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Check imports (typecheck runs with noCheck)
+      - name: Check imports
         run: node scripts/check-imports.mjs
 
       - name: Unit tests
