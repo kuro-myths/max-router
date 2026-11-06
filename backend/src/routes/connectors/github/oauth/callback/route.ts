@@ -1,5 +1,5 @@
-import { getAdapter } from "../../../../../../lib/db/driver.js";
-import { saveGitHubConnection } from "../../../../../../lib/githubConnector.js";
+import { getAdapter } from "../../../../../lib/db/driver.js";
+import { saveGitHubConnection } from "../../../../../lib/githubConnector.js";
 
 export async function GET_handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
