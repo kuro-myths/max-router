@@ -7,7 +7,7 @@ const inferParameterCount = (model) => {
   const explicit = first(meta?.parameter_count, meta?.parameterCount, meta?.num_parameters, meta?.parameters_count, meta?.model_parameters, meta?.params_count);
   if (explicit !== undefined) return { value: explicit, source: "provider" };
   const id = String(model?.id || "");
-  const match = id.match(/(?:^|[-_./])([0-9]+(?:\\.[0-9]+)?)(b|bn|m|mn)(?:[-_./]|$)/i);
+  const match = id.match(/(?:^|[-_./])([0-9]+(?:\.[0-9]+)?)(b|bn|m|mn)(?:[-_./]|$)/i);
   if (match) return { value: Number(match[1]) * (/m/i.test(match[2]) ? 1e6 : 1e9), source: "name-estimate" };
   return { value: null, source: "unknown" };
 };
@@ -16,9 +16,9 @@ const inferCapabilities = (model) => {
   const raw = JSON.stringify(model || {}).toLowerCase();
   const caps = new Set(Array.isArray(model?.capabilities) ? model.capabilities : []);
   const has = (pattern) => pattern.test(raw) || pattern.test(id);
-  if (has(/vision|image[_ -]?input|multimodal|\\bvl\\b/)) caps.add("Vision");
+  if (has(/vision|image[_ -]?input|multimodal|\bvl\b/)) caps.add("Vision");
   if (has(/video|veo|sora|kling|seedance/)) caps.add("Video");
-  if (has(/audio|speech|\\bstt\\b|\\btts\\b/)) caps.add("Audio");
+  if (has(/audio|speech|\bstt\b|\btts\b/)) caps.add("Audio");
   if (has(/function|tool[_ -]?calling|tools/)) caps.add("Tool calling");
   if (has(/json[_ -]?mode|structured[_ -]?output/)) caps.add("Structured output");
   if (has(/stream/)) caps.add("Streaming");
