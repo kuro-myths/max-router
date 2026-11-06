@@ -36,6 +36,11 @@ export async function POST_handler(req, res) {
     if (!Array.isArray(raw)) return res.status(400).json({ error: "conversations harus berupa array." });
     if (raw.length > MAX_CONVERSATIONS) return res.status(413).json({ error: "Maksimal 100 percakapan." });
     const normalized = raw.map(normalizeConversation);
+    const incoming = new Set(normalized.map((item) => item.id));
+    const existing = await conversationsStore.getAll();
+    for (const id of Object.keys(existing)) {
+      if (!incoming.has(id)) await conversationsStore.remove(id);
+    }
     await conversationsStore.setMany(Object.fromEntries(normalized.map((item) => [item.id, item])));
     return res.json({ success: true, count: normalized.length });
   } catch (error) {
