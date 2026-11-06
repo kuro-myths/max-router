@@ -20,6 +20,7 @@ const Automation      = lazy(() => import("./pages/automation/page"));
 const CompatibleChat  = lazy(() => import("./pages/compatible-chat/page"));
 const VoiceAI         = lazy(() => import("./pages/voice-ai/page"));
 const VtuberStudio    = lazy(() => import("./pages/vtuber-studio/page"));
+const ComicStudio     = lazy(() => import("./pages/comic-studio/page"));
 const ModelDetection  = lazy(() => import("./pages/model-detection/page"));
 const Parameters      = lazy(() => import("./pages/parameters/page"));
 const Profile         = lazy(() => import("./pages/profile/page"));
@@ -142,6 +143,7 @@ export default function App() {
               <Route path="chat" element={<CompatibleChat />} />
               <Route path="voice-ai" element={<VoiceAI />} />
               <Route path="vtuber-studio" element={<VtuberStudio />} />
+              <Route path="comic-studio" element={<ComicStudio />} />
               <Route path="model-detection" element={<ModelDetection />} />
               <Route path="profile" element={<Profile />} />
               <Route path="console-log" element={<ConsoleLog />} />
