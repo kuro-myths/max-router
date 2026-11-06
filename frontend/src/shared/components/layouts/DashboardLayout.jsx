@@ -49,13 +49,13 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">
-      <div className="fixed top-4 right-4 z-[80] flex w-[min(92vw,380px)] flex-col gap-2">
+      <div className="pointer-events-none fixed top-4 right-4 z-[80] flex w-[min(92vw,380px)] flex-col gap-2">
         {notifications.map((n) => {
           const style = getToastStyle(n.type);
           return (
             <div
               key={n.id}
-              className={`rounded-lg border px-3 py-2 shadow-lg backdrop-blur-sm ${style.wrapper}`}
+              className={`pointer-events-auto rounded-lg border px-3 py-2 shadow-lg backdrop-blur-sm ${style.wrapper}`}
             >
               <div className="flex items-start gap-2">
                 <span className="material-symbols-outlined text-[18px] leading-5">{style.icon}</span>
