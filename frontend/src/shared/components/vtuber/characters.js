@@ -9,7 +9,7 @@ export const EMOTIONS = [
   { id: "excited", label: "Antusias", gesture: "bounce" },
 ];
 
-const MIKA_PALETTE = { bg: "#35224f", hair: "#ff79b0", hair2: "#f45b9c", skin: "#ffe9da", eye: "#4c1d95", accent: "#ffd6e8", outfit: "#7c3aed", line: "#292343", mouth: "#7f1d3a" };
+const MIKA_PALETTE = { bg: "#f2eaff", hair: "#25243c", hair2: "#3159b8", skin: "#ffe9df", eye: "#5552a5", accent: "#d8e3ff", outfit: "#3159b8", line: "#292343", mouth: "#572b3d" };
 
 export const CHARACTERS = [
   {
@@ -21,7 +21,7 @@ export const CHARACTERS = [
     license: "Bundled - Max Router",
     attribution: "Aset PSD karakter yang diunggah pemilik Max Router",
     allowedUse: ["use", "modify", "redistribute"],
-    description: "Karakter VTuber 2D kustom bergaya mahasiswa magang dengan jaket biru, mata berkedip, dan animasi bicara ringan.",
+    description: "Karakter VTuber Kuro dari PSD berlapis: rambut hitam-biru, mata ungu, kemeja, dasi, dan jaket biru. Sprite tampil konsisten di dashboard, Chat, dan Voice AI.",
     expressions: EMOTIONS.map((e) => e.id),
   },
   {
