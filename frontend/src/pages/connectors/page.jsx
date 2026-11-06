@@ -125,95 +125,37 @@ export default function ConnectorsPage() {
 
 
 function GitHubWorkspace() {
-  const [status, setStatus] = useState(null);
-  const [repos, setRepos] = useState([]);
-  const [repo, setRepo] = useState("");
-  const [path, setPath] = useState("");
-  const [branch, setBranch] = useState("");
-  const [file, setFile] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const refresh = async () => {
-    const r = await fetch("/api/connectors/github/status", { credentials: "same-origin", cache: "no-store" });
-    const data = await r.json();
-    setStatus(data);
-    if (data.connected) {
-      const rr = await fetch("/api/connectors/github/repos?per_page=100", { credentials: "same-origin" });
-      const rd = await rr.json();
-      if (!rr.ok) throw new Error(rd.error || "Gagal mengambil repositori.");
-      setRepos(rd.repositories || []);
-    }
-  };
-  useEffect(() => { refresh().catch((e) => setMessage(e.message)); }, []);
-
-  const readFile = async () => {
-    if (!repo || !path.trim()) return;
-    setBusy(true); setMessage("");
-    try {
-      const [owner, name] = repo.split("/");
-      const q = new URLSearchParams({ owner, repo: name, path: path.trim(), ...(branch ? { ref: branch } : {}) });
-      const r = await fetch("/api/connectors/github/contents?" + q, { credentials: "same-origin" });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Gagal membaca file.");
-      if (data.type !== "file") throw new Error("Path bukan file. Masukkan path file, misalnya backend/src/server.ts.");
-      setFile(data); setMessage("File berhasil dimuat.");
-    } catch (e) { setMessage(e.message); }
-    finally { setBusy(false); }
-  };
-
-  const saveFile = async () => {
-    if (!file || !repo) return;
-    setBusy(true); setMessage("");
-    try {
-      const [owner, name] = repo.split("/");
-      const r = await fetch("/api/connectors/github/contents", {
-        method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner, repo: name, path: file.path, content: file.content, sha: file.sha, branch: branch || undefined, message: "Update " + file.path + " via Max Router" }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Gagal menyimpan file.");
-      setFile({ ...file, sha: data.content?.sha || file.sha });
-      setMessage("Commit berhasil: " + (data.commit?.sha || "tersimpan"));
-    } catch (e) { setMessage(e.message); }
-    finally { setBusy(false); }
-  };
-
-  if (!status?.connected) {
-    return <section className="rounded-2xl border border-border bg-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="font-semibold text-text-main">GitHub Workspace</h2><p className="mt-1 text-xs text-text-muted">Hubungkan akun GitHub untuk membaca dan mengedit repository publik maupun private.</p></div>
-        <button onClick={() => window.location.assign("/api/connectors/github/oauth/start")} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white">Hubungkan GitHub</button>
-      </div>
-      {message && <p className="mt-3 text-xs text-red-500">{message}</p>}
-    </section>;
-  }
-
+  const [status,setStatus]=useState(null),[repos,setRepos]=useState([]),[repo,setRepo]=useState("");
+  const [folder,setFolder]=useState(""),[entries,setEntries]=useState([]),[file,setFile]=useState(null);
+  const [branches,setBranches]=useState([]),[branch,setBranch]=useState(""),[newBranch,setNewBranch]=useState("");
+  const [pulls,setPulls]=useState([]),[tab,setTab]=useState("files"),[dirty,setDirty]=useState(false);
+  const [commitMessage,setCommitMessage]=useState(""),[prTitle,setPrTitle]=useState(""),[prBody,setPrBody]=useState("");
+  const [showPR,setShowPR]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+  const api=async(url,options={})=>{const r=await fetch(url,{credentials:"same-origin",cache:"no-store",...options,headers:{...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"GitHub API gagal.");return d;};
+  const repoParts=()=>repo.split("/");
+  const loadFolder=async(path)=>{if(!repo)return;setBusy(true);try{const p=repoParts();const q=new URLSearchParams({owner:p[0],repo:p[1],path:path||"",...(branch?{ref:branch}:{})});const d=await api("/api/connectors/github/contents?"+q);setFolder(path||"");setEntries(d.entries||[]);setFile(null);setDirty(false);}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  const loadRepo=async(value)=>{setRepo(value);setFile(null);setFolder("");if(!value)return;setBusy(true);try{const p=value.split("/");const [r,b,pr]=await Promise.all([api("/api/connectors/github/repos?per_page=100"),api("/api/connectors/github/branches?owner="+encodeURIComponent(p[0])+"&repo="+encodeURIComponent(p[1])),api("/api/connectors/github/pulls?owner="+encodeURIComponent(p[0])+"&repo="+encodeURIComponent(p[1]))]);setRepos(r.repositories||[]);setBranches(b.branches||[]);setPulls(pr.pullRequests||[]);const def=(r.repositories||[]).find(x=>x.fullName===value)?.defaultBranch||b.branches?.[0]?.name||"";setBranch(def);const q=new URLSearchParams({owner:p[0],repo:p[1],path:""});const root=await api("/api/connectors/github/contents?"+q);setEntries(root.entries||[]);}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  const refresh=async()=>{const d=await api("/api/connectors/github/status");setStatus(d);if(d.connected){const r=await api("/api/connectors/github/repos?per_page=100");setRepos(r.repositories||[]);}};
+  useEffect(()=>{refresh().catch(e=>setMessage(e.message));},[]);
+  const readFile=async(item)=>{setBusy(true);try{const p=repoParts();const q=new URLSearchParams({owner:p[0],repo:p[1],path:item.path,...(branch?{ref:branch}:{})});const d=await api("/api/connectors/github/contents?"+q);setFile(d);setCommitMessage("Update "+d.path);setDirty(false);}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  const makeBranch=async()=>{if(!newBranch.trim())return;setBusy(true);try{const p=repoParts();await api("/api/connectors/github/branches",{method:"POST",body:JSON.stringify({owner:p[0],repo:p[1],branch:newBranch.trim(),from:branch})});const d=await api("/api/connectors/github/branches?owner="+encodeURIComponent(p[0])+"&repo="+encodeURIComponent(p[1]));setBranches(d.branches||[]);setBranch(newBranch.trim());setNewBranch("");setMessage("Branch dibuat. Pilih file dan lakukan perubahan.");}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  const saveFile=async()=>{if(!file||!branch||!commitMessage.trim())return;setBusy(true);try{const p=repoParts();const d=await api("/api/connectors/github/contents",{method:"PUT",body:JSON.stringify({owner:p[0],repo:p[1],path:file.path,content:file.content,sha:file.sha,branch:branch,message:commitMessage})});setFile({...file,sha:d.content?.sha||file.sha});setDirty(false);setMessage("Commit & push berhasil: "+(d.commit?.sha||"OK"));}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  const makePR=async()=>{if(!prTitle.trim()||!branch)return;setBusy(true);try{const p=repoParts();const base=repoInfo?.defaultBranch||"main";const d=await api("/api/connectors/github/pulls",{method:"POST",body:JSON.stringify({owner:p[0],repo:p[1],title:prTitle,body:prBody,head:branch,base:base})});setMessage("Pull Request #"+d.number+" berhasil dibuat.");setShowPR(false);const pr=await api("/api/connectors/github/pulls?owner="+encodeURIComponent(p[0])+"&repo="+encodeURIComponent(p[1]));setPulls(pr.pullRequests||[]);}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  const repoInfo=repos.find(r=>r.fullName===repo);
+  if(!status?.connected)return <section className="rounded-2xl border border-border bg-surface p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-text-main">GitHub Workspace</h2><p className="mt-1 text-xs text-text-muted">Hubungkan GitHub untuk menjelajah source code, membuat branch, commit, push, dan Pull Request.</p></div><button onClick={()=>window.location.assign("/api/connectors/github/oauth/start")} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white">Hubungkan GitHub</button></div>{message&&<p className="mt-3 text-xs text-red-500">{message}</p>}</section>;
+  const priv=repos.filter(r=>r.private).length;
   return <section className="space-y-4 rounded-2xl border border-border bg-surface p-5">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="font-semibold text-text-main">GitHub Workspace</h2><p className="mt-1 text-xs text-text-muted">Terhubung sebagai <strong className="text-text-main">{status.account?.login}</strong> · repositori private mengikuti izin OAuth GitHub.</p></div>
-      <button onClick={async () => { await fetch("/api/connectors/github/status", { method: "DELETE", credentials: "same-origin" }); setStatus({ connected: false }); setRepos([]); setFile(null); }} className="rounded-lg border border-border px-3 py-2 text-xs text-red-500">Putuskan koneksi</button>
-    </div>
-    <div className="grid gap-3 md:grid-cols-3">
-      <label className="text-xs text-text-muted md:col-span-2">Repository
-        <select value={repo} onChange={(e) => { setRepo(e.target.value); setFile(null); }} className="mt-1 h-10 w-full rounded-lg border border-border bg-bg px-3 text-sm text-text-main">
-          <option value="">Pilih repository...</option>
-          {repos.map((r) => <option key={r.id} value={r.fullName}>{r.fullName}{r.private ? " · PRIVATE" : ""}</option>)}
-        </select>
-      </label>
-      <label className="text-xs text-text-muted">Branch (opsional)
-        <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="master / main / feature-x" className="mt-1 h-10 w-full rounded-lg border border-border bg-bg px-3 text-sm text-text-main" />
-      </label>
-    </div>
-    <div className="flex flex-col gap-2 sm:flex-row">
-      <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="Path file, contoh: backend/src/server.ts" className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-text-main" />
-      <button disabled={!repo || !path.trim() || busy} onClick={readFile} className="rounded-lg border border-primary/40 px-4 py-2 text-xs font-semibold text-primary disabled:opacity-40">{busy ? "Memproses..." : "Baca file"}</button>
-    </div>
-    {file && <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-semibold text-text-main">{file.path} · SHA {file.sha?.slice(0, 8)}</span><button disabled={busy} onClick={saveFile} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">Simpan & commit</button></div>
-      <textarea value={file.content} onChange={(e) => setFile({ ...file, content: e.target.value })} spellCheck={false} className="min-h-[320px] w-full rounded-xl border border-border bg-bg p-3 font-mono text-xs leading-relaxed text-text-main outline-none focus:border-primary" />
-      <p className="text-[11px] text-text-muted">Penyimpanan memakai SHA file saat dibaca untuk mencegah perubahan menimpa versi terbaru. Gunakan branch terpisah sebelum mengedit file penting.</p>
-    </div>}
-    {message && <p className="text-xs text-text-muted">{message}</p>}
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-text-main">GitHub Workspace</h2><p className="mt-1 text-xs text-text-muted">Terhubung sebagai <strong>{status.account?.login}</strong> · {repos.length} repo · {priv} private</p></div><div className="flex gap-2"><button onClick={()=>refresh().catch(e=>setMessage(e.message))} className="rounded-lg border border-border px-3 py-2 text-xs">Refresh</button><button onClick={()=>api("/api/connectors/github/status",{method:"DELETE"}).then(()=>setStatus({connected:false}))} className="rounded-lg border border-border px-3 py-2 text-xs text-red-500">Putuskan</button></div></div>
+    <label className="block text-xs text-text-muted">Repository<select value={repo} onChange={e=>loadRepo(e.target.value)} className="mt-1 h-11 w-full rounded-lg border border-border bg-bg px-3 text-sm text-text-main"><option value="">Pilih repository...</option>{repos.map(r=><option key={r.id} value={r.fullName}>{r.fullName}{r.private?" · PRIVATE":""}</option>)}</select></label>
+    {repo&&<><div className="grid gap-2 rounded-xl border border-border bg-bg p-3 md:grid-cols-[1fr_1fr_auto_auto]">
+      <label className="text-xs text-text-muted">Branch aktif<select value={branch} onChange={e=>{setBranch(e.target.value);setFile(null);loadFolder(folder);}} className="mt-1 h-10 w-full rounded-lg border border-border bg-surface px-2 text-sm text-text-main">{branches.map(b=><option key={b.name} value={b.name}>{b.name}{b.protected?" · protected":""}</option>)}</select></label>
+      <label className="text-xs text-text-muted">Branch AI baru<input value={newBranch} onChange={e=>setNewBranch(e.target.value)} placeholder="ai/update-feature" className="mt-1 h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm text-text-main"/></label>
+      <button disabled={busy||!newBranch.trim()} onClick={makeBranch} className="mt-5 h-10 rounded-lg border border-primary/40 px-3 text-xs font-semibold text-primary disabled:opacity-40">+ Branch</button>
+      <button onClick={()=>setShowPR(true)} className="mt-5 h-10 rounded-lg bg-primary px-3 text-xs font-semibold text-white">Buat PR</button></div>
+      <div className="flex gap-2 border-b border-border pb-2"><button onClick={()=>setTab("files")} className={"rounded-lg px-3 py-2 text-xs "+(tab==="files"?"bg-primary text-white":"text-text-muted")}>Source Code</button><button onClick={()=>setTab("pulls")} className={"rounded-lg px-3 py-2 text-xs "+(tab==="pulls"?"bg-primary text-white":"text-text-muted")}>Pull Requests ({pulls.length})</button></div>
+      {tab==="files"?<div className="grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.5fr)]"><div className="rounded-xl border border-border bg-bg p-3"><div className="mb-2 flex justify-between"><strong className="text-xs">Explorer</strong><button onClick={()=>loadFolder("")} className="text-xs text-primary">Root</button></div><p className="mb-2 truncate text-[11px] text-text-muted">/{folder}</p>{folder&&<button onClick={()=>loadFolder(folder.split("/").slice(0,-1).join("/"))} className="mb-2 text-xs text-primary">← Kembali</button>}<div className="max-h-[440px] space-y-1 overflow-auto">{entries.map(item=><button key={item.path} onClick={()=>item.type==="dir"?loadFolder(item.path):readFile(item)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-text-main hover:bg-surface">{item.type==="dir"?<Database size={14}/>:<Code2 size={14}/>}<span className="truncate">{item.name}</span></button>)}{!entries.length&&<p className="py-5 text-center text-xs text-text-muted">Folder kosong.</p>}</div></div>
+      <div className="min-w-0 space-y-2">{file?<><div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0"><p className="truncate text-xs font-semibold text-text-main">{file.path}</p><p className="text-[10px] text-text-muted">{dirty?"Ada perubahan belum disimpan":"Tersinkron"}</p></div><button disabled={busy||!dirty||!branch} onClick={saveFile} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">{busy?"Menyimpan...":"Commit & Push"}</button></div><textarea value={file.content} onChange={e=>{setFile({...file,content:e.target.value});setDirty(true);}} spellCheck={false} className="min-h-[360px] w-full rounded-xl border border-border bg-bg p-3 font-mono text-xs leading-relaxed text-text-main"/><label className="block text-xs text-text-muted">Pesan commit<input value={commitMessage} onChange={e=>setCommitMessage(e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-border bg-bg px-3 text-sm text-text-main"/></label></>:<div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-border p-6 text-center"><div><Code2 size={30} className="mx-auto text-text-muted"/><p className="mt-3 text-sm font-semibold text-text-main">Pilih file untuk melihat kode repository</p></div></div>}</div></div>:<div className="space-y-2">{pulls.map(p=><a key={p.number} href={p.url} target="_blank" rel="noreferrer" className="block rounded-xl border border-border p-3 hover:bg-bg"><p className="text-xs font-semibold text-text-main">#{p.number} {p.title}</p><p className="mt-1 text-[11px] text-text-muted">{p.head} → {p.base}</p></a>)}{!pulls.length&&<p className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-text-muted">Belum ada Pull Request terbuka.</p>}</div>}</>}
+    {message&&<p className="rounded-lg bg-primary/5 p-3 text-xs text-text-main">{message}</p>}
+    {showPR&&<div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4" onMouseDown={e=>{if(e.target===e.currentTarget)setShowPR(false);}}><div className="w-full max-w-lg space-y-3 rounded-2xl border border-border bg-surface p-5"><div className="flex justify-between"><strong className="text-text-main">Buat Pull Request</strong><button onClick={()=>setShowPR(false)}><X size={18}/></button></div><input value={prTitle} onChange={e=>setPrTitle(e.target.value)} placeholder="Judul PR" className="h-10 w-full rounded-lg border border-border bg-bg px-3 text-sm"/><textarea value={prBody} onChange={e=>setPrBody(e.target.value)} placeholder="Ringkasan perubahan..." className="min-h-28 w-full rounded-lg border border-border bg-bg p-3 text-sm"/><div className="flex justify-end gap-2"><button onClick={()=>setShowPR(false)} className="rounded-lg border border-border px-3 py-2 text-xs">Batal</button><button disabled={busy||!prTitle.trim()} onClick={makePR} className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">Buat PR</button></div></div></div>}
   </section>;
 }
