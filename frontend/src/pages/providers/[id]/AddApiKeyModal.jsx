@@ -1,11 +1,33 @@
 
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { Button, Badge, Input, Modal, Select } from "@/shared/components";
+import { Button, Input, Modal, Select } from "@/shared/components";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
+import ApiKeyInsightCard from "../components/ApiKeyInsightCard";
 
 const BULK_PLACEHOLDER = `name1|sk-key1\nname2|sk-key2\nsk-key-only-auto-named`;
 const VALIDATION_TIMEOUT_MS = 15000;
+
+async function fetchKeyInsight(payload) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+  try {
+    const res = await fetch("/api/providers/key-insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok || !data) {
+      return { status: "unknown", valid: null, error: data?.error || ("Pemeriksaan gagal (HTTP " + res.status + ").") };
+    }
+    return data;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 async function fetchValidation(payload) {
   const controller = new AbortController();
@@ -63,6 +85,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [validationError, setValidationError] = useState("");
+  const [insight, setInsight] = useState(null);
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState("single"); // "single" | "bulk"
   const [bulkText, setBulkText] = useState("");
@@ -89,32 +112,53 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     return undefined;
   };
 
+  const inspectKey = async () => {
+    const payload = {
+      provider,
+      apiKey: formData.apiKey,
+      defaultModel: formData.defaultModel.trim() || undefined,
+      providerSpecificData: buildProviderSpecificData(),
+    };
+    let next = await fetchKeyInsight(payload);
+    if (next.valid == null) {
+      const data = await fetchValidation(payload);
+      const valid = !!data.valid;
+      next = {
+        ...next,
+        valid,
+        status: valid ? "ok" : "invalid",
+        error: valid ? null : (data.error || next.error || "Pemeriksaan gagal"),
+        note: valid
+          ? (next.note || "Kunci valid, tetapi provider ini tidak mengirim jumlah model atau sisa limit.")
+          : next.note,
+      };
+    }
+    return next;
+  };
+
   const handleValidate = async () => {
     setValidating(true);
+    setInsight(null);
     let settled = false;
     const fallbackId = window.setTimeout(() => {
       if (settled) return;
       settled = true;
       setValidationResult("failed");
-      setValidationError("Waktu pemeriksaan habis (>15 detik)");
+      setValidationError("Waktu pemeriksaan habis (>25 detik)");
       setValidating(false);
-    }, VALIDATION_TIMEOUT_MS + 500);
+    }, 25500);
     try {
-      const data = await fetchValidation({
-        provider,
-        apiKey: formData.apiKey,
-        defaultModel: formData.defaultModel.trim() || undefined,
-        providerSpecificData: buildProviderSpecificData(),
-      });
+      const next = await inspectKey();
       if (settled) return;
       settled = true;
-      setValidationResult(data.valid ? "success" : "failed");
-      setValidationError(data.valid ? "" : (data.error || "Pemeriksaan gagal"));
+      setInsight(next);
+      setValidationResult(next.valid ? "success" : "failed");
+      setValidationError(next.valid ? "" : (next.error || next.note || "Pemeriksaan gagal"));
     } catch (error) {
       if (settled) return;
       settled = true;
       setValidationResult("failed");
-      setValidationError(error.name === "AbortError" ? "Validation timeout (>15s)" : "Kesalahan jaringan");
+      setValidationError(error.name === "AbortError" ? "Validation timeout (>25s)" : "Kesalahan jaringan");
     } finally {
       window.clearTimeout(fallbackId);
       if (settled) setValidating(false);
@@ -354,15 +398,9 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             Kosongkan untuk menggunakan <code>http://localhost:11434</code>. Untuk Ollama jarak jauh, masukkan URL host lengkap (misalnya <code>http://192.168.1.10:11434</code>).
           </p>
         )}
-        {validationResult && (
-          <div className="flex flex-col gap-1">
-            <Badge variant={validationResult === "success" ? "success" : "error"}>
-              {validationResult === "success" ? "Valid" : "Tidak valid"}
-            </Badge>
-            {validationResult === "failed" && validationError && (
-              <span className="text-sm text-red-500">{validationError}</span>
-            )}
-          </div>
+        {insight && <ApiKeyInsightCard insight={insight} />}
+        {!insight && validationResult === "failed" && validationError && (
+          <span className="text-sm text-red-500">{validationError}</span>
         )}
         {error && (
           <p className="text-xs text-red-500 break-words">{error}</p>

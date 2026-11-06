@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { Badge, Toggle } from "@/shared/components";
 import CooldownTimer from "./CooldownTimer";
+import ApiKeyInsightCard from "../components/ApiKeyInsightCard";
 
 export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMoveUp, onMoveDown, onToggleActive, onUpdateProxy, onEdit, onDelete, oneByOneStatus = null, isSelected, onSelect }) {
   const [showProxyDropdown, setShowProxyDropdown] = useState(false);
@@ -116,6 +117,33 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
 
   const [usage, setUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [insight, setInsight] = useState(connection.providerSpecificData?.lastKeyInsight || null);
+  const [checkingInsight, setCheckingInsight] = useState(false);
+  useEffect(() => {
+    setInsight(connection.providerSpecificData?.lastKeyInsight || null);
+  }, [connection.id, connection.providerSpecificData?.lastKeyInsight?.checkedAt]);
+
+  const handleCheckInsight = async () => {
+    if (!connection.id || checkingInsight) return;
+    setCheckingInsight(true);
+    try {
+      const res = await fetch("/api/providers/key-insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId: connection.id }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        setInsight({ status: "unknown", valid: null, modelCount: null, error: data?.error || "Gagal memeriksa API key" });
+        return;
+      }
+      setInsight(data);
+    } catch {
+      setInsight({ status: "unknown", valid: null, modelCount: null, error: "Kesalahan jaringan" });
+    } finally {
+      setCheckingInsight(false);
+    }
+  };
   useEffect(() => {
     let stopped = false; let timer = null;
     const loadUsage = async () => {
@@ -198,7 +226,19 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
           {authIcon}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{displayName}</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-medium">{displayName}</p>
+            {!isOAuthConnection && (
+              <button
+                type="button"
+                onClick={handleCheckInsight}
+                disabled={checkingInsight}
+                className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 disabled:opacity-60"
+              >
+                {checkingInsight ? "Mengecek..." : "Cek limit & model"}
+              </button>
+            )}
+          </div>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
             <Badge variant={getStatusVariant()} size="sm" dot>
               {connection.isActive === false ? "Nonaktif" : (effectiveStatus === "active" || effectiveStatus === "success" ? "Aktif" : (effectiveStatus || "Belum diuji"))}
@@ -244,6 +284,11 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
               </Badge>
             )}
           </div>
+          {insight && (
+            <div className="mt-2">
+              <ApiKeyInsightCard insight={insight} compact />
+            </div>
+          )}
           {hasAnyProxy && (
             <div className="mt-1 flex items-center gap-2 flex-wrap">
               <span className="max-w-full truncate text-[11px] text-text-muted sm:max-w-[420px]" title={proxyDisplayText}>
