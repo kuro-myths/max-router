@@ -284,7 +284,7 @@ export default function CompatibleChatPage() {
             <button type="button" onClick={exportConversation} disabled={!messages.length || modelCategory !== "multitasking"} title="Ekspor percakapan JSON" className="rounded-lg border border-[#cbbbd6] bg-white p-2 text-[#554261] hover:bg-[#fff0f7] disabled:opacity-40"><Download size={15}/></button>
           </div>
         </header>
-        {modelsError && <div className="border-b border-[#f0c5bd] bg-[#fff0ed] px-4 py-2 text-xs text-[#9b3d32]">{modelsError}</div>}
+        {modelsError && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0c5bd] bg-[#fff0ed] px-4 py-2 text-xs text-[#9b3d32]"><span>{modelsError}</span><a href="/dashboard/providers" className="rounded-lg border border-[#d99a91] bg-white px-3 py-1.5 font-bold text-[#8f3930] hover:bg-[#fff8f6]">+ Tambah provider</a></div>}
         {modelCategory === "layanan" && <div className="border-b border-[#e5d8e8] bg-[#f7f0fb] px-4 py-2 text-xs text-[#554261]">Katalog layanan: {serviceModels.length} model tersinkron · Image · Video · Audio · Embedding · Web</div>}
         {notice && <div role="status" className="border-b border-[#ead7a6] bg-[#fff8df] px-4 py-2 text-xs text-[#806021]">{notice}</div>}
         {modelCategory === "layanan" && <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
