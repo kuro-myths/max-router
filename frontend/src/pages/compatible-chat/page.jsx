@@ -42,7 +42,10 @@ export default function CompatibleChatPage() {
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState("");
   const [notice, setNotice] = useState("");
-  const [githubToolsEnabled, setGithubToolsEnabled] = useState(false);\n  const [composerMenuOpen, setComposerMenuOpen] = useState(false);\n  const [attachments, setAttachments] = useState([]);\n  const fileInputRef = useRef(null);
+  const [githubToolsEnabled, setGithubToolsEnabled] = useState(false);
+  const [composerMenuOpen, setComposerMenuOpen] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); }
