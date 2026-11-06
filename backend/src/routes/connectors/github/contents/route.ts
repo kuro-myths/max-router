@@ -4,7 +4,7 @@ function validRepoPart(value: unknown) {
   return typeof value === "string" && /^[A-Za-z0-9_.-]{1,100}$/.test(value) && value !== "." && value !== "..";
 }
 function validPath(value: unknown) {
-  return typeof value === "string" && value.length > 0 && value.length <= 1000 && !value.split("/").some((part) => !part || part === "." || part === "..");
+  return typeof value === "string" && value.length <= 1000 && (value === "" || !value.split("/").some((part) => !part || part === "." || part === ".."));
 }
 
 export async function GET_handler(req, res) {
@@ -15,7 +15,7 @@ export async function GET_handler(req, res) {
   if (!validRepoPart(owner) || !validRepoPart(repo) || !validPath(path)) return res.status(400).json({ error: "owner, repo, dan path tidak valid." });
   try {
     const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-    const data = await githubFetch(`/repos/${owner}/${repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}${query}`);
+    const data = await githubFetch(`/repos/${owner}/${repo}/contents${path ? `/${path.split("/").map(encodeURIComponent).join("/")}` : ""}${query}`);
     if (Array.isArray(data)) return res.json({ type: "directory", entries: data.map((item: any) => ({ name: item.name, path: item.path, type: item.type, size: item.size, sha: item.sha, htmlUrl: item.html_url })) });
     if (data.type !== "file") return res.status(400).json({ error: "Path bukan file atau direktori yang didukung." });
     if (data.size > 1_000_000) return res.status(413).json({ error: "File lebih besar dari batas editor 1 MB." });
