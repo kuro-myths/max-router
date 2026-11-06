@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, Bot, MessageSquare, Plus, RefreshCw, Send, Trash2, Download, Clock3, Github } from "lucide-react";
+import { ArrowDown, Bot, MessageSquare, Plus, RefreshCw, Send, Trash2, Download, Clock3 } from "lucide-react";
 import VtuberAvatar from "@/shared/components/vtuber/VtuberAvatar";
 
 
@@ -232,7 +232,7 @@ export default function CompatibleChatPage() {
         <form onSubmit={sendMessage} className="border-t border-[#e5d8e8] bg-[#fff9fc] p-3 sm:p-4">
           <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#554261]">
             <input type="checkbox" checked={githubToolsEnabled} onChange={(e) => setGithubToolsEnabled(e.target.checked)} disabled={busy}/>
-            <Github size={14}/> Aktifkan GitHub AI Tools
+            <Bot size={14}/> Aktifkan GitHub AI Tools
             <span className="font-normal text-[#93859b]">· Operasi tulis memerlukan persetujuan.</span>
           </label>
           <div className="flex items-end gap-2 rounded-xl border-2 border-[#cbbbd6] bg-white p-2 focus-within:border-[#9b78b8]">
