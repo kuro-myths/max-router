@@ -88,6 +88,8 @@ export default function ConnectorsPage() {
         <div className="flex flex-wrap gap-2">{CATEGORIES.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${category === item ? "bg-primary text-white" : "border border-border bg-surface text-text-muted hover:text-text-main"}`}>{item}</button>)}</div>
       </div>
 
+      <GitHubWorkspace />
+
       <section className="space-y-3">
         <div className="flex items-center justify-between"><h2 className="text-base font-semibold text-text-main">Katalog connector</h2><span className="text-xs text-text-muted">{filtered.length} layanan</span></div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
