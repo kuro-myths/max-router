@@ -2,6 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, Bot, MessageSquare, Plus, RefreshCw, Send, Trash2, Download, Clock3 } from "lucide-react";
 import VtuberAvatar from "@/shared/components/vtuber/VtuberAvatar";
 
+
+const githubToolDefinitions = [
+ {type:"function",function:{name:"github_list_repositories",description:"List accessible GitHub repositories, including private repositories.",parameters:{type:"object",properties:{page:{type:"integer"},per_page:{type:"integer"}},additionalProperties:false}}},
+ {type:"function",function:{name:"github_list_files",description:"List files and directories in a repository folder.",parameters:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},path:{type:"string"},branch:{type:"string"}},required:["owner","repo"],additionalProperties:false}}},
+ {type:"function",function:{name:"github_read_file",description:"Read source code from a repository file.",parameters:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},path:{type:"string"},branch:{type:"string"}},required:["owner","repo","path"],additionalProperties:false}}},
+ {type:"function",function:{name:"github_list_branches",description:"List repository branches.",parameters:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"}},required:["owner","repo"],additionalProperties:false}}},
+ {type:"function",function:{name:"github_create_branch",description:"Create a branch; requires user confirmation.",parameters:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},branch:{type:"string"},from:{type:"string"}},required:["owner","repo","branch"],additionalProperties:false}}},
+ {type:"function",function:{name:"github_update_file",description:"Update or create a file on a branch; requires user confirmation.",parameters:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},path:{type:"string"},content:{type:"string"},sha:{type:"string"},branch:{type:"string"},message:{type:"string"}},required:["owner","repo","path","content","branch","message"],additionalProperties:false}}},
+ {type:"function",function:{name:"github_create_pull_request",description:"Create a pull request; requires user confirmation.",parameters:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},title:{type:"string"},body:{type:"string"},head:{type:"string"},base:{type:"string"},draft:{type:"boolean"}},required:["owner","repo","title","head","base"],additionalProperties:false}}}
+];
+
 const STORAGE_KEY = "max-router.chat.conversations.v1";
 const makeId = () => globalThis.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const makeConversation = () => ({ id: makeId(), title: "Percakapan baru", model: "", messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
@@ -31,6 +42,7 @@ export default function CompatibleChatPage() {
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState("");
   const [notice, setNotice] = useState("");
+  const [githubToolsEnabled, setGithubToolsEnabled] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); }
@@ -124,21 +136,48 @@ export default function CompatibleChatPage() {
     setInput("");
     setBusy(true);
     try {
-      const response = await fetch("/api/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ model, messages: history, stream: false }),
-      });
-      const raw = await response.text();
-      let data = null;
-      try { data = JSON.parse(raw); } catch {}
-      if (!response.ok) {
-        setMessages((current) => [...current, { role: "error", content: data?.error?.message || data?.error || raw || `Request gagal (HTTP ${response.status})`, createdAt: new Date().toISOString() }]);
-        return;
+      let working = history;
+      let finalText = "";
+      let completed = false;
+      for (let turn = 0; turn < 6; turn++) {
+        const response = await fetch("/api/v1/chat/completions", {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ model, messages: working, stream: false,
+            ...(githubToolsEnabled ? { tools: githubToolDefinitions, tool_choice: "auto" } : {}) }),
+        });
+        const raw = await response.text();
+        let data = null;
+        try { data = JSON.parse(raw); } catch {}
+        if (!response.ok) throw new Error(data?.error?.message || data?.error || raw || "Request chat gagal.");
+        const message = data?.choices?.[0]?.message;
+        const calls = Array.isArray(message?.tool_calls) ? message.tool_calls : [];
+        if (!calls.length) { finalText = message?.content ?? data?.output_text ?? raw; completed = true; break; }
+        working = [...working, { role: "assistant", content: message.content || null, tool_calls: calls }];
+        for (const call of calls) {
+          const name = call.function?.name;
+          let args = {};
+          try { args = JSON.parse(call.function?.arguments || "{}"); } catch {}
+          const writeTool = ["github_create_branch","github_update_file","github_create_pull_request"].includes(name);
+          if (writeTool) {
+            const summary = name + "\n" + JSON.stringify(args, null, 2).slice(0, 5000);
+            if (!window.confirm("AI meminta operasi tulis GitHub:\n\n" + summary + "\n\nIzinkan operasi ini?")) {
+              working.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ ok:false, denied:true, message:"User menolak operasi tulis." }) });
+              continue;
+            }
+          }
+          const toolResponse = await fetch("/api/connectors/github/tools", {
+            method:"POST",credentials:"include",headers:{"Content-Type":"application/json",Accept:"application/json"},
+            body:JSON.stringify({name,arguments:args,confirmed:writeTool})
+          });
+          const toolRaw = await toolResponse.text();
+          let toolData = {};
+          try { toolData = JSON.parse(toolRaw); } catch { toolData = {error:toolRaw}; }
+          working.push({ role:"tool",tool_call_id:call.id,content:JSON.stringify(toolData) });
+        }
       }
-      const answer = data?.choices?.[0]?.message?.content ?? data?.output_text ?? raw;
-      setMessages((current) => [...current, { role: "assistant", content: String(answer || "(tidak ada respons)"), createdAt: new Date().toISOString() }]);
+      if (!completed) finalText = "Batas 6 putaran tool tercapai. Minta AI melanjutkan dari hasil yang sudah diperoleh.";
+      setMessages((current) => [...current, { role:"assistant",content:String(finalText || "(tidak ada respons)"),createdAt:new Date().toISOString() }]);
     } catch (error) {
       setMessages((current) => [...current, { role: "error", content: error instanceof Error ? error.message : String(error), createdAt: new Date().toISOString() }]);
     } finally { setBusy(false); }
@@ -191,6 +230,11 @@ export default function CompatibleChatPage() {
           {busy && <div className="flex items-center gap-2 text-xs text-[#82748d]"><VtuberAvatar size={34} emotion="thinking"/><span className="h-2 w-2 animate-pulse rounded-full bg-[#ff79b0]"/>Kuro sedang menyusun jawaban...</div>}
         </div>
         <form onSubmit={sendMessage} className="border-t border-[#e5d8e8] bg-[#fff9fc] p-3 sm:p-4">
+          <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#554261]">
+            <input type="checkbox" checked={githubToolsEnabled} onChange={(e) => setGithubToolsEnabled(e.target.checked)} disabled={busy}/>
+            <Bot size={14}/> Aktifkan GitHub AI Tools
+            <span className="font-normal text-[#93859b]">· Operasi tulis memerlukan persetujuan.</span>
+          </label>
           <div className="flex items-end gap-2 rounded-xl border-2 border-[#cbbbd6] bg-white p-2 focus-within:border-[#9b78b8]">
             <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder={model ? "Tulis pesan... (Enter untuk kirim, Shift+Enter untuk baris baru)" : "Pilih provider/model terlebih dahulu..."} className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-[#302344] outline-none placeholder:text-[#a397ac]" disabled={!model || busy || modelsLoading}/>
             <button type="submit" disabled={!canSend} className="inline-flex items-center gap-2 rounded-lg border-2 border-[#332746] bg-[#ff9fc9] px-4 py-3 text-xs font-black text-[#302344] shadow-[2px_2px_0_#332746] disabled:opacity-40"><Send size={14}/>Kirim</button>
