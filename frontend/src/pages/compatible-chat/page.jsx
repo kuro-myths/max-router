@@ -53,6 +53,7 @@ export default function CompatibleChatPage() {
   const [composerMenuOpen, setComposerMenuOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const fileInputRef = useRef(null);
+  const saveQueueRef = useRef(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
@@ -94,11 +95,13 @@ export default function CompatibleChatPage() {
   useEffect(() => {
     if (!serverReady) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-    fetch("/api/chat/conversations", {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ conversations }),
-    }).then(async (response) => {
+    const snapshot = JSON.stringify({ conversations });
+    saveQueueRef.current = saveQueueRef.current.catch(() => {}).then(async () => {
+      const response = await fetch("/api/chat/conversations", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: snapshot,
+      });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data?.error || "Database menolak penyimpanan percakapan.");
