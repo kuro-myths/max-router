@@ -35,6 +35,8 @@ export default function CompatibleChatPage() {
   const [conversations, setConversations] = useState(readConversations);
   const [activeId, setActiveId] = useState(() => readConversations()[0]?.id || "");
   const [models, setModels] = useState([]);
+  const [serviceModels, setServiceModels] = useState([]);
+  const [modelCategory, setModelCategory] = useState("multitasking");
   const [model, setModel] = useState("");
   const [messages, setMessages] = useState(() => readConversations()[0]?.messages || []);
   const [input, setInput] = useState("");
@@ -60,26 +62,45 @@ export default function CompatibleChatPage() {
   const loadModels = useCallback(async () => {
     setModelsLoading(true);
     setModelsError("");
-    try {
-      const response = await fetch("/api/v1/models", { credentials: "include", cache: "no-store", headers: { Accept: "application/json" } });
+    const requestList = async (path) => {
+      const response = await fetch(path, { credentials: "include", cache: "no-store", headers: { Accept: "application/json" } });
       const raw = await response.text();
       let data = null;
       try { data = JSON.parse(raw); } catch {}
-      if (!response.ok) throw new Error(data?.error?.message || data?.error || raw || `Gagal mengambil model (HTTP ${response.status})`);
-      const list = Array.isArray(data?.data) ? data.data.filter((item) => item?.id) : [];
-      setModels(list);
-      setModel((current) => current && list.some((item) => item.id === current) ? current : list[0]?.id || "");
-      if (!list.length) setModelsError("Belum ada model aktif. Tambahkan provider kompatibel terlebih dahulu.");
+      if (!response.ok) throw new Error(data?.error?.message || data?.error || raw || ("HTTP " + response.status));
+      return Array.isArray(data?.data) ? data.data.filter((item) => item?.id) : [];
+    };
+    try {
+      const results = await Promise.allSettled([
+        requestList("/api/v1/models"),
+        ...["image", "video", "tts", "stt", "embedding", "image-to-text", "web"].map((kind) =>
+          requestList("/api/v1/models/" + kind).then((items) => items.map((item) => ({ ...item, serviceKind: kind })))
+        )
+      ]);
+      if (results[0].status === "rejected") throw results[0].reason;
+      const chatList = results[0].value;
+      const serviceList = results.slice(1).flatMap((result) => result.status === "fulfilled" ? result.value : []);
+      const uniqueServices = Array.from(new Map(serviceList.map((item) => [item.id, item])).values());
+      setModels(chatList);
+      setServiceModels(uniqueServices);
+      setModel((current) => {
+        const available = modelCategory === "layanan" ? uniqueServices : chatList;
+        return current && available.some((item) => item.id === current) ? current : available[0]?.id || "";
+      });
+      if (!chatList.length && !uniqueServices.length) setModelsError("Belum ada model aktif. Tambahkan atau aktifkan provider API terlebih dahulu.");
+      else if (!chatList.length) setModelsError("Model layanan tersedia, tetapi belum ada model chat. Periksa provider multitasking.");
     } catch (error) {
       setModels([]);
+      setServiceModels([]);
       setModel("");
       setModelsError(error instanceof Error ? error.message : "Daftar model gagal dimuat.");
     } finally { setModelsLoading(false); }
-  }, []);
+  }, [modelCategory]);
 
   useEffect(() => { loadModels(); }, [loadModels]);
 
-  const canSend = useMemo(() => Boolean((input.trim() || attachments.length) && model && !busy), [input, attachments, model, busy]);
+  const visibleModels = modelCategory === "layanan" ? serviceModels : models;
+  const canSend = useMemo(() => Boolean(modelCategory === "multitasking" && (input.trim() || attachments.length) && model && !busy), [modelCategory, input, attachments, model, busy]);
 
   async function addAttachments(fileList) {
     const files = Array.from(fileList || []);
@@ -249,17 +270,22 @@ export default function CompatibleChatPage() {
 
       <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-[#3b2c4b] bg-[#fffdf8] shadow-[3px_3px_0_rgba(51,39,70,.10)]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e5d8e8] bg-[#fff7fb] px-4 py-3">
-          <div className="min-w-0"><h1 className="truncate text-sm font-black text-[#302344]">{activeConversation?.title || "Chat AI"}</h1><p className="text-[10px] text-[#82748d]">OpenAI-compatible · riwayat percakapan lokal</p></div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={loadModels} disabled={modelsLoading} title="Muat ulang model" className="rounded-lg border border-[#cbbbd6] bg-white p-2 text-[#554261] hover:bg-[#fff0f7] disabled:opacity-50"><RefreshCw size={15} className={modelsLoading ? "animate-spin" : ""}/></button>
-            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={!models.length || busy || modelsLoading} aria-label="Pilih model" className="max-w-[44vw] rounded-lg border border-[#cbbbd6] bg-white px-2.5 py-2 text-xs text-[#302344] sm:max-w-[260px]">
-              {!models.length && <option value="">{modelsLoading ? "Memuat model..." : "Belum ada model"}</option>}
-              {models.map((item) => <option key={item.id} value={item.id}>{item.id}</option>)}
+          <div className="min-w-0"><h1 className="truncate text-sm font-black text-[#302344]">{modelCategory === "layanan" ? "AI Layanan" : activeConversation?.title || "Multitasking AI"}</h1><p className="text-[10px] text-[#82748d]">Model tersinkron dari provider dan API Max Router</p></div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex rounded-xl border border-[#cbbbd6] bg-white p-1">
+              <button type="button" onClick={() => { setModelCategory("multitasking"); setModel(models[0]?.id || ""); setNotice(""); }} aria-pressed={modelCategory === "multitasking"} className={"rounded-lg px-3 py-2 text-[11px] font-bold transition " + (modelCategory === "multitasking" ? "bg-[#302344] text-white" : "text-[#554261] hover:bg-[#fff0f7]")}>Multitasking AI</button>
+              <button type="button" onClick={() => { setModelCategory("layanan"); setModel(serviceModels[0]?.id || ""); setNotice(""); }} aria-pressed={modelCategory === "layanan"} className={"rounded-lg px-3 py-2 text-[11px] font-bold transition " + (modelCategory === "layanan" ? "bg-[#302344] text-white" : "text-[#554261] hover:bg-[#fff0f7]")}>AI Layanan</button>
+            </div>
+            <button type="button" onClick={loadModels} disabled={modelsLoading} title="Sinkronkan model dari API" className="rounded-lg border border-[#cbbbd6] bg-white p-2 text-[#554261] hover:bg-[#fff0f7] disabled:opacity-50"><RefreshCw size={15} className={modelsLoading ? "animate-spin" : ""}/></button>
+            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={!visibleModels.length || busy || modelsLoading} aria-label="Pilih model" className="max-w-[44vw] rounded-lg border border-[#cbbbd6] bg-white px-2.5 py-2 text-xs text-[#302344] sm:max-w-[260px]">
+              {!visibleModels.length && <option value="">{modelsLoading ? "Menyinkronkan..." : "Belum ada model"}</option>}
+              {visibleModels.map((item) => <option key={item.id} value={item.id}>{item.id}{item.serviceKind ? " · " + item.serviceKind : ""}</option>)}
             </select>
-            <button type="button" onClick={exportConversation} disabled={!messages.length} title="Ekspor percakapan JSON" className="rounded-lg border border-[#cbbbd6] bg-white p-2 text-[#554261] hover:bg-[#fff0f7] disabled:opacity-40"><Download size={15}/></button>
+            <button type="button" onClick={exportConversation} disabled={!messages.length || modelCategory !== "multitasking"} title="Ekspor percakapan JSON" className="rounded-lg border border-[#cbbbd6] bg-white p-2 text-[#554261] hover:bg-[#fff0f7] disabled:opacity-40"><Download size={15}/></button>
           </div>
         </header>
         {modelsError && <div className="border-b border-[#f0c5bd] bg-[#fff0ed] px-4 py-2 text-xs text-[#9b3d32]">{modelsError}</div>}
+        {modelCategory === "layanan" && <div className="border-b border-[#e5d8e8] bg-[#f7f0fb] px-4 py-2 text-xs text-[#554261]">Katalog layanan: {serviceModels.length} model tersinkron · Image · Video · Audio · Embedding · Web</div>}
         {notice && <div role="status" className="border-b border-[#ead7a6] bg-[#fff8df] px-4 py-2 text-xs text-[#806021]">{notice}</div>}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
           {!messages.length && <div className="flex h-full min-h-[220px] items-center justify-center text-center">
@@ -271,7 +297,8 @@ export default function CompatibleChatPage() {
           </div>)}
           {busy && <div className="flex items-center gap-2 text-xs text-[#82748d]"><VtuberAvatar size={34} emotion="thinking"/><span className="h-2 w-2 animate-pulse rounded-full bg-[#ff79b0]"/>Kuro sedang menyusun jawaban...</div>}
         </div>
-        <form onSubmit={sendMessage} className="border-t border-[#e5d8e8] bg-[#fff9fc] p-3 sm:p-4">
+        {modelCategory === "layanan" && <div className="border-t border-[#e5d8e8] bg-[#fff9fc] px-4 py-3 text-xs text-[#82748d]">AI Layanan menggunakan endpoint khusus sesuai jenis layanan. Untuk menjalankan generasi, buka modul layanan terkait dari menu dashboard.</div>}
+        <form onSubmit={sendMessage} className={"border-t border-[#e5d8e8] bg-[#fff9fc] p-3 sm:p-4 " + (modelCategory === "layanan" ? "hidden" : "")}>
           <input ref={fileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.json,.csv,.log,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.sql,.yml,.yaml" className="hidden" onChange={(e) => addAttachments(e.target.files)}/>
           {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-2">{attachments.map((item) => <span key={item.id} className="inline-flex max-w-full items-center gap-2 rounded-xl border border-[#d9c9e2] bg-white px-2.5 py-1.5 text-[11px] text-[#554261]"><span className="truncate">{item.name}</span><button type="button" onClick={() => removeAttachment(item.id)} aria-label={`Hapus lampiran ${item.name}`} className="rounded-full p-0.5 hover:bg-[#ffe3ef]"><X size={12}/></button></span>)}</div>}
           <div className="relative flex items-end gap-2 rounded-2xl border-2 border-[#cbbbd6] bg-white p-2 shadow-[0_4px_18px_rgba(59,44,75,.06)] focus-within:border-[#9b78b8]">
