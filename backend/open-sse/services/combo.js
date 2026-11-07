@@ -105,6 +105,38 @@ export function getComboModelsFromData(modelStr, combosData) {
   return null;
 }
 
+function fusionCompletionResponse({ content, comboName, metadata, stream = false }) {
+  const id = "chatcmpl-fusion-" + Date.now();
+  const model = comboName || "fusion";
+  const payload = {
+    id, object: "chat.completion", model,
+    choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    combo: metadata,
+  };
+  if (!stream) return new Response(JSON.stringify(payload), {
+    status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+  const encoder = new TextEncoder();
+  const created = Math.floor(Date.now() / 1000);
+  const chunks = [
+    { id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta: { role: "assistant", content }, finish_reason: null }] },
+    { id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+  ];
+  const streamBody = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(encoder.encode("data: " + JSON.stringify(chunk) + "\\n\\n"));
+      controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));
+      controller.close();
+    },
+  });
+  return new Response(streamBody, { status: 200, headers: {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    "X-Accel-Buffering": "no",
+  } });
+}
+
 /**
  * Handle combo chat with fallback
  * @param {Object} options
@@ -121,9 +153,13 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   // Apply rotation strategy if enabled
   const rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit, body);
 
-  // Fusion: run every panel model concurrently, then let a configured judge synthesize.
+  // Fusion: fan out to panel models, then synthesize with the configured Judge.
   if (comboStrategy === "fusion") {
-    const settled = await Promise.allSettled(models.map(model => handleSingleModel({ ...body, stream: false }, model)));
+    const panelBody = { ...body, stream: false };
+    delete panelBody.tools;
+    delete panelBody.tool_choice;
+
+    const settled = await Promise.allSettled(models.map(model => handleSingleModel(panelBody, model)));
     const outputs = [];
     let lastFailure = null;
     for (let i = 0; i < settled.length; i++) {
@@ -134,42 +170,50 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       try {
         const payload = await response.clone().json();
         const raw = payload?.choices?.[0]?.message?.content ?? payload?.output_text;
-        const content = Array.isArray(raw) ? raw.map(part => part.text || "").join("\n") : (raw == null ? "" : String(raw));
+        const content = Array.isArray(raw) ? raw.map(part => part.text || "").join("\\n") : (raw == null ? "" : String(raw));
         if (content.trim()) outputs.push({ model: models[i], content });
       } catch (error) { lastFailure = error; }
     }
-    if (!outputs.length) return new Response(JSON.stringify({ error: { message: lastFailure?.message || "Semua model dalam Fusion gagal." } }), { status: 503, headers: { "Content-Type": "application/json" } });
+    if (!outputs.length) return new Response(JSON.stringify({ error: { message: lastFailure?.message || "Semua model dalam Fusion gagal." } }), {
+      status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+
     const panelMeta = { strategy: "fusion", successful_models: outputs.map(item => item.model), failed_count: models.length - outputs.length };
-    const panelText = outputs.map((item, i) => "### Panel " + (i + 1) + "\n" + item.content).join("\n\n");
-    if (outputs.length === 1 || !judgeModel || !models.includes(judgeModel)) {
-      const content = outputs.length === 1 ? outputs[0].content : outputs.map((item, i) => "### " + (i + 1) + " — " + item.model + "\n" + item.content).join("\n\n");
-      return new Response(JSON.stringify({ id: "combo-fusion-" + Date.now(), object: "chat.completion", model: comboName || "fusion", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, combo: panelMeta }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
-    }
+    const panelText = outputs.map((item, i) => "[Source " + (i + 1) + "]\\n" + item.content).join("\\n\\n");
     const originalPrompt = Array.isArray(body?.messages)
-      ? body.messages.filter(message => message?.role !== "assistant").map(message => typeof message.content === "string" ? message.content : JSON.stringify(message.content)).join("\n")
-      : JSON.stringify(body?.input ?? body?.messages ?? "");
+      ? body.messages.filter(message => message?.role === "user").map(message => {
+          if (typeof message.content === "string") return message.content;
+          if (Array.isArray(message.content)) return message.content.filter(part => part?.type === "text" && typeof part.text === "string").map(part => part.text).join("\\n");
+          return "";
+        }).filter(Boolean).join("\\n")
+      : (typeof body?.input === "string" ? body.input : JSON.stringify(body?.input ?? body?.messages ?? ""));
+
+    if (outputs.length === 1 || !judgeModel || !models.includes(judgeModel)) {
+      const content = outputs.length === 1 ? outputs[0].content : "Hasil panel Fusion:\\n\\n" + panelText;
+      return fusionCompletionResponse({ content, comboName, metadata: panelMeta, stream: body?.stream === true });
+    }
+
     const judgeBody = {
       ...body,
       model: judgeModel,
-      stream: false,
+      stream: body?.stream === true,
       messages: [
-        { role: "system", content: "You are the Fusion Judge. Synthesize the panel responses into one accurate, complete answer. Resolve contradictions, prefer verifiable reasoning, preserve useful details, and do not mention internal panel labels. State uncertainty clearly. Answer in the user's language." },
-        { role: "user", content: "Original request:\n" + originalPrompt + "\n\nIndependent panel responses (sources anonymized):\n" + panelText }
-      ]
+        { role: "system", content: "You are the Judge in a model-fusion panel. Synthesize independent responses into one accurate, complete answer. Resolve contradictions, prioritize verifiable reasoning, preserve unique useful insights, and identify uncertainty. Do not mention models, sources, or panel labels. Answer in the user's language." },
+        { role: "user", content: "Original request:\\n" + originalPrompt + "\\n\\nIndependent responses (anonymized):\\n" + panelText + "\\n\\nProduce one authoritative final answer." },
+      ],
     };
     delete judgeBody.input;
-    delete judgeBody.tools;
-    delete judgeBody.tool_choice;
-    delete judgeBody.response_format;
+    delete judgeBody.contents;
     try {
       const judged = await handleSingleModel(judgeBody, judgeModel);
       if (judged?.ok) {
+        if (body?.stream === true) return judged;
         const payload = await judged.clone().json();
         const raw = payload?.choices?.[0]?.message?.content ?? payload?.output_text;
-        const content = Array.isArray(raw) ? raw.map(part => part.text || "").join("\n") : (raw == null ? "" : String(raw));
-        if (content.trim()) {
-          return new Response(JSON.stringify({ ...payload, model: comboName || "fusion", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }], combo: { ...panelMeta, judge_model: judgeModel } }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
-        }
+        const content = Array.isArray(raw) ? raw.map(part => part.text || "").join("\\n") : (raw == null ? "" : String(raw));
+        if (content.trim()) return fusionCompletionResponse({
+          content, comboName, metadata: { ...panelMeta, judge_model: judgeModel }, stream: false,
+        });
       }
       log.warn("COMBO", "Fusion judge failed; returning panel responses", { judgeModel, status: judged?.status });
       panelMeta.judge_error = "Judge tidak tersedia; hasil panel dikembalikan.";
@@ -177,8 +221,11 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       log.warn("COMBO", "Fusion judge threw error; returning panel responses", { judgeModel, error: error?.message });
       panelMeta.judge_error = "Judge tidak tersedia; hasil panel dikembalikan.";
     }
-    const fallbackContent = outputs.map((item, i) => "### " + (i + 1) + " — " + item.model + "\n" + item.content).join("\n\n");
-    return new Response(JSON.stringify({ id: "combo-fusion-" + Date.now(), object: "chat.completion", model: comboName || "fusion", choices: [{ index: 0, message: { role: "assistant", content: fallbackContent }, finish_reason: "stop" }], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, combo: panelMeta }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+
+    return fusionCompletionResponse({
+      content: "Hasil panel Fusion (Judge tidak tersedia):\\n\\n" + panelText,
+      comboName, metadata: panelMeta, stream: body?.stream === true,
+    });
   }
   
   let lastError = null;
