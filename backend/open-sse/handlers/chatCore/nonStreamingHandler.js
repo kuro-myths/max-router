@@ -134,7 +134,8 @@ export function translateNonStreamingResponse(responseBody, targetFormat, source
  */
 export async function handleNonStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, trackDone, appendLog }) {
   trackDone();
-  const contentType = providerResponse.headers.get("content-type") || "";
+  const responseHeaders = providerResponse?.headers || new Headers();
+  const contentType = responseHeaders.get?.("content-type") || responseHeaders["content-type"] || "";
   let responseBody;
 
   if (contentType.includes("text/event-stream")) {
@@ -155,7 +156,7 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
     }
   }
 
-  reqLogger.logProviderResponse(providerResponse.status, providerResponse.statusText, providerResponse.headers, responseBody);
+  reqLogger.logProviderResponse(providerResponse.status, providerResponse.statusText, responseHeaders, responseBody);
   if (onRequestSuccess) await onRequestSuccess();
 
   // Decloak tool_use names once on raw Claude body, before any translation (INPUT side)
