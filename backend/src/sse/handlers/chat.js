@@ -114,7 +114,7 @@ export async function handleChat(request, clientRawRequest = null) {
     const comboStrategy = comboSpecificStrategy || settings.comboStrategy || "fallback";
     
     const comboStickyLimit = settings.comboStickyRoundRobinLimit;
-    const judgeModel = comboStrategies[modelStr]?.judgeModel || null;
+    const judgeModel = comboStrategies[modelStr]?.judgeModel || comboModels[0] || null;
     log.info("CHAT", `Combo "${modelStr}" with ${comboModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
     return handleComboChat({
       body,
@@ -191,7 +191,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       const comboStrategy = comboSpecificStrategy || chatSettings.comboStrategy || "fallback";
       
       const comboStickyLimit = chatSettings.comboStickyRoundRobinLimit;
-      const judgeModel = comboStrategies[modelStr]?.judgeModel || null;
+      const judgeModel = comboStrategies[modelStr]?.judgeModel || comboModels[0] || null;
       log.info("CHAT", `Combo "${modelStr}" with ${comboModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
       return handleComboChat({
         body,
