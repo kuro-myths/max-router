@@ -247,7 +247,38 @@ export default function ModelSelectModal({
 
         // Always show compatible providers that are connected, even with no aliases.
         // When no aliases exist, show a placeholder so users know it's available.
-        const modelsToShow = nodeModels.length > 0 ? nodeModels : [{
+        // Compatible-provider model catalogs are stored with the connection after
+        // model discovery. Surface those real IDs here instead of showing only the
+        // generic "prefix/model-id" placeholder.
+        const catalog = connection?.providerSpecificData?.modelCatalog?.models;
+        const catalogModels = Array.isArray(catalog) ? catalog : [];
+        const catalogOptions = catalogModels
+          .filter((model) => typeof model?.id === "string" && model.id.trim())
+          .map((model) => ({
+            id: model.id,
+            name: model.display_name || model.name || model.id,
+            value: `${nodePrefix}/${model.id}`,
+            // Compatible catalogs commonly use type="model" with modality="chat".
+            // Normalize chat entries to the LLM type expected by filterByKind().
+            type: model.modality === "chat" || model.type === "model" ? "llm" : model.type,
+            pricing: model.pricing,
+            isFree: model.isFree === true || Number(model.pricing?.input) === 0,
+            capabilities: model.capabilities,
+            supportedParameters: model.supportedParameters,
+            contextWindow: model.contextWindow || model.context_length,
+            maxOutput: model.maxOutput || model.max_output_tokens,
+          }));
+
+        // Prefer a discovered display alias when one exists, otherwise use the
+        // provider's discovered catalog. De-duplicate by the routable model value.
+        const availableModels = [...nodeModels, ...catalogOptions];
+        const seenModelValues = new Set();
+        const modelsToShow = filterByKind(availableModels.filter((model) => {
+          if (seenModelValues.has(model.value)) return false;
+          seenModelValues.add(model.value);
+          return true;
+        }));
+        const visibleModels = modelsToShow.length > 0 ? modelsToShow : [{
           id: `__placeholder__${providerId}`,
           name: `${nodePrefix}/model-id`,
           value: `${nodePrefix}/model-id`,
@@ -258,9 +289,10 @@ export default function ModelSelectModal({
           name: displayName,
           alias: nodePrefix,
           color: providerInfo.color,
-          models: modelsToShow,
+          models: visibleModels,
           isCustom: true,
-          hasModels: nodeModels.length > 0,
+          hasModels: modelsToShow.length > 0,
+          modelCount: modelsToShow.length,
         };
       } else {
         const hardcodedModels = getModelsByProviderId(providerId);
