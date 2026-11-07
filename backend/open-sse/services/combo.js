@@ -168,6 +168,49 @@ function collectFusionPanel(calls, minPanel = 2, graceMs = 5000, hardTimeoutMs =
   });
 }
 
+function buildFusionJudgeBody(body, judgeModel, panelText) {
+  const instruction = "You are the Judge in a model-fusion panel. Synthesize independent responses into one accurate, complete answer. Resolve contradictions, prioritize verifiable reasoning, preserve unique useful insights, and identify uncertainty. Do not mention models, sources, or panel labels. Answer in the user's language.";
+  const panelPrompt = "Independent responses (anonymized):\n" + panelText + "\n\nProduce one authoritative final answer using the conversation context above.";
+  const judgeBody = { ...body, model: judgeModel, stream: body?.stream === true };
+
+  if (Array.isArray(body?.messages)) {
+    judgeBody.messages = [
+      { role: "system", content: instruction },
+      ...flattenFusionToolHistory(body.messages),
+      { role: "user", content: panelPrompt },
+    ];
+    delete judgeBody.input;
+    delete judgeBody.contents;
+  } else if (Array.isArray(body?.input)) {
+    judgeBody.input = [...body.input, { role: "user", content: [{ type: "input_text", text: panelPrompt }] }];
+    judgeBody.instructions = [body.instructions, instruction].filter(Boolean).join("\n\n");
+    delete judgeBody.messages;
+    delete judgeBody.contents;
+  } else if (typeof body?.input === "string") {
+    judgeBody.input = body.input + "\n\n" + panelPrompt;
+    judgeBody.instructions = [body.instructions, instruction].filter(Boolean).join("\n\n");
+    delete judgeBody.messages;
+    delete judgeBody.contents;
+  } else if (Array.isArray(body?.contents)) {
+    const currentSystem = body.systemInstruction;
+    const existingParts = Array.isArray(currentSystem?.parts) ? currentSystem.parts : [];
+    const existingText = typeof currentSystem === "string" ? [{ text: currentSystem }] : [];
+    judgeBody.systemInstruction = {
+      ...(currentSystem && typeof currentSystem === "object" ? currentSystem : {}),
+      parts: [...existingParts, ...existingText, { text: instruction }],
+    };
+    judgeBody.contents = [...body.contents, { role: "user", parts: [{ text: panelPrompt }] }];
+    delete judgeBody.messages;
+    delete judgeBody.input;
+  } else {
+    judgeBody.messages = [
+      { role: "system", content: instruction },
+      { role: "user", content: panelPrompt },
+    ];
+  }
+  return judgeBody;
+}
+
 function fusionCompletionResponse({ content, comboName, metadata, stream = false }) {
   const id = "chatcmpl-fusion-" + Date.now();
   const model = comboName || "fusion";
@@ -248,30 +291,12 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
     const panelMeta = { strategy: "fusion", successful_models: outputs.map(item => item.model), failed_count: models.length - outputs.length };
     const panelText = outputs.map((item, i) => "[Source " + (i + 1) + "]\\n" + item.content).join("\\n\\n");
-    const originalPrompt = Array.isArray(body?.messages)
-      ? body.messages.filter(message => message?.role === "user").map(message => {
-          if (typeof message.content === "string") return message.content;
-          if (Array.isArray(message.content)) return message.content.filter(part => part?.type === "text" && typeof part.text === "string").map(part => part.text).join("\\n");
-          return "";
-        }).filter(Boolean).join("\\n")
-      : (typeof body?.input === "string" ? body.input : JSON.stringify(body?.input ?? body?.messages ?? ""));
-
     if (outputs.length === 1 || !judgeModel || !models.includes(judgeModel)) {
       const content = outputs.length === 1 ? outputs[0].content : "Hasil panel Fusion:\\n\\n" + panelText;
       return fusionCompletionResponse({ content, comboName, metadata: panelMeta, stream: body?.stream === true });
     }
 
-    const judgeBody = {
-      ...body,
-      model: judgeModel,
-      stream: body?.stream === true,
-      messages: [
-        { role: "system", content: "You are the Judge in a model-fusion panel. Synthesize independent responses into one accurate, complete answer. Resolve contradictions, prioritize verifiable reasoning, preserve unique useful insights, and identify uncertainty. Do not mention models, sources, or panel labels. Answer in the user's language." },
-        { role: "user", content: "Original request:\\n" + originalPrompt + "\\n\\nIndependent responses (anonymized):\\n" + panelText + "\\n\\nProduce one authoritative final answer." },
-      ],
-    };
-    delete judgeBody.input;
-    delete judgeBody.contents;
+    const judgeBody = buildFusionJudgeBody(body, judgeModel, panelText);
     try {
       const judged = await handleSingleModel(judgeBody, judgeModel);
       if (judged?.ok) {
