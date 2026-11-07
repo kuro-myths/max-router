@@ -20,7 +20,7 @@ const COMBO_STRATEGIES = [
   { value: "last-good", label: "Last Good · terakhir berhasil", description: "Mendahulukan model terakhir yang berhasil, lalu mencoba model lain jika gagal." },
   { value: "shuffle", label: "Shuffle · acak tiap permintaan", description: "Mengacak urutan model pada setiap permintaan dan mencoba sisanya bila gagal." },
   { value: "capacity", label: "Capacity · sesuai kemampuan", description: "Mendahulukan model yang namanya mengindikasikan dukungan gambar atau audio; ini heuristik, bukan jaminan." },
-  { value: "fusion", label: "Fusion · hasil paralel", description: "Meminta semua model secara paralel lalu menampilkan jawaban berhasil dengan label model; belum memakai model penilai." },
+  { value: "fusion", label: "Fusion · sintesis AI", description: "Menjalankan semua model secara paralel, lalu Judge menyatukan hasil menjadi satu jawaban." },
 ];
 
 export default function CombosPage() {
@@ -117,6 +117,15 @@ export default function CombosPage() {
     });
   };
 
+  const handleChangeJudgeModel = async (comboName, judgeModel) => {
+    try {
+      const updated = { ...comboStrategies, [comboName]: { ...(comboStrategies[comboName] || {}), judgeModel } };
+      const response = await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ comboStrategies: updated }) });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      setComboStrategies(updated);
+    } catch (error) { console.error("Error updating Fusion judge:", error); alert("Judge model gagal disimpan."); }
+  };
+
   const handleChangeStrategy = async (comboName, strategy) => {
     try {
       const updated = { ...comboStrategies, [comboName]: { ...(comboStrategies[comboName] || {}), fallbackStrategy: strategy } };
@@ -188,6 +197,8 @@ export default function CombosPage() {
               onUbah={() => setUbahingCombo(combo)}
               onHapus={() => handleHapus(combo.id)}
               strategy={comboStrategies[combo.name]?.fallbackStrategy || "fallback"}
+              judgeModel={comboStrategies[combo.name]?.judgeModel || combo.models?.[0] || ""}
+              onChangeJudgeModel={(model) => handleChangeJudgeModel(combo.name, model)}
               onChangeStrategy={(strategy) => handleChangeStrategy(combo.name, strategy)}
             />
           ))}
@@ -226,7 +237,7 @@ export default function CombosPage() {
   );
 }
 
-function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, onChangeStrategy }) {
+function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeModel, onChangeJudgeModel, onChangeStrategy }) {
   return (
     <Card padding="sm" className="group">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -268,6 +279,16 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, onChange
               {COMBO_STRATEGIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </div>
+
+          {strategy === "fusion" && (
+            <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-primary/20 bg-primary/5 px-2 py-1.5 sm:min-w-[190px]">
+              <label className="text-[10px] font-semibold text-text-muted" htmlFor={"fusion-judge-" + combo.id}>Judge model · penyatu jawaban</label>
+              <select id={"fusion-judge-" + combo.id} value={judgeModel} onChange={(event) => onChangeJudgeModel(event.target.value)} disabled={!combo.models?.length} className="max-w-full rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary">
+                {combo.models.map((model) => <option key={model} value={model}>{model}</option>)}
+              </select>
+              <span className="text-[10px] text-text-muted">Dipilih dari model yang sudah terdaftar di combo.</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-1 sm:flex">
             <button
