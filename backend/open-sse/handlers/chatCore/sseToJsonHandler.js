@@ -99,7 +99,8 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
  */
 export async function handleForcedSSEToJson({ providerResponse, sourceFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, trackDone, appendLog }) {
-  const contentType = providerResponse.headers.get("content-type") || "";
+  const responseHeaders = providerResponse?.headers || new Headers();
+  const contentType = responseHeaders.get?.("content-type") || responseHeaders["content-type"] || "";
   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && provider === "codex");
   if (!isSSE) return null; // not handled here
 
