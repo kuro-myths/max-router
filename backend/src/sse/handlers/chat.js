@@ -8,7 +8,7 @@ import {
   isValidApiKey,
 } from "../services/auth.js";
 import { cacheClaudeHeaders } from "open-sse/utils/claudeHeaderCache.js";
-import { getSettings, getApiKeyByValue, getProviderConnections, getProviderNodes } from "../../lib/localDb.js";
+import { getSettings, getApiKeyByValue, getProviderConnections, getProviderNodes, getProviderConnectionById } from "../../lib/localDb.js";
 import { getModelInfo, getComboModels } from "../services/model.js";
 import { handleChatCore } from "open-sse/handlers/chatCore.js";
 import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
@@ -47,7 +47,21 @@ export async function handleChat(request, clientRawRequest = null) {
 
   // Log request endpoint and model
   const url = new URL(request.url);
-  const modelStr = body.model;
+  const requestedConnectionId = body.provider_connection_id || null;
+  let selectedConnection = null;
+  if (requestedConnectionId) {
+    selectedConnection = await getProviderConnectionById(requestedConnectionId).catch(() => null);
+    if (!selectedConnection || selectedConnection.isActive === false) {
+      return errorResponse(HTTP_STATUS.NOT_FOUND, "Provider connection not found or inactive");
+    }
+    // The test-chat modal is scoped to one saved connection. Prefix with its
+    // provider ID so model IDs containing "/" remain the model name, not a route.
+    body = { ...body };
+    delete body.provider_connection_id;
+  }
+  const modelStr = selectedConnection
+    ? `${selectedConnection.provider}/${body.model}`
+    : body.model;
 
   // Count messages (support both messages[] and input[] formats)
   const msgCount = body.messages?.length || body.input?.length || 0;
@@ -113,7 +127,7 @@ export async function handleChat(request, clientRawRequest = null) {
   }
 
   // Single model request
-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, apiKeyId);
+  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, apiKeyId, { preferredConnectionId: selectedConnection?.id || null });
 }
 
 /**
@@ -161,11 +175,11 @@ async function handleGlobalModelFallback(body, modelStr, clientRawRequest = null
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, apiKeyId = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, apiKeyId = null, options = {}) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
-  if (!modelInfo.provider) {
+  if (!modelInfo?.provider) {
     const comboModels = await getComboModels(modelStr);
     if (comboModels) {
       const chatSettings = await getSettings();
@@ -214,7 +228,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   let lastStatus = null;
 
   while (true) {
-    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model, { apiKeyId });
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model, { apiKeyId, preferredConnectionId: options?.preferredConnectionId || null });
 
     // All accounts unavailable
     if (!credentials || credentials.allRateLimited) {
