@@ -7,8 +7,8 @@ import { normalizeThinkingConfig } from "../services/provider.js";
 
 // Registry for translators - var + lazy-init agar aman terhadap circular import
 // (modul translator di-import statis di bawah dan mendaftar saat dievaluasi).
-var requestRegistry = null;
-var responseRegistry = null;
+var requestRegistry;
+var responseRegistry;
 
 // Translator modules - dimuat via import statis ESM.
 // require() tidak bisa memuat ES Module di runtime Node serverless.
