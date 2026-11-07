@@ -105,6 +105,69 @@ export function getComboModelsFromData(modelStr, combosData) {
   return null;
 }
 
+function fusionMessageText(content) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map(part => {
+    if (typeof part === "string") return part;
+    if (part?.type === "text" && typeof part.text === "string") return part.text;
+    if (part?.type === "tool_result") return "[Tool result: " + fusionMessageText(part.content) + "]";
+    if (part?.type === "tool_use") return "[Called tool: " + (part.name || "tool") + "]";
+    return "";
+  }).filter(Boolean).join("\n");
+}
+
+function flattenFusionToolHistory(messages) {
+  return messages.filter(Boolean).map(message => {
+    if (message.role === "tool" || message.role === "function") {
+      return { role: "assistant", content: "[Tool result: " + fusionMessageText(message.content) + "]" };
+    }
+    if (message.role === "assistant" && Array.isArray(message.tool_calls)) {
+      const { tool_calls, ...rest } = message;
+      const names = tool_calls.map(call => call?.function?.name || call?.name || "tool").join(", ");
+      const base = fusionMessageText(rest.content);
+      return { ...rest, content: [base, "[Called tools: " + names + "]"].filter(Boolean).join("\n") };
+    }
+    if (Array.isArray(message.content)) {
+      const hasToolBlocks = message.content.some(part => part?.type === "tool_use" || part?.type === "tool_result");
+      if (hasToolBlocks) return { ...message, content: fusionMessageText(message.content) };
+    }
+    return message;
+  });
+}
+
+// Stop waiting for stragglers once two panel answers are ready, but give the
+// remaining models a short grace window. The hard cap prevents a hung provider
+// from holding the whole request open indefinitely.
+function collectFusionPanel(calls, minPanel = 2, graceMs = 5000, hardTimeoutMs = 45000) {
+  return new Promise(resolve => {
+    const results = new Array(calls.length);
+    let settled = 0;
+    let successful = 0;
+    let finished = false;
+    let graceTimer = null;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(hardTimer);
+      if (graceTimer) clearTimeout(graceTimer);
+      resolve(results);
+    };
+    const hardTimer = setTimeout(finish, hardTimeoutMs);
+    calls.forEach((call, index) => {
+      Promise.resolve(call)
+        .then(value => { results[index] = { status: "fulfilled", value }; })
+        .catch(reason => { results[index] = { status: "rejected", reason }; })
+        .finally(() => {
+          settled++;
+          if (results[index]?.value?.ok) successful++;
+          if (settled === calls.length) return finish();
+          if (successful >= minPanel && !graceTimer) graceTimer = setTimeout(finish, graceMs);
+        });
+    });
+  });
+}
+
 function fusionCompletionResponse({ content, comboName, metadata, stream = false }) {
   const id = "chatcmpl-fusion-" + Date.now();
   const model = comboName || "fusion";
@@ -158,12 +221,17 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
     const panelBody = { ...body, stream: false };
     delete panelBody.tools;
     delete panelBody.tool_choice;
+    if (Array.isArray(panelBody.messages)) panelBody.messages = flattenFusionToolHistory(panelBody.messages);
 
-    const settled = await Promise.allSettled(models.map(model => handleSingleModel(panelBody, model)));
+    const settled = await collectFusionPanel(
+      models.map(model => handleSingleModel(panelBody, model)),
+      Math.min(2, models.length),
+    );
     const outputs = [];
     let lastFailure = null;
     for (let i = 0; i < settled.length; i++) {
       const item = settled[i];
+      if (!item) continue; // panel exceeded the quorum grace/hard timeout
       if (item.status !== "fulfilled") { lastFailure = item.reason; continue; }
       const response = item.value;
       if (!response?.ok) { lastFailure = new Error("Model " + models[i] + " returned HTTP " + response?.status); continue; }
