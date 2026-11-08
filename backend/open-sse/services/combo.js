@@ -20,7 +20,7 @@ function requestSignals(body = {}) {
   const hasImage = /image_url|"image"|inline_data|input_image/.test(messages);
   const hasAudio = /input_audio|audio_url|speech|transcri|"audio"/.test(messages);
   const hasVideo = /video_url|video_frame|"video"/.test(messages);
-  const hasPdf = /application\\/pdf|\\.pdf|"file"/.test(messages);
+  const hasPdf = /application.{0,4}pdf|\.pdf|"file"/.test(messages);
   const effort = String(body?.reasoning_effort || body?.reasoning?.effort || body?.thinking?.level || "").toLowerCase();
   return { hasImage, hasAudio, hasVideo, hasPdf, tools, estimatedTokens: Math.ceil(messages.length / 4),
     reasoning: ["high", "xhigh", "max", "medium"].includes(effort) };
