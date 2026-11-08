@@ -274,7 +274,7 @@ export async function resolveKiroModels(credentials, options = {}) {
           if (next.refreshToken) credentials.refreshToken = next.refreshToken;
         } catch (err2) {
           options.log?.warn?.("KIRO_MODELS", `Retry after refresh failed: ${err2?.message || err2}`);
-          return null;
+          return { models: [], rawModels: [], error: err2?.message || String(err2), statusCode: err2?.status || null };
         }
       } else {
         options.log?.warn?.("KIRO_MODELS", "Token refresh did not return accessToken");
