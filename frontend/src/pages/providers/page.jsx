@@ -23,6 +23,107 @@ import ModelAvailabilityBadge from "./components/ModelAvailabilityBadge";
 
 const VALIDATION_TIMEOUT_MS = 15000;
 
+const FAILED_ARCHIVE_KEY = "max-router-failed-service-tests";
+const PENDING_DELETE_KEY = "max-router-pending-failed-account-deletions";
+
+function readPendingFailedDeletes() {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(PENDING_DELETE_KEY) || "[]");
+    return Array.isArray(value) ? value.filter((item) => item && item.id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingFailedDeletes(items) {
+  window.localStorage.setItem(PENDING_DELETE_KEY, JSON.stringify(items.slice(0, 1000)));
+}
+
+function saveFailedArchiveLocal(items) {
+  const previous = JSON.parse(window.localStorage.getItem(FAILED_ARCHIVE_KEY) || "[]");
+  const merged = new Map();
+  for (const item of [...(Array.isArray(items) ? items : []), ...(Array.isArray(previous) ? previous : [])]) {
+    if (item?.id) merged.set(String(item.id), { ...merged.get(String(item.id)), ...item });
+  }
+  window.localStorage.setItem(FAILED_ARCHIVE_KEY, JSON.stringify([...merged.values()].slice(0, 1000)));
+}
+
+async function persistFailedArchive(archive) {
+  const response = await fetch("/api/providers/failed-archive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ archive }),
+  });
+  if (!response.ok) throw new Error("Arsip JSON gagal disimpan ke database (HTTP " + response.status + ").");
+  return true;
+}
+
+// Queue is written before any destructive request. It survives refresh/reopen and retries
+// only explicitly verified authentication failures; transient 429/5xx/network errors stay.
+async function resumePendingFailedDeletes(notify, setConnections) {
+  const pending = readPendingFailedDeletes();
+  if (!pending.length) return;
+  const completed = [];
+  const remaining = [];
+  for (let start = 0; start < pending.length; start += 4) {
+    const batch = pending.slice(start, start + 4);
+    const outcomes = await Promise.all(batch.map(async (record) => {
+      try {
+        const response = await fetch("/api/providers/" + encodeURIComponent(String(record.id)), { method: "DELETE" });
+        return { record, ok: response.ok || response.status === 404, status: response.status };
+      } catch {
+        return { record, ok: false, status: 0 };
+      }
+    }));
+    for (const outcome of outcomes) {
+      if (outcome.ok) completed.push({ ...outcome.record, removedFromActiveServices: true, deleteHttpStatus: outcome.status });
+      else remaining.push({ ...outcome.record, removedFromActiveServices: false, deleteHttpStatus: outcome.status });
+    }
+  }
+
+  writePendingFailedDeletes(remaining);
+  const allRecords = [...completed, ...remaining];
+  saveFailedArchiveLocal(allRecords);
+  const archive = {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    source: "Max Router / antrean penghapusan akun gagal",
+    summary: {
+      failed: allRecords.length,
+      deletedFromActiveServices: completed.length,
+      deleteFailed: remaining.length,
+      pendingAfterReload: remaining.length,
+    },
+    failedServices: allRecords,
+  };
+  let serverSaved = false;
+  try { await persistFailedArchive(archive); serverSaved = true; }
+  catch (error) { console.warn("Failed deletion archive sync:", error); }
+
+  try {
+    const refreshed = await fetch("/api/providers", { cache: "no-store" });
+    if (refreshed.ok) {
+      const data = await refreshed.json();
+      setConnections(data.connections || []);
+    }
+  } catch (error) {
+    console.warn("Provider refresh after cleanup failed:", error);
+  }
+
+  if (completed.length) {
+    notify.success(
+      completed.length + " akun error berhasil dihapus" +
+      (remaining.length ? "; " + remaining.length + " akan dicoba lagi saat halaman dibuka." : ".") +
+      (serverSaved ? " Arsip tersimpan di database." : " Arsip tetap tersimpan lokal."),
+      "Pembersihan otomatis dilanjutkan",
+    );
+  } else if (remaining.length) {
+    notify.warning(remaining.length + " penghapusan masih tertunda. Sistem akan mencoba lagi saat halaman dibuka.", "Pembersihan tertunda");
+  }
+}
+
+
+
 async function fetchProviderNodeValidation(payload) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), VALIDATION_TIMEOUT_MS);
@@ -208,6 +309,11 @@ export default function ProvidersPage() {
         console.log("Error fetching data:", error);
       } finally {
         setLoading(false);
+        // Continue queued deletions after reload/navigation. Queue is browser-persistent.
+        resumePendingFailedDeletes(notify, setConnections).catch((error) => {
+          console.warn("Could not resume failed-account cleanup:", error);
+          notify.warning("Antrean penghapusan belum selesai. Sistem akan mencoba lagi saat halaman dibuka.", "Pembersihan tertunda");
+        });
       }
     };
     fetchData();
@@ -296,122 +402,32 @@ export default function ProvidersPage() {
       notify.info("Tidak ada akun dengan kredensial 401/403 yang perlu dibersihkan.");
       return;
     }
-    const confirmed = window.confirm(
-      `Hapus ${pending.length} akun dengan kredensial ditolak (401/403) dari layanan aktif? Metadata error akan diarsipkan ke JSON/local storage terlebih dahulu. Error jaringan, 429, dan 5xx tidak ikut dihapus.`
-    );
-    if (!confirmed) return;
+    if (!window.confirm("Hapus " + pending.length + " akun yang terbukti ditolak HTTP 401/403? Metadata aman disimpan terlebih dahulu. Error jaringan, 429, dan 5xx tidak ikut dihapus.")) return;
 
     setTestingMode("cleanup");
-    const testedAt = new Date().toISOString();
-    const failedServices = pending.map((connection) => ({
-      id: String(connection.id),
-      name: connection.name || connection.email || "Layanan tanpa nama",
-      provider: connection.provider || null,
-      authType: connection.authType || null,
-      endpoint: connection.providerSpecificData?.baseUrl || null,
-      model: connection.defaultModel || null,
-      result: "failed",
-      verified: true,
-      httpStatus: Number(connection.errorCode || getErrorCode(connection.lastError)) || null,
-      errorCode: getConnectionErrorTag(connection),
-      reason: String(connection.lastError || "Kredensial ditolak provider").slice(0, 1000),
-      testedAt: connection.lastErrorAt || testedAt,
-    }));
-
-    const archive = {
-      schemaVersion: 1,
-      generatedAt: testedAt,
-      source: "Max Router / Pembersihan akun error dari halaman Penyedia",
-      summary: { failed: failedServices.length, autoDeleteEligible: failedServices.length },
-      failedServices,
-    };
-
     try {
-      // Persist safe metadata before destructive deletion; never archive credentials.
-      try {
-        const key = "max-router-failed-service-tests";
-        const previous = JSON.parse(window.localStorage.getItem(key) || "[]");
-        const merged = new Map();
-        for (const item of [...failedServices, ...(Array.isArray(previous) ? previous : [])]) {
-          if (!merged.has(String(item.id))) merged.set(String(item.id), item);
-        }
-        window.localStorage.setItem(key, JSON.stringify([...merged.values()].slice(0, 1000)));
-      } catch (storageError) {
-        console.warn("Local failed-account archive could not be saved:", storageError);
-      }
-
-      let archiveSavedToServer = false;
-      try {
-        const archiveResponse = await fetch("/api/providers/failed-archive", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ archive }),
-        });
-        archiveSavedToServer = archiveResponse.ok;
-      } catch (archiveError) {
-        console.warn("Server failed-account archive could not be saved:", archiveError);
-      }
-
-      const removed = [];
-      const failedDeletes = [];
-      for (let start = 0; start < pending.length; start += 4) {
-        const batch = pending.slice(start, start + 4);
-        const outcomes = await Promise.all(batch.map(async (connection) => {
-          const id = String(connection.id);
-          try {
-            const response = await fetch(`/api/providers/${encodeURIComponent(id)}`, { method: "DELETE" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return { id, ok: true };
-          } catch (error) {
-            return { id, ok: false, error: error.message };
-          }
-        }));
-        removed.push(...outcomes.filter((item) => item.ok).map((item) => item.id));
-        failedDeletes.push(...outcomes.filter((item) => !item.ok));
-      }
-
-      const removedSet = new Set(removed);
-      const refreshed = await fetch("/api/providers", { cache: "no-store" });
-      if (refreshed.ok) {
-        const data = await refreshed.json();
-        setConnections(data.connections || []);
-      } else {
-        setConnections((current) => current.filter((connection) => !removedSet.has(String(connection.id))));
-      }
-
-      const finalArchive = {
-        ...archive,
-        summary: { ...archive.summary, deletedFromActiveServices: removed.length, deleteFailed: failedDeletes.length },
-        failedServices: failedServices.map((item) => ({
-          ...item,
-          removedFromActiveServices: removedSet.has(item.id),
-          deleteHttpStatus: failedDeletes.find((failure) => failure.id === item.id)?.error || (removedSet.has(item.id) ? 200 : null),
-        })),
-      };
-      try {
-        const key = "max-router-failed-service-tests";
-        const previous = JSON.parse(window.localStorage.getItem(key) || "[]");
-        const byId = new Map((Array.isArray(previous) ? previous : []).map((item) => [String(item.id), item]));
-        for (const item of finalArchive.failedServices) byId.set(item.id, item);
-        window.localStorage.setItem(key, JSON.stringify([...byId.values()].slice(0, 1000)));
-      } catch (storageError) {
-        console.warn("Could not update local archive deletion state:", storageError);
-      }
-      try {
-        await fetch("/api/providers/failed-archive", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ archive: finalArchive }),
-        });
-      } catch (archiveError) {
-        console.warn("Could not update server archive deletion state:", archiveError);
-      }
-
-      if (failedDeletes.length) {
-        notify.warning(`${removed.length} akun dihapus, ${failedDeletes.length} gagal dihapus. Arsip lokal ${archiveSavedToServer ? "dan database" : "browser"} tetap tersedia.`, "Pembersihan akun error");
-      } else {
-        notify.success(`${removed.length} akun error 401/403 berhasil dihapus. Metadata JSON tersimpan di local storage${archiveSavedToServer ? " dan database" : ""}.`, "Pembersihan selesai");
-      }
+      const testedAt = new Date().toISOString();
+      const records = pending.map((connection) => ({
+        id: String(connection.id),
+        name: connection.name || connection.email || "Layanan tanpa nama",
+        provider: connection.provider || null,
+        authType: connection.authType || null,
+        endpoint: connection.providerSpecificData?.baseUrl || null,
+        model: connection.defaultModel || null,
+        result: "failed",
+        verified: true,
+        httpStatus: Number(connection.errorCode || getErrorCode(connection.lastError)) || null,
+        errorCode: getConnectionErrorTag(connection),
+        reason: String(connection.lastError || "Kredensial ditolak provider").slice(0, 1000),
+        testedAt: connection.lastErrorAt || testedAt,
+      }));
+      // Persist archive and deletion queue BEFORE calling DELETE, so refresh cannot lose the work.
+      saveFailedArchiveLocal(records);
+      writePendingFailedDeletes([...readPendingFailedDeletes(), ...records].filter((item, index, all) => all.findIndex((entry) => String(entry.id) === String(item.id)) === index));
+      const archive = { schemaVersion: 1, generatedAt: testedAt, source: "Max Router / Pembersihan akun error", summary: { failed: records.length, pendingAfterReload: records.length }, failedServices: records };
+      try { await persistFailedArchive(archive); }
+      catch (error) { console.warn("Archive database sync failed; local queue remains durable:", error); }
+      await resumePendingFailedDeletes(notify, setConnections);
     } catch (error) {
       notify.error(error?.message || "Pembersihan akun error gagal.");
     } finally {
@@ -469,98 +485,74 @@ export default function ProvidersPage() {
         throw new Error(`Pengujian belum lengkap: ${accumulated.length} dari ${total} akun menerima hasil. Jalankan ulang untuk melanjutkan pemeriksaan.`);
       }
 
-      // A failed test is archived as safe metadata before the account is removed.
-      // "Unverified" successes are intentionally retained; only valid=false is removed.
+      // Only definitive authentication rejection is auto-deleted. Queue + metadata are
+      // persisted before DELETE so a page reload cannot cancel the remaining cleanup.
       const failedResults = accumulated.filter((item) => item.valid === false);
+      const currentById = new Map(connections.map((connection) => [String(connection.id), connection]));
+      const failedRecords = failedResults.map((item) => {
+        const id = String(item.connectionId || item.id || "");
+        const connection = currentById.get(id);
+        return {
+          id,
+          name: item.connectionName || connection?.name || connection?.email || "Layanan tanpa nama",
+          provider: item.provider || connection?.provider || null,
+          authType: connection?.authType || null,
+          endpoint: connection?.providerSpecificData?.baseUrl || null,
+          model: connection?.defaultModel || null,
+          result: "failed",
+          verified: item.verified === true,
+          httpStatus: item.statusCode ?? item.httpStatus ?? null,
+          errorCode: item.errorCode || null,
+          reason: String(item.error || item.message || item.reason || "Uji layanan gagal").slice(0, 1000),
+          testedAt: item.testedAt || new Date().toISOString(),
+        };
+      }).filter((item) => item.id);
+
+      const deletableRecords = failedRecords.filter((record) => [401, 403].includes(Number(record.httpStatus)));
       let deletedCount = 0;
       let deleteFailedCount = 0;
-      if (failedResults.length > 0) {
-        const currentById = new Map(connections.map((connection) => [String(connection.id), connection]));
-        const failedRecords = failedResults.map((item) => {
-          const id = String(item.connectionId || item.id || "");
-          const connection = currentById.get(id);
-          return {
-            id,
-            name: item.connectionName || connection?.name || connection?.email || "Layanan tanpa nama",
-            provider: item.provider || connection?.provider || null,
-            authType: connection?.authType || null,
-            endpoint: connection?.providerSpecificData?.baseUrl || null,
-            model: connection?.defaultModel || null,
-            result: "failed",
-            verified: item.verified === true,
-            httpStatus: item.statusCode ?? item.httpStatus ?? null,
-            errorCode: item.errorCode || null,
-            reason: item.error || item.message || item.reason || "Uji layanan gagal",
-            testedAt: item.testedAt || new Date().toISOString(),
-          };
-        }).filter((item) => item.id);
-
-        const deletableRecords = failedRecords.filter((record) => [401, 403].includes(Number(record.httpStatus)));
-        const deletions = await Promise.all(deletableRecords.map(async (record) => {
-          try {
-            const response = await fetch(`/api/providers/${encodeURIComponent(record.id)}`, { method: "DELETE" });
-            return { id: record.id, ok: response.ok, status: response.status };
-          } catch {
-            return { id: record.id, ok: false, status: 0 };
-          }
-        }));
-        const deletedIds = new Set(deletions.filter((item) => item.ok).map((item) => item.id));
-        deletedCount = deletedIds.size;
-        deleteFailedCount = deletableRecords.length - deletedCount;
-
+      if (failedRecords.length) {
+        saveFailedArchiveLocal(failedRecords);
         const archive = {
           schemaVersion: 1,
           generatedAt: new Date().toISOString(),
           source: "Max Router / Uji Semua Penyedia",
-          summary: {
-            tested: summary.total,
-            passed: summary.passed,
-            unverified: summary.unverified,
-            failed: failedRecords.length,
-            autoDeleteEligible: deletableRecords.length,
-            deletedFromActiveServices: deletedCount,
-            deleteFailed: deleteFailedCount,
-          },
-          failedServices: failedRecords.map((record) => ({
-            ...record,
-            removedFromActiveServices: deletedIds.has(record.id),
-            deleteHttpStatus: deletions.find((item) => item.id === record.id)?.status ?? null,
-          })),
+          summary: { tested: summary.total, passed: summary.passed, unverified: summary.unverified, failed: failedRecords.length, autoDeleteEligible: deletableRecords.length },
+          failedServices: failedRecords,
         };
+        try { await persistFailedArchive(archive); }
+        catch (archiveError) { console.warn("Server archive save failed; local archive retained:", archiveError); }
 
-        let archiveSavedToServer = false;
-        try {
-          const archiveResponse = await fetch("/api/providers/failed-archive", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ archive }),
-          });
-          archiveSavedToServer = archiveResponse.ok;
-          if (!archiveResponse.ok) console.warn("Server archive save failed:", archiveResponse.status);
-        } catch (archiveError) {
-          console.warn("Server archive save failed:", archiveError);
+        if (deletableRecords.length) {
+          const queue = [...readPendingFailedDeletes(), ...deletableRecords];
+          writePendingFailedDeletes(queue.filter((item, index, all) => all.findIndex((entry) => String(entry.id) === String(item.id)) === index));
+          const before = readPendingFailedDeletes().length;
+          await resumePendingFailedDeletes(notify, setConnections);
+          const after = readPendingFailedDeletes().length;
+          deleteFailedCount = after;
+          deletedCount = Math.max(0, before - after);
         }
 
+        // Preserve all failed test details in local storage; no API credentials are stored.
         try {
-          const previous = JSON.parse(window.localStorage.getItem("max-router-failed-service-tests") || "[]");
-          window.localStorage.setItem("max-router-failed-service-tests", JSON.stringify([...archive.failedServices, ...(Array.isArray(previous) ? previous : [])].slice(0, 1000)));
-        } catch (storageError) {
-          console.warn("Failed-service archive could not be saved in local storage:", storageError);
+          const blob = new Blob([JSON.stringify(archive, null, 2)], { type: "application/json;charset=utf-8" });
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = "max-router-failed-services-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(objectUrl);
+        } catch (downloadError) {
+          console.warn("JSON download unavailable; local/database archive remains:", downloadError);
         }
+      }
 
-        const blob = new Blob([JSON.stringify(archive, null, 2)], { type: "application/json;charset=utf-8" });
-        const objectUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = `max-router-failed-services-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(objectUrl);
-
-        for (const item of accumulated) {
-          const id = String(item.connectionId || item.id || "");
-          if (deletedIds.has(id)) item.removedFromActiveServices = true;
+      for (const item of accumulated) {
+        const id = String(item.connectionId || item.id || "");
+        if (deletableRecords.some((record) => record.id === id) && !readPendingFailedDeletes().some((record) => record.id === id)) {
+          item.removedFromActiveServices = true;
         }
       }
 
@@ -571,7 +563,7 @@ export default function ProvidersPage() {
       }
 
       if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} akun selesai diuji dan berhasil diverifikasi.`, "Uji semua selesai");
-      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. ${deletedCount} akun dengan HTTP 401/403 dihapus otomatis; ${deleteFailedCount} gagal dihapus. Arsip JSON ${archiveSavedToServer ? "tersimpan di database dan " : "belum tersimpan di database; "}otomatis diunduh.${deleteFailedCount ? ` ${deleteFailedCount} gagal dihapus dari server.` : ""}`, "Hasil uji semua");
+      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. ${deletedCount} akun 401/403 dihapus; ${deleteFailedCount} masih dalam antrean dan akan dicoba lagi setelah reload. Arsip JSON disimpan lokal dan disinkronkan ke database bila tersedia.`, "Hasil uji semua");
     } catch (error) {
       setTestResults((current) => ({
         ...(current || {}),
