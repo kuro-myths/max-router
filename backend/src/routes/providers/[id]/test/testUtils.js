@@ -167,7 +167,10 @@ async function refreshOAuthToken(connection) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ clientId, clientSecret, refreshToken, grantType: "refresh_token" }),
         });
-        if (!response.ok) return null;
+        if (!response.ok) {
+          const detail = (await response.text().catch(() => "")).slice(0, 240);
+          return { refreshError: `Kiro OIDC menolak refresh token (HTTP ${response.status})${detail ? `: ${detail}` : ""}`, statusCode: response.status };
+        }
         const data = await response.json();
         return { accessToken: data.accessToken, expiresIn: data.expiresIn || 3600, refreshToken: data.refreshToken || refreshToken };
       }
@@ -176,7 +179,10 @@ async function refreshOAuthToken(connection) {
         headers: { "Content-Type": "application/json", "User-Agent": "kiro-cli/1.0.0" },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        const detail = (await response.text().catch(() => "")).slice(0, 240);
+        return { refreshError: `Kiro social login menolak refresh token (HTTP ${response.status})${detail ? `: ${detail}` : ""}`, statusCode: response.status };
+      }
       const data = await response.json();
       return { accessToken: data.accessToken, expiresIn: data.expiresIn || 3600, refreshToken: data.refreshToken || refreshToken };
     }
@@ -256,7 +262,17 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
 
   // Cursor uses protobuf API - can only verify token exists, not test endpoint
   if (config.tokenExists) {
-    return { valid: true, error: null, refreshed: false, newTokens: null };
+    return {
+      valid: true,
+      verified: false,
+      error: null,
+      diagnosis: {
+        type: "token_presence_only",
+        message: "Token ditemukan, tetapi endpoint model provider ini belum diuji. Status ini bukan bukti bahwa inferensi berhasil.",
+      },
+      refreshed: false,
+      newTokens: null,
+    };
   }
 
   let accessToken = connection.accessToken;
@@ -266,12 +282,26 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
   const tokenExpired = isTokenExpired(connection);
   if (config.refreshable && tokenExpired && connection.refreshToken) {
     const tokens = await refreshOAuthToken(connection);
-    if (tokens) {
+    if (tokens?.refreshError) {
+      return {
+        valid: false,
+        error: tokens.refreshError,
+        statusCode: tokens.statusCode,
+        diagnosis: {
+          type: tokens.statusCode === 401 ? "reauth_required" : "token_refresh_failed",
+          message: tokens.statusCode === 401
+            ? "Refresh token ditolak penyedia. Akun harus diotorisasi ulang; token lama tidak dapat dipulihkan oleh Max Router."
+            : "Penyedia gagal memperbarui token. Coba lagi atau otorisasi ulang akun.",
+        },
+        refreshed: false,
+      };
+    }
+    if (tokens?.accessToken) {
       accessToken = tokens.accessToken;
       refreshed = true;
       newTokens = tokens;
     } else {
-      return { valid: false, error: "Token expired and refresh failed", refreshed: false };
+      return { valid: false, error: "Token kedaluwarsa dan refresh gagal. Login ulang diperlukan.", diagnosis: { type: "reauth_required", message: "Refresh token tidak tersedia atau ditolak penyedia." }, refreshed: false };
     }
   }
 
@@ -821,6 +851,12 @@ export async function testSingleConnection(id) {
     updateData.last_balance = result.balance;
   }
 
+  if (result.statusCode !== undefined) updateData.lastStatusCode = result.statusCode;
+  if (result.verified === false) {
+    updateData.testStatus = "unknown";
+    updateData.lastError = "Token tersedia; endpoint model belum diverifikasi";
+  }
+
   if (result.refreshed && result.newTokens) {
     if (result.newTokens.accessToken) updateData.accessToken = result.newTokens.accessToken;
     if (result.newTokens.refreshToken) updateData.refreshToken = result.newTokens.refreshToken;
@@ -844,5 +880,21 @@ export async function testSingleConnection(id) {
 
   await updateProviderConnection(id, updateData);
 
-  return { valid: result.valid, error: result.error, refreshed: !!result.refreshed, latencyMs, testedAt: new Date().toISOString() };
+  return {
+    valid: result.valid,
+    verified: result.verified !== false,
+    error: result.error,
+    diagnosis: result.diagnosis || (result.valid ? null : {
+      type: result.statusCode === 401 ? "invalid_credentials" : result.statusCode === 403 ? "access_denied" : "provider_error",
+      message: result.statusCode === 401
+        ? "Kredensial ditolak (HTTP 401). Hubungkan ulang akun."
+        : result.statusCode === 403
+          ? "Akses ditolak (HTTP 403). Periksa izin, scope, atau kuota akun."
+          : result.error || "Penyedia gagal merespons pengujian.",
+    }),
+    statusCode: result.statusCode || null,
+    refreshed: !!result.refreshed,
+    latencyMs,
+    testedAt: new Date().toISOString(),
+  };
 }
