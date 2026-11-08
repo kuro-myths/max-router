@@ -404,8 +404,25 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
       return { valid: false, error: connection.provider === "github" ? `GitHub menolak token: ${detail || "Bad credentials"}. Otorisasi ulang GitHub diperlukan.` : "Token tidak valid atau sudah dicabut.", statusCode: res.status, refreshed };
     }
     if (res.status === 403) {
-      const detail = (await readResponseError(res)).slice(0, 180);
-      return { valid: false, error: `Akses ditolak oleh provider (HTTP 403). Periksa scope, izin, kebijakan akun, atau kuota.${detail ? ` Detail: ${detail}` : ""}`, statusCode: res.status, refreshed };
+      const detail = (await readResponseError(res)).slice(0, 700);
+      const suspended = /temporarily\\s+(?:is\\s+)?suspended|account.{0,40}(?:suspended|locked)|locked.{0,40}account|security precaution|contact.{0,30}support/i.test(detail);
+      return {
+        valid: false,
+        error: suspended
+          ? `Akun provider ditangguhkan/dikunci untuk pemeriksaan keamanan (HTTP 403).${detail ? ` Detail: ${detail}` : ""}`
+          : `Akses ditolak oleh provider (HTTP 403). Periksa scope, izin, kebijakan akun, atau kuota.${detail ? ` Detail: ${detail}` : ""}`,
+        statusCode: res.status,
+        diagnosis: {
+          type: suspended ? "account_suspended" : "access_denied",
+          message: suspended
+            ? "Provider mengunci akun sebagai tindakan keamanan. Ini bukan bukti API key salah atau model tidak tersedia."
+            : "Provider menolak akses. Periksa scope, izin organisasi, kebijakan akun, atau kuota.",
+          action: suspended
+            ? "Hentikan pengujian otomatis untuk akun ini dan hubungi dukungan resmi provider untuk verifikasi/pemulihan."
+            : "Periksa izin dan scope provider; jangan menghapus akun hanya berdasarkan HTTP 403.",
+        },
+        refreshed,
+      };
     }
     const detail = (await readResponseError(res)).slice(0, 180);
     return { valid: false, error: `Provider mengembalikan HTTP ${res.status}.${detail ? ` Detail: ${detail}` : ""}`, statusCode: res.status, refreshed };
