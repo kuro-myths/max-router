@@ -166,9 +166,11 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
   const [loginMethod, setLoginMethod] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
-  const notifications = useNotificationStore((state) => state.notifications);
-  const removeNotification = useNotificationStore((state) => state.removeNotification);
-  const clearNotifications = useNotificationStore((state) => state.clearAll);
+  const notifications = useNotificationStore((state) => state.history);
+  const unreadCount = notifications.filter((item) => !item.read).length;
+  const markRead = useNotificationStore((state) => state.markRead);
+  const markAllRead = useNotificationStore((state) => state.markAllRead);
+  const clearNotifications = useNotificationStore((state) => state.clearHistory);
  
   // Memoize page info to prevent unnecessary recalculations
   const pageInfo = useMemo(() => getPageInfo(pathname), [pathname]);
@@ -303,14 +305,14 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
           <button
             type="button"
             onClick={() => setShowNotifications((value) => !value)}
-            className={`relative flex size-9 sm:size-10 items-center justify-center rounded-xl border border-primary/15 bg-surface/70 text-text-muted transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary ${notifications.length ? "animate-[pulse_2s_ease-in-out_infinite]" : ""}`}
+            className={`relative flex size-9 sm:size-10 items-center justify-center rounded-xl border border-primary/15 bg-surface/70 text-text-muted transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10 hover:text-primary ${unreadCount ? "animate-[pulse_2s_ease-in-out_infinite]" : ""}`}
             aria-label="Notifikasi"
             title="Notifikasi"
           >
             <HeaderIcon name="notifications" className="text-[21px] transition-transform duration-200 hover:rotate-[-12deg]" />
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute right-1 top-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
-                {notifications.length > 99 ? "99+" : notifications.length}
+                {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
           </button>
@@ -319,10 +321,13 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
               <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold">Notifikasi</p>
-                  <p className="text-[10px] text-text-muted">{notifications.length} pemberitahuan aktif</p>
+                  <p className="text-[10px] text-text-muted">{notifications.length} riwayat · {unreadCount} belum dibaca</p>
                 </div>
                 {notifications.length > 0 && (
-                  <button type="button" onClick={clearNotifications} className="text-[11px] text-primary hover:underline">Bersihkan</button>
+                  <div className="flex items-center gap-3">
+                    {unreadCount > 0 && <button type="button" onClick={markAllRead} className="text-[11px] text-primary hover:underline">Tandai dibaca</button>}
+                    <button type="button" onClick={clearNotifications} className="text-[11px] text-primary hover:underline">Hapus riwayat</button>
+                  </div>
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto p-2">
@@ -340,8 +345,8 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
                       {n.title && <p className="text-xs font-semibold">{n.title}</p>}
                       <p className="text-xs text-text-muted">{n.message}</p>
                     </div>
-                    {n.dismissible && <button type="button" onClick={() => removeNotification(n.id)} className="text-text-muted hover:text-text-main"><HeaderIcon name="close" className="text-[15px]" /></button>}
-                  </div>
+                    {!n.read && <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" aria-label="Belum dibaca" />}
+                  </button>
                 ))}
               </div>
             </div>
