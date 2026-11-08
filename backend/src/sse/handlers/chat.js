@@ -114,7 +114,11 @@ export async function handleChat(request, clientRawRequest = null) {
     const comboStrategy = comboSpecificStrategy || settings.comboStrategy || "fallback";
     
     const comboStickyLimit = settings.comboStickyRoundRobinLimit;
-    const judgeModel = comboStrategies[modelStr]?.judgeModel || comboModels[0] || null;
+    const comboConfig = comboStrategies[modelStr] || {};
+    const judgeModel = comboConfig.judgeModel || comboModels[0] || null;
+    const fusionMinPanel = comboConfig.fusionMinPanel ?? 2;
+    const fusionGraceMs = comboConfig.fusionGraceMs ?? 5000;
+    const fusionTimeoutMs = comboConfig.fusionTimeoutMs ?? 45000;
     log.info("CHAT", `Combo "${modelStr}" with ${comboModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
     return handleComboChat({
       body,
@@ -124,7 +128,10 @@ export async function handleChat(request, clientRawRequest = null) {
       comboName: modelStr,
       comboStrategy,
       comboStickyLimit,
-      judgeModel
+      judgeModel,
+      fusionMinPanel,
+      fusionGraceMs,
+      fusionTimeoutMs
     });
   }
 
