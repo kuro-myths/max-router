@@ -863,6 +863,9 @@ export async function testSingleConnection(id) {
   }
 
   if (result.statusCode !== undefined) updateData.lastStatusCode = result.statusCode;
+  // Quarantine rejected credentials so invalid imported tokens stop being selected
+  // for inference. Keep the connection row and tokens for explicit reauthorization.
+  if (!result.valid && result.statusCode === 401) updateData.isActive = false;
   if (result.verified === false) {
     updateData.testStatus = "unknown";
     updateData.lastError = "Token tersedia; endpoint model belum diverifikasi";
