@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Database, FileJson, LoaderCircle, ShieldCheck, Upload, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, FileJson, LoaderCircle, Upload, X } from "lucide-react";
 import { Card } from "@/shared/components";
 
 const PROVIDER_MAP = { "github-copilot": "github" };
@@ -10,6 +10,7 @@ function getPreview(payload) {
   const providers = {};
   let supported = 0;
   let withoutCredentials = 0;
+  let unsupported = 0;
   for (const row of rows) {
     const source = String(row?.provider || row?.sourcePlatform || "unknown");
     const provider = PROVIDER_MAP[source.toLowerCase()] || source.toLowerCase();
@@ -18,8 +19,9 @@ function getPreview(payload) {
     const hasCredentials = Boolean(row?.accessToken || row?.refreshToken || row?.serviceToken || data?.access_token || data?.refresh_token || data?.github_access_token || data?.copilot_token);
     if (SUPPORTED.has(provider) && hasCredentials) supported += 1;
     else if (SUPPORTED.has(provider)) withoutCredentials += 1;
+    else unsupported += 1;
   }
-  return { total: rows.length, supported, withoutCredentials, providers };
+  return { total: rows.length, supported, withoutCredentials, unsupported, providers };
 }
 
 export default function Import9RouterPage() {
@@ -112,10 +114,11 @@ export default function Import9RouterPage() {
       {preview && (
         <Card>
           <div className="flex items-center justify-between gap-3"><h2 className="font-semibold text-text-main">Pratinjau impor</h2><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{preview.total} koneksi ditemukan</span></div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-text-muted">Siap diproses</p><p className="mt-1 text-2xl font-bold text-text-main">{preview.supported}</p></div>
             <div className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-text-muted">Tanpa kredensial</p><p className="mt-1 text-2xl font-bold text-text-main">{preview.withoutCredentials}</p></div>
-            <div className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-text-muted">Provider terdeteksi</p><p className="mt-1 text-2xl font-bold text-text-main">{providerRows.length}</p></div>
+            <div className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-text-muted">Provider tak didukung</p><p className="mt-1 text-2xl font-bold text-text-main">{preview.unsupported}</p></div>
+            <div className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-text-muted">Jenis provider</p><p className="mt-1 text-2xl font-bold text-text-main">{providerRows.length}</p></div>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {providerRows.map(([provider, count]) => <div key={provider} className="flex items-center justify-between rounded-lg border border-border-subtle px-3 py-2 text-sm"><span className="truncate text-text-main">{provider}</span><span className="ml-3 font-mono text-text-muted">{count}</span></div>)}
