@@ -21,6 +21,10 @@ export async function POST_handler(req, res, { params }) {
     return res.json({
       valid: result.valid,
       error: result.error,
+      diagnosis: result.diagnosis || null,
+      statusCode: result.statusCode || null,
+      verified: result.verified !== false,
+      testedAt: result.testedAt || new Date().toISOString(),
       refreshed: result.refreshed || false,
       latencyMs: result.latencyMs ?? null,
       connection: result.connection || null,
