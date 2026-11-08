@@ -279,6 +279,146 @@ export default function ProvidersPage() {
     );
   };
 
+  // Bersihkan hanya kredensial yang terbukti ditolak (HTTP 401/403 atau diagnosis AUTH).
+  // Error jaringan, rate limit (429), dan gangguan provider (5xx) tidak dihapus otomatis.
+  const getDeletableAuthErrors = () => connections.filter((connection) => {
+    const status = String(connection.testStatus || "").toLowerCase();
+    const code = Number(connection.errorCode || getErrorCode(connection.lastError));
+    const authTag = getConnectionErrorTag(connection);
+    return ["error", "expired", "unavailable"].includes(status) &&
+      (code === 401 || code === 403 || authTag === "AUTH");
+  });
+
+  const handleCleanupAuthErrors = async () => {
+    if (testingMode) return;
+    const pending = getDeletableAuthErrors();
+    if (!pending.length) {
+      notify.info("Tidak ada akun dengan kredensial 401/403 yang perlu dibersihkan.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Hapus ${pending.length} akun dengan kredensial ditolak (401/403) dari layanan aktif? Metadata error akan diarsipkan ke JSON/local storage terlebih dahulu. Error jaringan, 429, dan 5xx tidak ikut dihapus.`
+    );
+    if (!confirmed) return;
+
+    setTestingMode("cleanup");
+    const testedAt = new Date().toISOString();
+    const failedServices = pending.map((connection) => ({
+      id: String(connection.id),
+      name: connection.name || connection.email || "Layanan tanpa nama",
+      provider: connection.provider || null,
+      authType: connection.authType || null,
+      endpoint: connection.providerSpecificData?.baseUrl || null,
+      model: connection.defaultModel || null,
+      result: "failed",
+      verified: true,
+      httpStatus: Number(connection.errorCode || getErrorCode(connection.lastError)) || null,
+      errorCode: getConnectionErrorTag(connection),
+      reason: String(connection.lastError || "Kredensial ditolak provider").slice(0, 1000),
+      testedAt: connection.lastErrorAt || testedAt,
+    }));
+
+    const archive = {
+      schemaVersion: 1,
+      generatedAt: testedAt,
+      source: "Max Router / Pembersihan akun error dari halaman Penyedia",
+      summary: { failed: failedServices.length, autoDeleteEligible: failedServices.length },
+      failedServices,
+    };
+
+    try {
+      // Persist safe metadata before destructive deletion; never archive credentials.
+      try {
+        const key = "max-router-failed-service-tests";
+        const previous = JSON.parse(window.localStorage.getItem(key) || "[]");
+        const merged = new Map();
+        for (const item of [...failedServices, ...(Array.isArray(previous) ? previous : [])]) {
+          if (!merged.has(String(item.id))) merged.set(String(item.id), item);
+        }
+        window.localStorage.setItem(key, JSON.stringify([...merged.values()].slice(0, 1000)));
+      } catch (storageError) {
+        console.warn("Local failed-account archive could not be saved:", storageError);
+      }
+
+      let archiveSavedToServer = false;
+      try {
+        const archiveResponse = await fetch("/api/providers/failed-archive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ archive }),
+        });
+        archiveSavedToServer = archiveResponse.ok;
+      } catch (archiveError) {
+        console.warn("Server failed-account archive could not be saved:", archiveError);
+      }
+
+      const removed = [];
+      const failedDeletes = [];
+      for (let start = 0; start < pending.length; start += 4) {
+        const batch = pending.slice(start, start + 4);
+        const outcomes = await Promise.all(batch.map(async (connection) => {
+          const id = String(connection.id);
+          try {
+            const response = await fetch(`/api/providers/${encodeURIComponent(id)}`, { method: "DELETE" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return { id, ok: true };
+          } catch (error) {
+            return { id, ok: false, error: error.message };
+          }
+        }));
+        removed.push(...outcomes.filter((item) => item.ok).map((item) => item.id));
+        failedDeletes.push(...outcomes.filter((item) => !item.ok));
+      }
+
+      const removedSet = new Set(removed);
+      const refreshed = await fetch("/api/providers", { cache: "no-store" });
+      if (refreshed.ok) {
+        const data = await refreshed.json();
+        setConnections(data.connections || []);
+      } else {
+        setConnections((current) => current.filter((connection) => !removedSet.has(String(connection.id))));
+      }
+
+      const finalArchive = {
+        ...archive,
+        summary: { ...archive.summary, deletedFromActiveServices: removed.length, deleteFailed: failedDeletes.length },
+        failedServices: failedServices.map((item) => ({
+          ...item,
+          removedFromActiveServices: removedSet.has(item.id),
+          deleteHttpStatus: failedDeletes.find((failure) => failure.id === item.id)?.error || (removedSet.has(item.id) ? 200 : null),
+        })),
+      };
+      try {
+        const key = "max-router-failed-service-tests";
+        const previous = JSON.parse(window.localStorage.getItem(key) || "[]");
+        const byId = new Map((Array.isArray(previous) ? previous : []).map((item) => [String(item.id), item]));
+        for (const item of finalArchive.failedServices) byId.set(item.id, item);
+        window.localStorage.setItem(key, JSON.stringify([...byId.values()].slice(0, 1000)));
+      } catch (storageError) {
+        console.warn("Could not update local archive deletion state:", storageError);
+      }
+      try {
+        await fetch("/api/providers/failed-archive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ archive: finalArchive }),
+        });
+      } catch (archiveError) {
+        console.warn("Could not update server archive deletion state:", archiveError);
+      }
+
+      if (failedDeletes.length) {
+        notify.warning(`${removed.length} akun dihapus, ${failedDeletes.length} gagal dihapus. Arsip lokal ${archiveSavedToServer ? "dan database" : "browser"} tetap tersedia.`, "Pembersihan akun error");
+      } else {
+        notify.success(`${removed.length} akun error 401/403 berhasil dihapus. Metadata JSON tersimpan di local storage${archiveSavedToServer ? " dan database" : ""}.`, "Pembersihan selesai");
+      }
+    } catch (error) {
+      notify.error(error?.message || "Pembersihan akun error gagal.");
+    } finally {
+      setTestingMode(null);
+    }
+  };
+
   const handleBatchTest = async (mode, providerId = null) => {
     if (testingMode) return;
     setTestingMode(mode === "provider" ? providerId : mode);
@@ -550,6 +690,9 @@ export default function ProvidersPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Button icon="science" onClick={() => handleBatchTest("all")} disabled={!!testingMode}>
             {testingMode === "all" ? "Menguji Semua..." : "Uji Semua Penyedia"}
+          </Button>
+          <Button icon="delete" onClick={handleCleanupAuthErrors} disabled={!!testingMode}>
+            {testingMode === "cleanup" ? "Membersihkan..." : `Hapus akun error (${getDeletableAuthErrors().length})`}
           </Button>
           <Button icon="add" onClick={() => setIsAddCompatibleOpen(true)}>
             Tambah Kompatibel
