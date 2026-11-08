@@ -270,6 +270,24 @@ jobs:
           console.log('DIAGNOSTICS authenticated HTTP:', diagnostics.status);
           console.log('DIAGNOSTICS response:', diagnosticsText.slice(0, 1200));
           if (!diagnostics.ok) throw new Error('Diagnostics endpoint gagal setelah login: HTTP ' + diagnostics.status);
+
+          const batchTest = await fetch('http://127.0.0.1:20222/api/providers/test-batch', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              cookie: '9r_session=' + sessionToken
+            },
+            body: JSON.stringify({mode: 'all', offset: 0, limit: 1})
+          });
+          const batchText = await batchTest.text();
+          console.log('PROVIDER BATCH TEST HTTP:', batchTest.status);
+          console.log('PROVIDER BATCH TEST response:', batchText.slice(0, 1200));
+          if (!batchTest.ok) throw new Error('Provider batch-test route tidak termount: HTTP ' + batchTest.status + ' ' + batchText.slice(0, 300));
+          const batchBody = JSON.parse(batchText);
+          if (!batchBody.inventory || !batchBody.pagination || !Array.isArray(batchBody.results)) {
+            throw new Error('Provider batch-test response tidak memiliki inventory, pagination, atau results.');
+          }
+          console.log('PROVIDER BATCH TEST route smoke: PASS');
           NODE
 
           cat /tmp/max-router-start.log
