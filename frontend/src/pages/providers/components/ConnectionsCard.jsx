@@ -354,6 +354,8 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
   const [selectedIds, setSelectedIds] = useState([]);
   const [testingIds, setTestingIds] = useState([]);
   const [testError, setTestError] = useState("");
+  const [failedTestArchive, setFailedTestArchive] = useState([]);
+  const [testingAll, setTestingAll] = useState(false);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -409,24 +411,23 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
   const runTest = async (id) => {
     setTestingIds((prev) => [...new Set([...prev, id])]);
     try {
-      const res = await fetch(`/api/providers/${id}/test`, { method: "POST" });
-      if (!res.ok) {
-        let data = null;
-        try { data = await res.json(); } catch { data = null; }
-        const serverMessage = data?.error?.message || data?.error || data?.reason || `HTTP ${res.status}`;
+      const res = await fetch(`/api/providers/${encodeURIComponent(id)}/test`, { method: "POST", headers: { Accept: "application/json" } });
+      const data = await res.json().catch(() => ({}));
+      const testedConnection = data?.connection || data?.providerConnection || data;
+      const testStatus = String(testedConnection?.testStatus || data?.testStatus || data?.status || "").toLowerCase();
+      const explicitFailure = data?.success === false || data?.ok === false || ["error", "failed", "failure", "unavailable", "expired"].includes(testStatus);
+      if (!res.ok || explicitFailure) {
+        const serverMessage = data?.error?.message || data?.error || data?.reason || testedConnection?.lastError || `HTTP ${res.status}`;
         let message = `Uji koneksi gagal: ${serverMessage}`;
-        if (res.status === 401) {
-          message = "Sesi login berakhir (401). Muat ulang halaman lalu masuk kembali.";
-        } else if (res.status === 404) {
-          message = "Koneksi tidak ditemukan di server (404). Data kemungkinan hilang saat instance serverless dinginkan — tambahkan ulang koneksi, atau konfigurasikan database eksternal (SUPABASE_DATABASE_URL / DATABASE_URL / MYSQL_URL).";
-        }
-        return { ok: false, message };
+        if (res.status === 401) message = "Sesi login berakhir (401). Muat ulang halaman lalu masuk kembali.";
+        else if (res.status === 404) message = "Koneksi tidak ditemukan di server (404).";
+        return { ok: false, message, httpStatus: res.status, response: data };
       }
       await fetch_();
-      return { ok: true, message: "" };
+      return { ok: true, message: "", httpStatus: res.status, response: data };
     } catch (error) {
       console.error("test connection error:", error);
-      return { ok: false, message: "Uji koneksi gagal: " + (error?.message || "kesalahan jaringan.") };
+      return { ok: false, message: "Uji koneksi gagal: " + (error?.message || "kesalahan jaringan."), httpStatus: 0 };
     } finally {
       setTestingIds((prev) => prev.filter((item) => item !== id));
     }
@@ -439,19 +440,90 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
   };
 
   const handleTestAll = async () => {
-    if (testingIds.length || connections.length === 0) return;
+    if (testingAll || testingIds.length || connections.length === 0) return;
     setTestError("");
-    let failed = 0;
-    let lastMessage = "";
-    for (const connection of connections) {
-      const result = await runTest(connection.id);
-      if (!result.ok) {
-        failed += 1;
-        lastMessage = result.message;
+    setTestingAll(true);
+    const snapshot = [...connections];
+    const failedRecords = [];
+    let passed = 0;
+    try {
+      // Process every loaded connection sequentially; no fixed 60-item limit.
+      for (const connection of snapshot) {
+        const result = await runTest(connection.id);
+        if (result.ok) {
+          passed += 1;
+          continue;
+        }
+        failedRecords.push({
+          id: connection.id,
+          name: connection.name || connection.email || "Koneksi tanpa nama",
+          provider: connection.provider || providerId,
+          authType: connection.authType || null,
+          endpoint: connection.providerSpecificData?.baseUrl || connection.baseUrl || null,
+          model: connection.defaultModel || null,
+          status: "failed",
+          httpStatus: result.httpStatus ?? null,
+          reason: result.message || "Uji koneksi gagal",
+          testedAt: new Date().toISOString(),
+        });
       }
-    }
-    if (failed > 0) {
-      setTestError(`${failed} dari ${connections.length} koneksi gagal diuji. ${lastMessage}`);
+
+      // Archive failed metadata first, then remove failed connections from active storage.
+      if (failedRecords.length) {
+        const archive = {
+          schemaVersion: 1,
+          generatedAt: new Date().toISOString(),
+          source: "Max Router - Uji Semua Layanan",
+          summary: { tested: snapshot.length, passed, failed: failedRecords.length },
+          failedServices: failedRecords,
+        };
+        setFailedTestArchive((prev) => [...failedRecords, ...prev]);
+        try {
+          const previous = JSON.parse(window.localStorage.getItem("max-router-failed-service-tests") || "[]");
+          window.localStorage.setItem("max-router-failed-service-tests", JSON.stringify([...failedRecords, ...previous].slice(0, 1000)));
+        } catch (storageError) {
+          console.warn("Failed-service archive could not be persisted locally:", storageError);
+        }
+
+        const deletionResults = await Promise.all(failedRecords.map(async (record) => {
+          try {
+            const response = await fetch(`/api/providers/${encodeURIComponent(record.id)}`, { method: "DELETE" });
+            return { id: record.id, ok: response.ok, status: response.status };
+          } catch {
+            return { id: record.id, ok: false, status: 0 };
+          }
+        }));
+        const deletedIds = deletionResults.filter((item) => item.ok).map((item) => item.id);
+        setConnections((prev) => prev.filter((item) => !deletedIds.includes(item.id)));
+        setSelectedIds((prev) => prev.filter((id) => !deletedIds.includes(id)));
+
+        const finalArchive = {
+          ...archive,
+          summary: { ...archive.summary, deletedFromActiveServices: deletedIds.length, deleteFailed: failedRecords.length - deletedIds.length },
+          failedServices: failedRecords.map((record) => ({
+            ...record,
+            removedFromActiveServices: deletedIds.includes(record.id),
+            deleteHttpStatus: deletionResults.find((item) => item.id === record.id)?.status ?? null,
+          })),
+        };
+        const blob = new Blob([JSON.stringify(finalArchive, null, 2)], { type: "application/json;charset=utf-8" });
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `max-router-failed-services-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+
+        const deleteFailed = failedRecords.length - deletedIds.length;
+        setTestError(`Selesai: ${passed} berhasil, ${failedRecords.length} gagal. ${deletedIds.length} layanan gagal dihapus dan arsip JSON diunduh.${deleteFailed ? ` ${deleteFailed} gagal dihapus dari server; periksa kembali koneksi/database.` : ""}`);
+      } else {
+        setTestError(`Selesai: semua ${passed} layanan berhasil diuji. Tidak ada layanan yang dihapus.`);
+      }
+      await fetch_();
+    } finally {
+      setTestingAll(false);
     }
   };
 
@@ -654,11 +726,11 @@ export default function ConnectionsCard({ providerId, isOAuth = false, providerN
               <button
                 type="button"
                 onClick={handleTestAll}
-                disabled={testingIds.length > 0 || connections.length === 0}
+                disabled={testingAll || testingIds.length > 0 || connections.length === 0}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
               >
                 <span className={`material-symbols-outlined text-[15px] ${testingIds.length ? "animate-spin" : ""}`}>{testingIds.length ? "progress_activity" : "playlist_play"}</span>
-                {testingIds.length ? `Menguji ${testingIds.length}/${connections.length}` : "Tes Semua"}
+                {testingAll ? `Menguji ${testingIds.length}/${connections.length}` : "Tes Semua"}
               </button>
             </div>
           </div>
