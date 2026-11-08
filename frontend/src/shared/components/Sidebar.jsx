@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare, Mic, PersonStanding, Clapperboard } from "lucide-react";
+import { Activity, BarChart3, Bot, Layers, Search, Server, SlidersHorizontal, Terminal, Network, Settings, Power, Copy, Home, Globe, Puzzle, MessageSquare, Mic, PersonStanding, Clapperboard, Download } from "lucide-react";
 import PropTypes from "prop-types";
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -12,7 +12,7 @@ import { ConfirmModal } from "./Modal";
 const NAV_ICONS = {
   home: Home, api: Activity, dns: Server, manage_search: Search,
   layers: Layers, bar_chart: BarChart3, tune: SlidersHorizontal,
-  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare, mic: Mic, vtuber: PersonStanding, comic: Clapperboard,
+  terminal: Terminal, lan: Network, smart_toy: Bot, settings: Settings, browser: Globe, puzzle: Puzzle, chat: MessageSquare, mic: Mic, vtuber: PersonStanding, comic: Clapperboard, download: Download,
 };
 function NavIcon({ name, active = false }) {
   const Icon = NAV_ICONS[name] || Activity;
@@ -46,6 +46,7 @@ const debugItems = [
 
 const systemItems = [
   { href: "/dashboard/automation", label: "Otomatisasi", icon: "smart_toy" },
+  { href: "/dashboard/import-9router", label: "Impor 9Router", icon: "download" },
 ];
 
 export default function Sidebar({ onClose, collapsed = false, onToggleCollapse }) {
