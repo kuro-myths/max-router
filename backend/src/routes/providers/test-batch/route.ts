@@ -56,6 +56,8 @@ export async function POST_handler(req, res) {
     // credentials (HTTP 401); filtering active rows here changes the offset pages
     // between requests and silently skips the remaining accounts.
     const allConnections = await getProviderConnections(mode === "all" ? {} : { isActive: true });
+    // Stable inventory for the entire run: disabled, expired and quarantined rows
+    // remain included in "all". Never derive the next page from the mutable active set.
     allConnections.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
     let connectionsToTest = [];
@@ -78,6 +80,12 @@ export async function POST_handler(req, res) {
     }
 
     const totalCount = connectionsToTest.length;
+    const inventory = {
+      total: totalCount,
+      active: connectionsToTest.filter((connection) => connection.isActive !== false).length,
+      inactive: connectionsToTest.filter((connection) => connection.isActive === false).length,
+      includedDisabled: mode === "all",
+    };
     connectionsToTest = connectionsToTest.slice(offset, offset + limit);
 
     if (connectionsToTest.length === 0) {
@@ -86,6 +94,7 @@ export async function POST_handler(req, res) {
         providerId: providerId || null,
         results: [],
         summary: { total: 0, passed: 0, unverified: 0, failed: 0 },
+        inventory,
         pagination: { offset, limit, total: totalCount, nextOffset: offset, done: true },
         testedAt: new Date().toISOString(),
       });
@@ -96,7 +105,7 @@ export async function POST_handler(req, res) {
     // overwhelming provider APIs or the database connection pool.
     const results = new Array(connectionsToTest.length);
     let nextIndex = 0;
-    const concurrency = Math.min(2, connectionsToTest.length);
+    const concurrency = Math.min(mode === "all" ? 4 : 3, connectionsToTest.length);
 
     async function worker() {
       while (true) {
@@ -110,6 +119,7 @@ export async function POST_handler(req, res) {
             connectionId: conn.id,
             connectionName: conn.name || conn.email || conn.provider,
             authType: conn.authType || getAuthGroup(conn.provider, conn),
+            wasActive: conn.isActive !== false,
             valid: data.valid,
             verified: data.verified !== false,
             latencyMs: data.latencyMs || 0,
@@ -125,6 +135,7 @@ export async function POST_handler(req, res) {
             connectionId: conn.id,
             connectionName: conn.name || conn.email || conn.provider,
             authType: conn.authType || getAuthGroup(conn.provider, conn),
+            wasActive: conn.isActive !== false,
             valid: false,
             latencyMs: 0,
             error: error?.message || "Pengujian gagal",
@@ -142,6 +153,7 @@ export async function POST_handler(req, res) {
       mode,
       providerId: providerId || null,
       results,
+      inventory,
       pagination: { offset, limit, total: totalCount, nextOffset: offset + results.length, done: offset + results.length >= totalCount },
       testedAt: new Date().toISOString(),
       summary: {
