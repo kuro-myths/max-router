@@ -339,7 +339,7 @@ export default function Header({ onMenuClick, onToggleCollapse, sidebarCollapsed
                     <button type="button" onClick={() => { setShowNotifications(false); navigate("/dashboard/usage"); }} className="mt-3 rounded-lg border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/15">Lihat penggunaan</button>
                   </div>
                 ) : notifications.slice().reverse().map((n) => (
-                  <div key={n.id} className="flex gap-2 rounded-xl px-3 py-2.5 hover:bg-primary/5">
+                  <button type="button" key={n.id} onClick={() => markRead(n.id)} className={`flex w-full gap-2 rounded-xl px-3 py-2.5 text-left hover:bg-primary/5 ${n.read ? "opacity-65" : "bg-primary/5"}`}>
                     <HeaderIcon name={n.type === "error" ? "error" : n.type === "warning" ? "warning" : n.type === "success" ? "check_circle" : "info"} className="mt-0.5 text-[17px] text-primary" />
                     <div className="min-w-0 flex-1">
                       {n.title && <p className="text-xs font-semibold">{n.title}</p>}
