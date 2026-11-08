@@ -282,31 +282,56 @@ export default function ProvidersPage() {
   const handleBatchTest = async (mode, providerId = null) => {
     if (testingMode) return;
     setTestingMode(mode === "provider" ? providerId : mode);
-    setTestResults(null);
+    const accumulated = [];
+    let total = null;
+    let offset = 0;
+    const summary = { total: 0, passed: 0, failed: 0, unverified: 0 };
+    setTestResults({ mode, results: [], summary, progress: { completed: 0, total: 0 }, running: true });
     try {
-      const res = await fetch("/api/providers/test-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, providerId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Pengujian penyedia gagal");
-      setTestResults(data);
+      let done = false;
+      while (!done) {
+        const res = await fetch("/api/providers/test-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, providerId, offset, limit: 6 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || data?.diagnosis?.message || "Pengujian penyedia gagal");
+        if (total === null) total = Number(data.pagination?.total ?? data.summary?.total ?? 0);
+        accumulated.push(...(data.results || []));
+        summary.total = accumulated.length;
+        summary.passed = accumulated.filter((item) => item.valid && item.verified !== false).length;
+        summary.unverified = accumulated.filter((item) => item.valid && item.verified === false).length;
+        summary.failed = accumulated.filter((item) => !item.valid).length;
+        offset = Number(data.pagination?.nextOffset ?? offset + (data.results || []).length);
+        done = data.pagination ? data.pagination.done : offset >= total;
+        setTestResults({
+          mode, results: [...accumulated], summary: { ...summary },
+          testedAt: data.testedAt || new Date().toISOString(),
+          progress: { completed: accumulated.length, total: total ?? accumulated.length },
+          running: !done,
+        });
+        if (!data.pagination && (data.results || []).length === 0) done = true;
+      }
 
-      // Reload persisted status so badges/cards immediately reflect test outcomes.
       const refreshed = await fetch("/api/providers", { cache: "no-store" });
       if (refreshed.ok) {
         const refreshedData = await refreshed.json();
         setConnections(refreshedData.connections || []);
       }
 
-      if (data.summary) {
-        const { passed, failed, unverified = 0, total } = data.summary;
-        if (failed === 0 && unverified === 0) notify.success(`Semua ${total} pengujian berhasil`);
-        else notify.warning(`${passed} valid, ${unverified} belum terverifikasi, ${failed} gagal dari ${total} akun`);
-      }
+      if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} pengujian berhasil`);
+      else notify.warning(`${summary.passed} valid, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal dari ${summary.total} akun`);
     } catch (error) {
-      setTestResults({ error: error?.message || "Permintaan pengujian gagal" });
+      setTestResults((current) => ({
+        ...(current || {}),
+        mode,
+        results: accumulated,
+        summary: { ...summary },
+        progress: { completed: accumulated.length, total: total ?? accumulated.length },
+        running: false,
+        error: error?.message || "Permintaan pengujian gagal",
+      }));
       notify.error(error?.message || "Pengujian penyedia gagal");
     } finally {
       setTestingMode(null);
