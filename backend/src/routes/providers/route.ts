@@ -72,6 +72,7 @@ export async function GET(req, res) {
         apiKey: undefined,
         accessToken: undefined,
         refreshToken: undefined,
+        serviceToken: undefined,
         idToken: undefined,
       };
     });
