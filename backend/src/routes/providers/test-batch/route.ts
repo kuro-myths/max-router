@@ -44,6 +44,9 @@ export async function POST_handler(req, res) {
   try {
     const body = req.body;
     const { mode, providerId } = body;
+    const offset = Math.max(0, Number.parseInt(body.offset, 10) || 0);
+    const requestedLimit = Number.parseInt(body.limit, 10) || 6;
+    const limit = Math.min(8, Math.max(1, requestedLimit));
 
     if (!mode) {
       return res.status(400).json({ error: "mode is required" });
@@ -70,12 +73,16 @@ export async function POST_handler(req, res) {
       );
     }
 
+    const totalCount = connectionsToTest.length;
+    connectionsToTest = connectionsToTest.slice(offset, offset + limit);
+
     if (connectionsToTest.length === 0) {
       return res.json({
         mode,
         providerId: providerId || null,
         results: [],
-        summary: { total: 0, passed: 0, failed: 0 },
+        summary: { total: 0, passed: 0, unverified: 0, failed: 0 },
+        pagination: { offset, limit, total: totalCount, nextOffset: offset, done: true },
         testedAt: new Date().toISOString(),
       });
     }
@@ -130,6 +137,7 @@ export async function POST_handler(req, res) {
       mode,
       providerId: providerId || null,
       results,
+      pagination: { offset, limit, total: totalCount, nextOffset: offset + results.length, done: offset + results.length >= totalCount },
       testedAt: new Date().toISOString(),
       summary: {
         total: results.length,
@@ -140,6 +148,6 @@ export async function POST_handler(req, res) {
     });
   } catch (error) {
     console.log("Error in batch test:", error);
-    return res.status(500).json({ error: "Batch test failed" });
+    return res.status(500).json({ error: error?.message || "Batch test failed", diagnosis: { type: "batch_internal_error", message: "Batch pengujian gagal di server. Periksa log backend." } });
   }
 }
