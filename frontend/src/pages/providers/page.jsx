@@ -385,24 +385,22 @@ export default function ProvidersPage() {
     );
   };
 
-  // Bersihkan hanya kredensial yang terbukti ditolak (HTTP 401/403 atau diagnosis AUTH).
-  // Error jaringan, rate limit (429), dan gangguan provider (5xx) tidak dihapus otomatis.
+  // Hapus semua koneksi yang status pengujiannya memang gagal.
+  // Akun yang hanya terkena cooldown/rate-limit sementara tidak dianggap gagal permanen
+  // kecuali hasil tes terakhir secara eksplisit menandainya error/expired.
   const getDeletableAuthErrors = () => connections.filter((connection) => {
     const status = String(connection.testStatus || "").toLowerCase();
-    const code = Number(connection.errorCode || getErrorCode(connection.lastError));
-    const authTag = getConnectionErrorTag(connection);
-    return ["error", "expired", "unavailable"].includes(status) &&
-      (code === 401 || code === 403 || authTag === "AUTH");
+    return ["error", "expired"].includes(status);
   });
 
   const handleCleanupAuthErrors = async () => {
     if (testingMode) return;
     const pending = getDeletableAuthErrors();
     if (!pending.length) {
-      notify.info("Tidak ada akun dengan kredensial 401/403 yang perlu dibersihkan.");
+      notify.info("Tidak ada akun berstatus error atau expired yang perlu dibersihkan.");
       return;
     }
-    if (!window.confirm("Hapus " + pending.length + " akun yang terbukti ditolak HTTP 401/403? Metadata aman disimpan terlebih dahulu. Error jaringan, 429, dan 5xx tidak ikut dihapus.")) return;
+    if (!window.confirm("Hapus " + pending.length + " akun yang status pengujiannya error/expired? Metadata aman disimpan terlebih dahulu. Akun aktif dan belum terverifikasi tidak ikut dihapus.")) return;
 
     setTestingMode("cleanup");
     try {
