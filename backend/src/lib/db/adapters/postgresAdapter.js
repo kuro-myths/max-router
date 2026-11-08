@@ -186,7 +186,22 @@ async function runVersionedMigrations(client) {
 }
 
 export async function createPostgresAdapter(connectionString) {
-  const pool = new Pool({ connectionString });
+  // Vercel runs many short-lived function instances. The pg default pool
+  // (10 clients per instance) multiplies across instances and can exhaust the
+  // Supabase project's global connection limit. Keep each instance deliberately small.
+  const configuredPoolMax = Number.parseInt(process.env.PG_POOL_MAX || "3", 10);
+  const poolMax = Number.isFinite(configuredPoolMax)
+    ? Math.min(5, Math.max(1, configuredPoolMax))
+    : 3;
+  const pool = new Pool({
+    connectionString,
+    max: poolMax,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
+    allowExitOnIdle: true,
+    maxLifetimeSeconds: 60,
+    application_name: "max-router",
+  });
   pool.on("error", (error) => console.error("[DB] PostgreSQL pool error:", error));
 
   const bootstrapClient = await pool.connect();
