@@ -295,7 +295,7 @@ export default function ProvidersPage() {
         const res = await fetch("/api/providers/test-batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode, providerId, offset, limit: 6 }),
+          body: JSON.stringify({ mode, providerId, offset, limit: 8 }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || data?.diagnosis?.message || "Pengujian penyedia gagal");
