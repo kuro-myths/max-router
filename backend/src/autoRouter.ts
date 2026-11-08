@@ -112,8 +112,7 @@ export async function buildAutoRouter(): Promise<Router> {
       mod = await import(pathToFileURL(file).href);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error ? err.stack : "";
-      importFailures.push(rel + ": " + message + (stack ? "\n" + stack : ""));
+      importFailures.push(`${rel}: ${message}`);
       continue;
     }
 
