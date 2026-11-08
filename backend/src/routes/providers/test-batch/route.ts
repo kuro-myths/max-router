@@ -116,6 +116,7 @@ export async function POST_handler(req, res) {
             error: data.error || null,
             diagnosis: data.diagnosis || null,
             statusCode: data.statusCode || null,
+            refreshed: !!data.refreshed,
             testedAt: data.testedAt || new Date().toISOString(),
           };
         } catch (error) {
