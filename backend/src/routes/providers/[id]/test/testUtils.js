@@ -35,7 +35,16 @@ function isAuthFailure(status) {
 }
 
 function isReachableInferenceStatus(status) {
-  return !isAuthFailure(status) && status < 500;
+  return status >= 200 && status < 300;
+}
+
+function responseFailure(response, fallback = "Provider menolak permintaan") {
+  const status = Number(response?.status || 0);
+  if (status === 401) return "HTTP 401: kredensial tidak valid, kedaluwarsa, atau dicabut";
+  if (status === 403) return "HTTP 403: akses ditolak; periksa scope, izin, kebijakan akun, atau kuota";
+  if (status === 429) return "HTTP 429: batas permintaan/kuota tercapai; tunggu sebelum menguji ulang";
+  if (status >= 500) return `HTTP ${status}: layanan penyedia sedang bermasalah`;
+  return `HTTP ${status || "?"}: ${fallback}`;
 }
 
 // OAuth provider test endpoints
@@ -387,17 +396,17 @@ async function fetchWithConnectionProxy(url, options = {}, effectiveProxy = null
   // Vercel relay: forward via relay URL
   if (effectiveProxy?.vercelRelayUrl) {
     const { proxyAwareFetch } = await import("open-sse/utils/proxyFetch.js");
-    return proxyAwareFetch(url, options, {
+    return proxyAwareFetch(url, { ...options, signal: options.signal || AbortSignal.timeout(12000) }, {
       vercelRelayUrl: effectiveProxy.vercelRelayUrl,
     });
   }
 
   if (!effectiveProxy?.connectionProxyEnabled || !effectiveProxy?.connectionProxyUrl) {
-    return fetch(url, options);
+    return fetch(url, { ...options, signal: options.signal || AbortSignal.timeout(12000) });
   }
 
   const { proxyAwareFetch } = await import("open-sse/utils/proxyFetch.js");
-  return proxyAwareFetch(url, options, {
+  return proxyAwareFetch(url, { ...options, signal: options.signal || AbortSignal.timeout(12000) }, {
     connectionProxyEnabled: true,
     connectionProxyUrl: effectiveProxy.connectionProxyUrl,
     connectionNoProxy: effectiveProxy.connectionNoProxy || "",
@@ -414,7 +423,7 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         headers: { "Authorization": `Bearer ${connection.apiKey}` },
       }, effectiveProxy);
       if (modelsRes.ok) return { valid: true, error: null };
-      if (isAuthFailure(modelsRes.status)) return { valid: false, error: "Invalid API key" };
+      if (isAuthFailure(modelsRes.status)) return { valid: false, error: responseFailure(res, "API key atau endpoint tidak cocok"), statusCode: res.status };
 
       const chatRes = await fetchWithConnectionProxy(`${baseUrl}/chat/completions`, {
         method: "POST",
@@ -514,7 +523,7 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
       }
       case "openai": {
         const res = await fetchWithConnectionProxy("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "vercel-ai-gateway": {
         const res = await fetchWithConnectionProxy("https://ai-gateway.vercel.sh/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
@@ -526,8 +535,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "x-api-key": connection.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
           body: JSON.stringify({ model: "claude-3-haiku-20240307", max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res, "API key atau endpoint tidak cocok"), statusCode: res.status };
       }
       case "gemini": {
         const res = await fetchWithConnectionProxy(`https://generativelanguage.googleapis.com/v1/models?key=${connection.apiKey}`, {}, effectiveProxy);
@@ -543,8 +552,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "x-api-key": connection.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
           body: JSON.stringify({ model: "glm-4.7", max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res, "API key atau endpoint tidak cocok"), statusCode: res.status };
       }
       case "glm-cn": {
         const res = await fetchWithConnectionProxy("https://open.bigmodel.cn/api/coding/paas/v4/chat/completions", {
@@ -552,8 +561,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "Authorization": `Bearer ${connection.apiKey}`, "content-type": "application/json" },
           body: JSON.stringify({ model: "glm-4.7", max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "minimax":
       case "minimax-cn": {
@@ -696,8 +705,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           },
           body: JSON.stringify({ temporary: true, modelName: "grok-4", message: "ping", fileAttachments: [], imageAttachments: [], disableSearch: false, enableImageGeneration: false, sendFinalMetadata: true }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid SSO cookie" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res, "Cookie SSO tidak diterima"), statusCode: res.status };
       }
       case "perplexity-web": {
         let sessionToken = connection.apiKey;
@@ -767,7 +776,7 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           }
         }
         
-        return { valid, error: errorMessage };
+        return { valid, error: errorMessage, statusCode: res.status };
       }
       case "leonardo": {
         const { refreshLeonardoToken } = await import("open-sse/services/tokenRefresh.js");
