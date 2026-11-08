@@ -24,6 +24,7 @@ const ComicStudio     = lazy(() => import("./pages/comic-studio/page"));
 const ModelDetection  = lazy(() => import("./pages/model-detection/page"));
 const Parameters      = lazy(() => import("./pages/parameters/page"));
 const Profile         = lazy(() => import("./pages/profile/page"));
+const Import9Router   = lazy(() => import("./pages/import-9router/page"));
 const ConsoleLog      = lazy(() => import("./pages/console-log/page"));
 const WeavyPool       = lazy(() => import("./pages/providers/weavy/pool/page"));
 const AmmailTutorial  = lazy(() => import("./pages/automation/ammail-tutorial/page"));
@@ -146,6 +147,7 @@ export default function App() {
               <Route path="comic-studio" element={<ComicStudio />} />
               <Route path="model-detection" element={<ModelDetection />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="import-9router" element={<Import9Router />} />
               <Route path="console-log" element={<ConsoleLog />} />
             </Route>
 
