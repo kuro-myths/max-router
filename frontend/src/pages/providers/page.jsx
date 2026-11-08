@@ -1671,6 +1671,12 @@ function ProviderTestResultsView({ results }) {
           </div>
         </div>
       )}
+      {items.some((item) => item.diagnosis?.type === "account_suspended") && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="text-sm font-semibold text-amber-500">Akun ditangguhkan terdeteksi</p>
+          <p className="mt-1 text-xs text-text-muted">{items.filter((item) => item.diagnosis?.type === "account_suspended").length} akun dikunci oleh provider. Akun tetap disimpan, tidak dihapus otomatis, dan pengujian ulang berulang dihentikan sampai akun dipulihkan oleh provider.</p>
+        </div>
+      )}
       {results.progress && (
         <div className="rounded-xl border border-border bg-surface p-3">
           <div className="mb-2 flex items-center justify-between gap-3 text-xs">
@@ -1722,8 +1728,9 @@ function ProviderTestResultsView({ results }) {
         {filteredItems.map((r, i) => {
           const rowId = r.connectionId || String(i);
           const isOpen = !!expanded[rowId];
-          const statusLabel = !r.valid ? "GAGAL" : r.verified === false ? "BELUM DIVERIFIKASI" : "BERHASIL";
-          const statusClass = !r.valid ? "bg-red-500/15 text-red-500" : r.verified === false ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500";
+          const isSuspended = r.diagnosis?.type === "account_suspended";
+          const statusLabel = isSuspended ? "DITANGGUHKAN" : r.statusCode === 401 ? "AUTH DITOLAK" : r.statusCode === 403 ? "AKSES DITOLAK" : !r.valid ? "GAGAL" : r.verified === false ? "BELUM DIVERIFIKASI" : "BERHASIL";
+          const statusClass = isSuspended || r.statusCode === 403 ? "bg-amber-500/15 text-amber-500" : !r.valid ? "bg-red-500/15 text-red-500" : r.verified === false ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500";
           return (
             <div key={rowId} className="overflow-hidden rounded-xl border border-border bg-surface">
               <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-3 sm:flex-nowrap">
@@ -1732,7 +1739,7 @@ function ProviderTestResultsView({ results }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-text-main">{r.connectionName || "Koneksi tanpa nama"}</span>
-                  <span className="block truncate text-xs text-text-muted">{r.provider} · {r.authType || "auth tidak diketahui"}</span>
+                  <span className="block truncate text-xs text-text-muted">{r.provider} · {r.authType || "auth tidak diketahui"} · ID {String(r.connectionId || r.id || "n/a").slice(0, 12)}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {r.statusCode && <span className="font-mono text-xs text-text-muted">HTTP {r.statusCode}</span>}
