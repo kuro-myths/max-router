@@ -1245,102 +1245,129 @@ AddCompatibleModal.propTypes = {
 };
 
 function ProviderTestResultsView({ results }) {
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState({});
   if (results.error && !results.results) {
     return (
-      <div className="text-center py-6">
-        <span className="material-symbols-outlined text-red-500 text-[32px] mb-2 block">
-          error
-        </span>
-        <p className="text-sm text-red-400">{results.error}</p>
+      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+        <div className="flex items-center gap-2 font-semibold text-red-500">
+          <span className="material-symbols-outlined">error</span>
+          Pengujian tidak dapat dijalankan
+        </div>
+        <p className="mt-2 text-sm text-text-main">{results.error}</p>
+        {results.statusCode && <p className="mt-1 text-xs text-text-muted">HTTP {results.statusCode}</p>}
       </div>
     );
   }
 
   const { summary, mode } = results;
   const items = results.results || [];
-  const modeLabel =
-    {
-      oauth: "OAuth",
-      free: "Free",
-      apikey: "Kunci API",
-      provider: "Penyedia",
-      all: "Semua",
-    }[mode] || mode;
+  const modeLabel = {
+    oauth: "OAuth", free: "Free", apikey: "Kunci API",
+    provider: "Penyedia", compatible: "Kompatibel", all: "Semua koneksi",
+  }[mode] || mode;
+  const filteredItems = items.filter((item) => {
+    const status = !item.valid ? "failed" : item.verified === false ? "unverified" : "passed";
+    const matchesStatus = filter === "all" || filter === status;
+    const needle = query.trim().toLowerCase();
+    const matchesQuery = !needle || [item.connectionName, item.provider, item.error, item.diagnosis?.message, item.diagnosis?.type]
+      .some((value) => String(value || "").toLowerCase().includes(needle));
+    return matchesStatus && matchesQuery;
+  });
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-4">
       {summary && (
-        <div className="flex flex-wrap items-center gap-2 text-xs mb-1 sm:gap-3">
-          <span className="text-text-muted">{modeLabel} Test</span>
-          <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-medium">
-            {summary.passed} berhasil
-          </span>
-          {summary.failed > 0 && (
-            <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-400 font-medium">
-              {summary.failed} gagal
-            </span>
-          )}
-          {summary.unverified > 0 && (
-            <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 font-medium">
-              {summary.unverified} belum terverifikasi
-            </span>
-          )}
-          <span className="text-text-muted sm:ml-auto">
-            {summary.total} diuji
-          </span>
-        </div>
-      )}
-      {items.map((r, i) => (
-        <div
-          key={r.connectionId || i}
-          className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-xs dark:bg-white/[0.03] sm:flex-nowrap"
-        >
-          <span
-            className={`material-symbols-outlined text-[16px] ${!r.valid ? "text-red-500" : r.verified === false ? "text-amber-500" : "text-emerald-500"}`}
-          >
-            {!r.valid ? "error" : r.verified === false ? "help" : "check_circle"}
-          </span>
-          <div className="min-w-0 flex-[1_1_160px]">
-            <span className="block truncate font-medium sm:inline">
-              {r.connectionName}
-            </span>
-            <span className="block truncate text-text-muted sm:ml-1.5 sm:inline">
-              ({r.provider})
-            </span>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-lg border border-border bg-surface-2 p-3">
+            <span className="block text-xs text-text-muted">Diperiksa</span>
+            <strong className="text-xl tabular-nums">{summary.total}</strong>
           </div>
-          {r.latencyMs !== undefined && (
-            <span className="shrink-0 text-text-muted font-mono tabular-nums">
-              {r.latencyMs}ms
-            </span>
-          )}
-          <span
-            className={`shrink-0 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
-              !r.valid
-                ? "bg-red-500/15 text-red-400"
-                : r.verified === false
-                  ? "bg-amber-500/15 text-amber-500"
-                  : "bg-emerald-500/15 text-emerald-400"
-            }`}
-          >
-            {!r.valid ? (r.diagnosis?.type || "ERROR") : r.verified === false ? "BELUM DIVERIFIKASI" : "OK"}
-          </span>
-          {(r.error || r.diagnosis?.message || r.statusCode) && (
-            <p className="basis-full pl-6 text-[11px] leading-5 text-text-muted break-words">
-              {r.error && r.diagnosis?.message ? `${r.error}. ${r.diagnosis.message}` : r.error || r.diagnosis?.message}
-              {r.statusCode ? ` · HTTP ${r.statusCode}` : ""}
-            </p>
-          )}
-        </div>
-      ))}
-      {items.length === 0 && (
-        <div className="text-center py-4 text-text-muted text-sm">
-          Tidak ada koneksi aktif pada kelompok ini.
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <span className="block text-xs text-text-muted">Berhasil</span>
+            <strong className="text-xl text-emerald-500 tabular-nums">{summary.passed}</strong>
+          </div>
+          <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+            <span className="block text-xs text-text-muted">Gagal</span>
+            <strong className="text-xl text-red-500 tabular-nums">{summary.failed}</strong>
+          </div>
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+            <span className="block text-xs text-text-muted">Belum terverifikasi</span>
+            <strong className="text-xl text-amber-500 tabular-nums">{summary.unverified || 0}</strong>
+          </div>
         </div>
       )}
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <label htmlFor="provider-test-search" className="sr-only">Cari hasil pengujian</label>
+          <Input id="provider-test-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari akun, provider, atau pesan error..." />
+        </div>
+        <label htmlFor="provider-test-filter" className="sr-only">Filter hasil</label>
+        <select id="provider-test-filter" value={filter} onChange={(event) => setFilter(event.target.value)} className="h-10 rounded-lg border border-border bg-surface px-3 text-sm text-text-main">
+          <option value="all">Semua hasil ({items.length})</option>
+          <option value="passed">Berhasil ({items.filter((item) => item.valid && item.verified !== false).length})</option>
+          <option value="failed">Gagal ({items.filter((item) => !item.valid).length})</option>
+          <option value="unverified">Belum terverifikasi ({items.filter((item) => item.valid && item.verified === false).length})</option>
+        </select>
+      </div>
+      <div className="flex items-center justify-between text-xs text-text-muted">
+        <span>{modeLabel} · {filteredItems.length} dari {items.length} hasil</span>
+        <span>{results.testedAt ? new Date(results.testedAt).toLocaleString() : ""}</span>
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
+        {filteredItems.map((r, i) => {
+          const rowId = r.connectionId || String(i);
+          const isOpen = !!expanded[rowId];
+          const statusLabel = !r.valid ? "GAGAL" : r.verified === false ? "BELUM DIVERIFIKASI" : "BERHASIL";
+          const statusClass = !r.valid ? "bg-red-500/15 text-red-500" : r.verified === false ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500";
+          return (
+            <div key={rowId} className="overflow-hidden rounded-xl border border-border bg-surface">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-3 sm:flex-nowrap">
+                <span className={`material-symbols-outlined text-lg ${!r.valid ? "text-red-500" : r.verified === false ? "text-amber-500" : "text-emerald-500"}`}>
+                  {!r.valid ? "error" : r.verified === false ? "help" : "check_circle"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-text-main">{r.connectionName || "Koneksi tanpa nama"}</span>
+                  <span className="block truncate text-xs text-text-muted">{r.provider} · {r.authType || "auth tidak diketahui"}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {r.statusCode && <span className="font-mono text-xs text-text-muted">HTTP {r.statusCode}</span>}
+                  <span className="font-mono text-xs text-text-muted">{r.latencyMs ?? 0} ms</span>
+                  <span className={`rounded px-2 py-1 text-[10px] font-bold ${statusClass}`}>{statusLabel}</span>
+                </div>
+                <button type="button" onClick={() => setExpanded((current) => ({ ...current, [rowId]: !current[rowId] }))} aria-expanded={isOpen} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-brand-500 hover:bg-surface-2">
+                  <span>{isOpen ? "Tutup log" : "Detail & log"}</span>
+                  <span className="material-symbols-outlined text-base">{isOpen ? "expand_less" : "expand_more"}</span>
+                </button>
+              </div>
+              {isOpen && (
+                <div className="border-t border-border bg-surface-2 p-3 text-xs">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div><span className="text-text-muted">Diagnosis</span><p className="mt-0.5 font-medium text-text-main">{r.diagnosis?.type || (r.valid ? "connection_ok" : "provider_error")}</p></div>
+                    <div><span className="text-text-muted">Waktu tes</span><p className="mt-0.5 text-text-main">{r.testedAt ? new Date(r.testedAt).toLocaleString() : "Tidak tersedia"}</p></div>
+                    <div><span className="text-text-muted">Refresh token</span><p className="mt-0.5 text-text-main">{r.refreshed ? "Berhasil diperbarui" : "Tidak dilakukan"}</p></div>
+                    <div><span className="text-text-muted">HTTP</span><p className="mt-0.5 text-text-main">{r.statusCode || "Tidak ada respons HTTP"}</p></div>
+                  </div>
+                  {(r.error || r.diagnosis?.message) && (
+                    <div className="mt-3 rounded-lg border border-red-500/15 bg-red-500/5 p-3">
+                      <p className="font-semibold text-text-main">Pesan error / diagnosis</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-text-muted">{r.error || r.diagnosis?.message}</p>
+                      {r.error && r.diagnosis?.message && <p className="mt-1 whitespace-pre-wrap break-words text-text-muted">{r.diagnosis.message}</p>}
+                    </div>
+                  )}
+                  {r.diagnosis?.action && <p className="mt-2 text-text-muted">Tindakan: {r.diagnosis.action}</p>}
+                  {!r.error && !r.diagnosis?.message && <p className="mt-2 text-emerald-500">Pemeriksaan koneksi berhasil. Ini belum tentu merupakan uji generasi model.</p>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filteredItems.length === 0 && <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-text-muted">Tidak ada hasil yang cocok dengan filter.</div>}
+      </div>
     </div>
   );
 }
-
 ProviderTestResultsView.propTypes = {
   results: PropTypes.shape({
     mode: PropTypes.string,
