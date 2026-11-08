@@ -30,6 +30,7 @@ export async function POST_handler(req, res) {
     const priorities = new Map();
     let importedCount = 0;
     let updatedCount = 0;
+    const existingEmailsByProvider = new Map();
 
     for (const item of incoming) {
       if (!item || typeof item !== "object") {
@@ -54,9 +55,12 @@ export async function POST_handler(req, res) {
       }
 
       const email = String(item.email || sourceData.email || sourceData.github_email || "").trim();
-      const existing = email
-        ? (await getProviderConnections({ provider })).some((connection) => connection.email?.toLowerCase() === email.toLowerCase() && connection.authType === "oauth")
-        : false;
+      if (!existingEmailsByProvider.has(provider)) {
+        const current = await getProviderConnections({ provider });
+        existingEmailsByProvider.set(provider, new Set(current.filter((connection) => connection.authType === "oauth" && connection.email).map((connection) => connection.email.toLowerCase())));
+      }
+      const existingEmails = existingEmailsByProvider.get(provider);
+      const existing = Boolean(email && existingEmails.has(email.toLowerCase()));
 
       const priority = (priorities.get(provider) || 0) + 1;
       priorities.set(provider, priority);
@@ -91,6 +95,7 @@ export async function POST_handler(req, res) {
 
       if (existing) updatedCount += 1;
       else importedCount += 1;
+      if (email) existingEmails.add(email.toLowerCase());
     }
 
     return res.json({
