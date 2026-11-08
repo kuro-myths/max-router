@@ -503,8 +503,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "Authorization": `Bearer ${connection.apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model: getDefaultModel("cloudflare-ai"), messages: [{ role: "user", content: "test" }], max_tokens: 1 }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403 && res.status !== 404;
-        return { valid, error: valid ? null : "Invalid API token or Account ID" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res, "API token atau Account ID tidak cocok"), statusCode: res.status };
       }
       case "azure": {
         const psd = connection.providerSpecificData || {};
@@ -518,8 +518,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           method: "POST", headers,
           body: JSON.stringify({ messages: [{ role: "user", content: "test" }], max_completion_tokens: 1 }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key or Azure configuration" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res, "API key atau konfigurasi Azure tidak cocok"), statusCode: res.status };
       }
       case "openai": {
         const res = await fetchWithConnectionProxy("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
@@ -527,7 +527,7 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
       }
       case "vercel-ai-gateway": {
         const res = await fetchWithConnectionProxy("https://ai-gateway.vercel.sh/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "anthropic": {
         const res = await fetchWithConnectionProxy("https://api.anthropic.com/v1/messages", {
@@ -540,11 +540,11 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
       }
       case "gemini": {
         const res = await fetchWithConnectionProxy(`https://generativelanguage.googleapis.com/v1/models?key=${connection.apiKey}`, {}, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "openrouter": {
         const res = await fetchWithConnectionProxy("https://openrouter.ai/api/v1/auth/key", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "glm": {
         const res = await fetchWithConnectionProxy("https://api.z.ai/api/anthropic/v1/messages", {
@@ -572,8 +572,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "x-api-key": connection.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
           body: JSON.stringify({ model: "minimax-m2", max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "kimi": {
         const res = await fetchWithConnectionProxy("https://api.kimi.com/coding/v1/messages", {
@@ -581,8 +581,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "x-api-key": connection.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
           body: JSON.stringify({ model: "kimi-latest", max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "alicode":
       case "alicode-intl": {
@@ -595,8 +595,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "Authorization": `Bearer ${connection.apiKey}`, "content-type": "application/json" },
           body: JSON.stringify({ model: getDefaultModel(connection.provider), max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "volcengine-ark":
       case "byteplus": {
@@ -605,64 +605,64 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "Authorization": `Bearer ${connection.apiKey}`, "content-type": "application/json" },
           body: JSON.stringify({ model: getDefaultModel(connection.provider), max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "deepseek": {
         const res = await fetchWithConnectionProxy("https://api.deepseek.com/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "groq": {
         const res = await fetchWithConnectionProxy("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "mistral": {
         const res = await fetchWithConnectionProxy("https://api.mistral.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "xai": {
         const res = await fetchWithConnectionProxy("https://api.x.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "nvidia": {
         const res = await fetchWithConnectionProxy("https://integrate.api.nvidia.com/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "perplexity": {
         const res = await fetchWithConnectionProxy("https://api.perplexity.ai/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "together": {
         const res = await fetchWithConnectionProxy("https://api.together.xyz/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "fireworks": {
         const res = await fetchWithConnectionProxy("https://api.fireworks.ai/inference/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "cerebras": {
         const res = await fetchWithConnectionProxy("https://api.cerebras.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "cohere": {
         const res = await fetchWithConnectionProxy("https://api.cohere.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "nebius": {
         const res = await fetchWithConnectionProxy("https://api.studio.nebius.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "siliconflow": {
         const res = await fetchWithConnectionProxy("https://api.siliconflow.cn/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "hyperbolic": {
         const res = await fetchWithConnectionProxy("https://api.hyperbolic.xyz/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "ollama": {
         const res = await fetch("https://ollama.com/api/tags", { headers: { Authorization: `Bearer ${connection.apiKey}` } });
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "ollama-local": {
         const host = resolveOllamaLocalHost(connection);
@@ -671,24 +671,24 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
       }
       case "deepgram": {
         const res = await fetchWithConnectionProxy("https://api.deepgram.com/v1/projects", { headers: { Authorization: `Token ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "assemblyai": {
         const res = await fetchWithConnectionProxy("https://api.assemblyai.com/v1/account", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "nanobanana": {
         const res = await fetchWithConnectionProxy("https://api.nanobananaapi.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "fal-ai": {
         const res = await fetchWithConnectionProxy("https://api.fal.ai/v1/models?limit=1", { headers: { Authorization: `Key ${connection.apiKey}` } }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "chutes": {
         const res = await fetchWithConnectionProxy("https://llm.chutes.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "grok-web": {
         const token = connection.apiKey.startsWith("sso=") ? connection.apiKey.slice(4) : connection.apiKey;
@@ -729,8 +729,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${connection.apiKey}` },
           body: JSON.stringify({ model: getDefaultModel("opencode-go"), messages: [{ role: "user", content: "ping" }], max_tokens: 1, stream: false }),
         }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+        const valid = res.ok;
+        return { valid, error: valid ? null : responseFailure(res), statusCode: res.status };
       }
       case "xiaomi-mimo":
       case "xiaomi-tokenplan": {
@@ -738,7 +738,7 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         const res = await fetchWithConnectionProxy(`${baseUrls[connection.provider]}/models`, {
           headers: { Authorization: `Bearer ${connection.apiKey}` },
         }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        return { valid: res.ok, error: res.ok ? null : responseFailure(res), statusCode: res.status };
       }
       case "codebuddy":
       case "cb": {
