@@ -1326,7 +1326,7 @@ function ProviderTestResultsView({ results }) {
           </span>
           {(r.error || r.diagnosis?.message || r.statusCode) && (
             <p className="basis-full pl-6 text-[11px] leading-5 text-text-muted break-words">
-              {r.error || r.diagnosis?.message}
+              {r.error && r.diagnosis?.message ? `${r.error}. ${r.diagnosis.message}` : r.error || r.diagnosis?.message}
               {r.statusCode ? ` · HTTP ${r.statusCode}` : ""}
             </p>
           )}
