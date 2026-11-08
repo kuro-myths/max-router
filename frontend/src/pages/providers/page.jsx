@@ -301,9 +301,9 @@ export default function ProvidersPage() {
       }
 
       if (data.summary) {
-        const { passed, failed, total } = data.summary;
-        if (failed === 0) notify.success(`Semua ${total} pengujian berhasil`);
-        else notify.warning(`${passed}/${total} berhasil, ${failed} gagal`);
+        const { passed, failed, unverified = 0, total } = data.summary;
+        if (failed === 0 && unverified === 0) notify.success(`Semua ${total} pengujian berhasil`);
+        else notify.warning(`${passed} valid, ${unverified} belum terverifikasi, ${failed} gagal dari ${total} akun`);
       }
     } catch (error) {
       setTestResults({ error: error?.message || "Permintaan pengujian gagal" });
@@ -1280,6 +1280,11 @@ function ProviderTestResultsView({ results }) {
               {summary.failed} gagal
             </span>
           )}
+          {summary.unverified > 0 && (
+            <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 font-medium">
+              {summary.unverified} belum terverifikasi
+            </span>
+          )}
           <span className="text-text-muted sm:ml-auto">
             {summary.total} diuji
           </span>
@@ -1310,13 +1315,21 @@ function ProviderTestResultsView({ results }) {
           )}
           <span
             className={`shrink-0 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
-              r.valid
-                ? "bg-emerald-500/15 text-emerald-400"
-                : "bg-red-500/15 text-red-400"
+              !r.valid
+                ? "bg-red-500/15 text-red-400"
+                : r.verified === false
+                  ? "bg-amber-500/15 text-amber-500"
+                  : "bg-emerald-500/15 text-emerald-400"
             }`}
           >
-            {r.valid ? "OK" : r.diagnosis?.type || "ERROR"}
+            {!r.valid ? (r.diagnosis?.type || "ERROR") : r.verified === false ? "BELUM DIVERIFIKASI" : "OK"}
           </span>
+          {(r.error || r.diagnosis?.message || r.statusCode) && (
+            <p className="basis-full pl-6 text-[11px] leading-5 text-text-muted break-words">
+              {r.error || r.diagnosis?.message}
+              {r.statusCode ? ` · HTTP ${r.statusCode}` : ""}
+            </p>
+          )}
         </div>
       ))}
       {items.length === 0 && (
