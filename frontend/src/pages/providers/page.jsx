@@ -283,10 +283,12 @@ export default function ProvidersPage() {
     if (testingMode) return;
     setTestingMode(mode === "provider" ? providerId : mode);
     const accumulated = [];
+    const seenConnectionIds = new Set();
     let total = null;
     let offset = 0;
     const summary = { total: 0, passed: 0, failed: 0, unverified: 0 };
     setTestResults({ mode, results: [], summary, progress: { completed: 0, total: 0 }, running: true });
+    notify.info("Pengujian dimulai. Semua akun tersimpan akan diperiksa, termasuk akun nonaktif.", "Uji semua akun");
     try {
       let done = false;
       while (!done) {
@@ -297,14 +299,23 @@ export default function ProvidersPage() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || data?.diagnosis?.message || "Pengujian penyedia gagal");
-        if (total === null) total = Number(data.pagination?.total ?? data.summary?.total ?? 0);
-        accumulated.push(...(data.results || []));
+        if (total === null) total = Number(data.inventory?.total ?? data.pagination?.total ?? data.summary?.total ?? 0);
+        for (const item of data.results || []) {
+          const key = item.connectionId || item.id;
+          if (key && seenConnectionIds.has(key)) continue;
+          if (key) seenConnectionIds.add(key);
+          accumulated.push(item);
+        }
         summary.total = accumulated.length;
         summary.passed = accumulated.filter((item) => item.valid && item.verified !== false).length;
         summary.unverified = accumulated.filter((item) => item.valid && item.verified === false).length;
         summary.failed = accumulated.filter((item) => !item.valid).length;
-        offset = Number(data.pagination?.nextOffset ?? offset + (data.results || []).length);
-        done = data.pagination ? data.pagination.done : offset >= total;
+        const nextOffset = Number(data.pagination?.nextOffset ?? offset + (data.results || []).length);
+        done = data.pagination ? data.pagination.done : nextOffset >= total;
+        if (!done && nextOffset <= offset) {
+          throw new Error("Pengujian terhenti karena penanda halaman tidak bergerak. Tidak ada akun yang akan ditandai selesai secara keliru.");
+        }
+        offset = nextOffset;
         setTestResults({
           mode, results: [...accumulated], summary: { ...summary },
           testedAt: data.testedAt || new Date().toISOString(),
@@ -314,14 +325,18 @@ export default function ProvidersPage() {
         if (!data.pagination && (data.results || []).length === 0) done = true;
       }
 
+      if (total !== null && accumulated.length !== total) {
+        throw new Error(`Pengujian belum lengkap: ${accumulated.length} dari ${total} akun menerima hasil. Jalankan ulang untuk melanjutkan pemeriksaan.`);
+      }
+
       const refreshed = await fetch("/api/providers", { cache: "no-store" });
       if (refreshed.ok) {
         const refreshedData = await refreshed.json();
         setConnections(refreshedData.connections || []);
       }
 
-      if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} pengujian berhasil`);
-      else notify.warning(`${summary.passed} valid, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal dari ${summary.total} akun`);
+      if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} akun selesai diuji dan berhasil diverifikasi.`, "Uji semua selesai");
+      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. Buka Detail & Log untuk tindakan perbaikan.`, "Hasil uji semua");
     } catch (error) {
       setTestResults((current) => ({
         ...(current || {}),
