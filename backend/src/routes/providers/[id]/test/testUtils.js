@@ -899,12 +899,22 @@ export async function testSingleConnection(id) {
     verified: result.verified !== false,
     error: result.error,
     diagnosis: result.diagnosis || (result.valid ? null : {
-      type: result.statusCode === 401 ? "invalid_credentials" : result.statusCode === 403 ? "access_denied" : "provider_error",
+      type: result.statusCode === 401
+        ? "invalid_credentials"
+        : result.statusCode === 403
+          ? "access_denied"
+          : result.statusCode === 429
+            ? "rate_limited"
+            : /expired|refresh failed|login ulang|revoked/i.test(String(result.error || ""))
+              ? "reauth_required"
+              : "provider_error",
       message: result.statusCode === 401
         ? "Kredensial ditolak (HTTP 401). Hubungkan ulang akun."
         : result.statusCode === 403
           ? "Akses ditolak (HTTP 403). Periksa izin, scope, atau kuota akun."
-          : result.error || "Penyedia gagal merespons pengujian.",
+          : result.statusCode === 429
+            ? "Provider membatasi permintaan. Tunggu sebelum menguji ulang."
+            : result.error || "Penyedia gagal merespons pengujian.",
     }),
     statusCode: result.statusCode || null,
     refreshed: !!result.refreshed,
