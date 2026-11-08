@@ -355,7 +355,8 @@ export default function ProvidersPage() {
           };
         }).filter((item) => item.id);
 
-        const deletions = await Promise.all(failedRecords.map(async (record) => {
+        const deletableRecords = failedRecords.filter((record) => [401, 403].includes(Number(record.httpStatus)));
+        const deletions = await Promise.all(deletableRecords.map(async (record) => {
           try {
             const response = await fetch(`/api/providers/${encodeURIComponent(record.id)}`, { method: "DELETE" });
             return { id: record.id, ok: response.ok, status: response.status };
@@ -365,7 +366,7 @@ export default function ProvidersPage() {
         }));
         const deletedIds = new Set(deletions.filter((item) => item.ok).map((item) => item.id));
         deletedCount = deletedIds.size;
-        deleteFailedCount = failedRecords.length - deletedCount;
+        deleteFailedCount = deletableRecords.length - deletedCount;
 
         const archive = {
           schemaVersion: 1,
@@ -376,6 +377,7 @@ export default function ProvidersPage() {
             passed: summary.passed,
             unverified: summary.unverified,
             failed: failedRecords.length,
+            autoDeleteEligible: deletableRecords.length,
             deletedFromActiveServices: deletedCount,
             deleteFailed: deleteFailedCount,
           },
@@ -385,6 +387,19 @@ export default function ProvidersPage() {
             deleteHttpStatus: deletions.find((item) => item.id === record.id)?.status ?? null,
           })),
         };
+
+        let archiveSavedToServer = false;
+        try {
+          const archiveResponse = await fetch("/api/providers/failed-archive", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ archive }),
+          });
+          archiveSavedToServer = archiveResponse.ok;
+          if (!archiveResponse.ok) console.warn("Server archive save failed:", archiveResponse.status);
+        } catch (archiveError) {
+          console.warn("Server archive save failed:", archiveError);
+        }
 
         try {
           const previous = JSON.parse(window.localStorage.getItem("max-router-failed-service-tests") || "[]");
@@ -416,7 +431,7 @@ export default function ProvidersPage() {
       }
 
       if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} akun selesai diuji dan berhasil diverifikasi.`, "Uji semua selesai");
-      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. ${deletedCount} layanan gagal dihapus; arsip JSON otomatis diunduh.${deleteFailedCount ? ` ${deleteFailedCount} gagal dihapus dari server.` : ""}`, "Hasil uji semua");
+      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. ${deletedCount} akun dengan HTTP 401/403 dihapus otomatis; ${deleteFailedCount} gagal dihapus. Arsip JSON ${archiveSavedToServer ? "tersimpan di database dan " : "belum tersimpan di database; "}otomatis diunduh.${deleteFailedCount ? ` ${deleteFailedCount} gagal dihapus dari server.` : ""}`, "Hasil uji semua");
     } catch (error) {
       setTestResults((current) => ({
         ...(current || {}),
