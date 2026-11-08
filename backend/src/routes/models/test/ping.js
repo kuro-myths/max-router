@@ -50,7 +50,17 @@ async function getInternalHeaders() {
   return headers;
 }
 
-export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:${process.env.PORT || 3001}`) {
+// Vercel runs each request in an isolated serverless invocation. A loopback
+// URL points at the current function container (not the app router), so model
+// tests must call the same deployment over HTTPS. Keep localhost for local dev.
+function getInternalApiBaseUrl() {
+  const vercelHost = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
+  if (vercelHost) return `https://${String(vercelHost).replace(/^https?:\\/\\//, "").replace(/\\/$/, "")}`;
+  const port = process.env.PORT || 3001;
+  return `http://127.0.0.1:${port}`;
+}
+
+export async function pingModelByKind(model, kind, baseUrl = getInternalApiBaseUrl()) {
   const headers = await getInternalHeaders();
   const start = Date.now();
 
