@@ -445,7 +445,7 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         headers: { "Authorization": `Bearer ${connection.apiKey}` },
       }, effectiveProxy);
       if (modelsRes.ok) return { valid: true, error: null };
-      if (isAuthFailure(modelsRes.status)) return { valid: false, error: responseFailure(res, "API key atau endpoint tidak cocok"), statusCode: res.status };
+      if (isAuthFailure(modelsRes.status)) return { valid: false, error: responseFailure(modelsRes, "API key atau endpoint tidak cocok"), statusCode: modelsRes.status };
 
       const chatRes = await fetchWithConnectionProxy(`${baseUrl}/chat/completions`, {
         method: "POST",
@@ -460,8 +460,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           messages: [{ role: "user", content: "ping" }],
         }),
       }, effectiveProxy);
-      const valid = chatRes.ok || isReachableInferenceStatus(chatRes.status);
-      return { valid, error: valid ? null : (await readResponseError(chatRes)) || "Invalid API key or base URL" };
+      const valid = isReachableInferenceStatus(chatRes.status);
+      return { valid, error: valid ? null : responseFailure(chatRes, (await readResponseError(chatRes)) || "API key atau base URL tidak cocok"), statusCode: chatRes.status };
     } catch (err) {
       return { valid: false, error: err.message };
     }
@@ -493,8 +493,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           messages: [{ role: "user", content: "ping" }],
         }),
       }, effectiveProxy);
-      const valid = messagesRes.ok || isReachableInferenceStatus(messagesRes.status);
-      return { valid, error: valid ? null : (await readResponseError(messagesRes)) || "Invalid API key or base URL" };
+      const valid = isReachableInferenceStatus(messagesRes.status);
+      return { valid, error: valid ? null : responseFailure(messagesRes, (await readResponseError(messagesRes)) || "API key atau base URL tidak cocok"), statusCode: messagesRes.status };
     } catch (err) {
       return { valid: false, error: err.message };
     }
@@ -883,10 +883,15 @@ export async function testSingleConnection(id) {
 
   const latencyMs = Date.now() - start;
 
+  const testedAt = new Date().toISOString();
   const updateData = {
-    testStatus: result.valid ? "active" : "error",
+    testStatus: result.verified === false ? "unknown" : result.valid ? "active" : "error",
     lastError: result.valid ? null : result.error,
-    lastErrorAt: result.valid ? null : new Date().toISOString(),
+    lastErrorAt: result.valid ? null : testedAt,
+    lastTested: testedAt,
+    lastLatencyMs: Date.now() - start,
+    lastDiagnosis: result.diagnosis || null,
+    lastStatusCode: result.statusCode ?? null,
   };
 
   if (result.balance !== undefined) {
@@ -950,6 +955,6 @@ export async function testSingleConnection(id) {
     statusCode: result.statusCode || null,
     refreshed: !!result.refreshed,
     latencyMs,
-    testedAt: new Date().toISOString(),
+    testedAt,
   };
 }
