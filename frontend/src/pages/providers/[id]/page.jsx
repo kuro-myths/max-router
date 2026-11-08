@@ -42,6 +42,7 @@ export default function ProviderDetailPage() {
   const [showEditNodeModal, setShowEditNodeModal] = useState(false);
   const [showBulkProxyModal, setShowBulkProxyModal] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState(null);
+  const [repairingConnection, setRepairingConnection] = useState(null);
   const [modelAliases, setModelAliases] = useState({});
   const [headerImgError, setHeaderImgError] = useState(false);
   const [modelTestResults, setModelTestResults] = useState({});
@@ -797,6 +798,22 @@ export default function ProviderDetailPage() {
 
   const isSelected = (connectionId) => selectedConnectionIds.includes(connectionId);
 
+  const handleRepairConnection = (connection) => {
+    setRepairingConnection(connection);
+  };
+
+  const continueRepairConnection = () => {
+    const target = repairingConnection;
+    if (!target) return;
+    setRepairingConnection(null);
+    if (target.authType === "oauth" || isOAuth) {
+      setShowOAuthModal(true);
+      return;
+    }
+    setSelectedConnection(target);
+    setShowEditModal(true);
+  };
+
   const handleTestConnection = async (id) => {
     if (testingConnectionIds.includes(id)) return;
     setTestingConnectionIds((prev) => [...prev, id]);
@@ -876,6 +893,7 @@ export default function ProviderDetailPage() {
       }}
       onDelete={handleDelete}
       onTest={handleTestConnection}
+      onRepair={handleRepairConnection}
       testingIds={testingConnectionIds}
       providerName={providerInfo?.name || providerId}
       providerIcon={providerMark}
@@ -1709,6 +1727,35 @@ export default function ProviderDetailPage() {
       {bulkActionModal}
       </>
       )}
+
+      {/* Guided repair: keep the selected account and provider visible before starting re-auth/edit. */}
+      <Modal
+        isOpen={!!repairingConnection}
+        onClose={() => setRepairingConnection(null)}
+        title={"Perbaiki " + (providerInfo?.name || providerId)}
+      >
+        {repairingConnection && (
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900">
+              <p className="font-semibold">Layanan tujuan: {providerInfo?.name || providerId}</p>
+              <p className="mt-1 break-all text-xs">Akun yang diperbaiki: {repairingConnection.email || repairingConnection.name || "Akun tanpa email"}</p>
+              <p className="mt-2 text-xs">Perbaikan hanya berlaku untuk koneksi ini. Untuk OAuth, masuk kembali menggunakan akun yang sama. Untuk API Key, ganti kredensial yang ditolak dengan key baru.</p>
+            </div>
+            {officialProviderWebsite && (
+              <a href={officialProviderWebsite} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold text-primary underline">
+                Buka situs resmi {providerInfo?.name || providerId}
+                <span className="material-symbols-outlined text-sm">open_in_new</span>
+              </a>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setRepairingConnection(null)}>Batal</Button>
+              <Button onClick={continueRepairConnection}>
+                {repairingConnection.authType === "oauth" || isOAuth ? "Hubungkan ulang akun" : "Perbarui API Key"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Modals */}
       {providerId === "kiro" ? (
