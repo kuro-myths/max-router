@@ -1,4 +1,4 @@
-import { getProviderConnectionById, updateProviderCredentials } from "../../../../lib/localDb.js";
+import { getProviderConnectionById, updateProviderConnection } from "../../../../lib/localDb.js";
 import { getProviderModels, PROVIDER_ID_TO_ALIAS } from "../../../../../open-sse/config/providerModels.js";
 import { resolveKiroModels } from "../../../../../open-sse/services/kiroModels.js";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "../../../../shared/constants/providers.js";
@@ -29,7 +29,7 @@ export async function POST_handler(req, res, { params }) {
         log: console,
         onCredentialsRefreshed: async (refreshed) => {
           if (!refreshed?.accessToken) return;
-          await updateProviderCredentials(connection.id, {
+          await updateProviderConnection(connection.id, {
             accessToken: refreshed.accessToken,
             refreshToken: refreshed.refreshToken || connection.refreshToken,
             expiresIn: refreshed.expiresIn
