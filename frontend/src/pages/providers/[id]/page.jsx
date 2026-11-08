@@ -960,18 +960,27 @@ export default function ProviderDetailPage() {
   const handleTestModel = async (modelId) => {
     if (testingModelId) return;
     setTestingModelId(modelId);
+    setModelsTestError("");
     try {
       const res = await fetch("/api/models/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: `${providerStorageAlias}/${modelId}` }),
       });
-      const data = await res.json();
-      setModelTestResults((prev) => ({ ...prev, [modelId]: data.ok ? "ok" : "error" }));
-      setModelsTestError(data.ok ? "" : (data.error || "Model not reachable"));
-    } catch {
+      const raw = await res.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch {
+        throw new Error(`HTTP ${res.status}: respons server bukan JSON`);
+      }
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `HTTP ${res.status}: pengujian model gagal`);
+      }
+      const passed = data.ok === true;
+      setModelTestResults((prev) => ({ ...prev, [modelId]: passed ? "ok" : "error" }));
+      setModelsTestError(passed ? "" : (data.error || "Model tidak mengembalikan completion yang valid"));
+    } catch (error) {
       setModelTestResults((prev) => ({ ...prev, [modelId]: "error" }));
-      setModelsTestError("Network error");
+      setModelsTestError(error?.message || "Gagal menghubungi endpoint pengujian model");
     } finally {
       setTestingModelId(null);
     }
