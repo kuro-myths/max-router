@@ -80,37 +80,50 @@ export async function POST_handler(req, res) {
       });
     }
 
-    const results = [];
-    for (const conn of connectionsToTest) {
-      try {
-        const data = await testSingleConnection(conn.id);
-        results.push({
-          provider: conn.provider,
-          connectionId: conn.id,
-          connectionName: conn.name || conn.email || conn.provider,
-          authType: conn.authType || getAuthGroup(conn.provider, conn),
-          valid: data.valid,
-          latencyMs: data.latencyMs || 0,
-          error: data.error || null,
-          diagnosis: data.diagnosis || null,
-          statusCode: data.statusCode || null,
-          testedAt: data.testedAt || new Date().toISOString(),
-        });
-      } catch (error) {
-        results.push({
-          provider: conn.provider,
-          connectionId: conn.id,
-          connectionName: conn.name || conn.email || conn.provider,
-          authType: conn.authType || getAuthGroup(conn.provider, conn),
-          valid: false,
-          latencyMs: 0,
-          error: error.message,
-          diagnosis: { type: "network_error", source: "local", code: null, message: error.message },
-          statusCode: null,
-          testedAt: new Date().toISOString(),
-        });
+    // Run a small worker pool instead of testing accounts serially.
+    // Six concurrent checks keeps large OAuth imports responsive without
+    // overwhelming provider APIs or the database connection pool.
+    const results = new Array(connectionsToTest.length);
+    let nextIndex = 0;
+    const concurrency = Math.min(6, connectionsToTest.length);
+
+    async function worker() {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= connectionsToTest.length) return;
+        const conn = connectionsToTest[index];
+        try {
+          const data = await testSingleConnection(conn.id);
+          results[index] = {
+            provider: conn.provider,
+            connectionId: conn.id,
+            connectionName: conn.name || conn.email || conn.provider,
+            authType: conn.authType || getAuthGroup(conn.provider, conn),
+            valid: data.valid,
+            latencyMs: data.latencyMs || 0,
+            error: data.error || null,
+            diagnosis: data.diagnosis || null,
+            statusCode: data.statusCode || null,
+            testedAt: data.testedAt || new Date().toISOString(),
+          };
+        } catch (error) {
+          results[index] = {
+            provider: conn.provider,
+            connectionId: conn.id,
+            connectionName: conn.name || conn.email || conn.provider,
+            authType: conn.authType || getAuthGroup(conn.provider, conn),
+            valid: false,
+            latencyMs: 0,
+            error: error?.message || "Pengujian gagal",
+            diagnosis: { type: "network_error", source: "local", code: null, message: error?.message || "Pengujian gagal" },
+            statusCode: null,
+            testedAt: new Date().toISOString(),
+          };
+        }
       }
     }
+
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
     return res.json({
       mode,
