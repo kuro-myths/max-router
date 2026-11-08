@@ -20,6 +20,7 @@ const COMBO_STRATEGIES = [
   { value: "last-good", label: "Last Good · terakhir berhasil", description: "Mendahulukan model terakhir yang berhasil, lalu mencoba model lain jika gagal." },
   { value: "shuffle", label: "Shuffle · acak tiap permintaan", description: "Mengacak urutan model pada setiap permintaan dan mencoba sisanya bila gagal." },
   { value: "capacity", label: "Capacity · sesuai kemampuan", description: "Mendahulukan model yang namanya mengindikasikan dukungan gambar atau audio; ini heuristik, bukan jaminan." },
+  { value: "smart", label: "Smart Router · adaptif", description: "Menilai kebutuhan request, kemampuan model, prioritas biaya/kecepatan/kualitas, dan mempertahankan model per sesi." },
   { value: "fusion", label: "Fusion · sintesis AI", description: "Menjalankan semua model secara paralel, lalu Judge menyatukan hasil menjadi satu jawaban." },
 ];
 
@@ -146,6 +147,18 @@ export default function CombosPage() {
     }
   };
 
+  const handleChangeSmartConfig = async (comboName, key, value) => {
+    try {
+      const updated = { ...comboStrategies, [comboName]: { ...(comboStrategies[comboName] || {}), [key]: value } };
+      const response = await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ comboStrategies: updated }) });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      setComboStrategies(updated);
+    } catch (error) {
+      console.error("Error updating Smart Router configuration:", error);
+      alert("Pengaturan Smart Router gagal disimpan.");
+    }
+  };
+
   const handleChangeStrategy = async (comboName, strategy) => {
     try {
       const updated = { ...comboStrategies, [comboName]: { ...(comboStrategies[comboName] || {}), fallbackStrategy: strategy } };
@@ -221,6 +234,9 @@ export default function CombosPage() {
               fusionMinPanel={comboStrategies[combo.name]?.fusionMinPanel ?? 2}
               fusionGraceMs={comboStrategies[combo.name]?.fusionGraceMs ?? 5000}
               fusionTimeoutMs={comboStrategies[combo.name]?.fusionTimeoutMs ?? 45000}
+              smartPolicy={comboStrategies[combo.name]?.smartPolicy || "balanced"}
+              smartStickiness={comboStrategies[combo.name]?.smartStickiness || "adaptive"}
+              onChangeSmartConfig={(key, value) => handleChangeSmartConfig(combo.name, key, value)}
               onChangeJudgeModel={(model) => handleChangeJudgeModel(combo.name, model)}
               onChangeFusionConfig={(key, value) => handleChangeFusionConfig(combo.name, key, value)}
               onChangeStrategy={(strategy) => handleChangeStrategy(combo.name, strategy)}
@@ -261,7 +277,7 @@ export default function CombosPage() {
   );
 }
 
-function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeModel, fusionMinPanel, fusionGraceMs, fusionTimeoutMs, onChangeJudgeModel, onChangeFusionConfig, onChangeStrategy }) {
+function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeModel, fusionMinPanel, fusionGraceMs, fusionTimeoutMs, smartPolicy, smartStickiness, onChangeJudgeModel, onChangeFusionConfig, onChangeSmartConfig, onChangeStrategy }) {
   return (
     <Card padding="sm" className="group">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -303,6 +319,21 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeMod
               {COMBO_STRATEGIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </div>
+
+          {strategy === "smart" && (
+            <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-2 py-1.5 sm:min-w-[190px]">
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">SMART ROUTER POLICY</span>
+              <label className="text-[10px] font-semibold text-text-muted" htmlFor={"smart-policy-" + combo.id}>Prioritas routing</label>
+              <select id={"smart-policy-" + combo.id} value={smartPolicy} onChange={(event) => onChangeSmartConfig("smartPolicy", event.target.value)} className="rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary">
+                <option value="balanced">Balanced · seimbang</option><option value="quality">Quality · kualitas</option><option value="fast">Fast · kecepatan</option><option value="economy">Economy · hemat biaya</option>
+              </select>
+              <label className="mt-1 text-[10px] font-semibold text-text-muted" htmlFor={"smart-stickiness-" + combo.id}>Session stickiness</label>
+              <select id={"smart-stickiness-" + combo.id} value={smartStickiness} onChange={(event) => onChangeSmartConfig("smartStickiness", event.target.value)} className="rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary">
+                <option value="adaptive">Adaptive · pindah jika perlu</option><option value="strict">Strict lock · kunci sesi</option><option value="per-turn">Per-turn · evaluasi tiap request</option>
+              </select>
+              <span className="text-[10px] text-text-muted">Pemilihan kemampuan memakai sinyal request dan pola ID model; fallback tetap aktif.</span>
+            </div>
+          )}
 
           {strategy === "fusion" && (
             <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-primary/20 bg-primary/5 px-2 py-1.5 sm:min-w-[190px]">
