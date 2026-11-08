@@ -5,6 +5,7 @@ import { refreshGoogleToken, updateProviderCredentials } from "../../../../sse/s
 import { resolveOllamaLocalHost } from "../../../../../open-sse/config/providers.js";
 import { resolveKiroModels } from "../../../../../open-sse/services/kiroModels.js";
 import { resolveQoderModels } from "../../../../../open-sse/services/qoderModels.js";
+import { getProviderModels, PROVIDER_ID_TO_ALIAS } from "../../../../../open-sse/config/providerModels.js";
 
 const normalizeCompatibleBaseUrl = (value) => {
   const raw = String(value || "").trim().replace(/\/+$/, "");
@@ -392,7 +393,19 @@ const PROVIDER_MODELS_CONFIG = {
         warning = `Failed to fetch Kiro models: ${error.message}`;
         console.log("Failed to fetch Kiro models dynamically, falling back to static:", error.message);
       }
-      return { models: [], warning };
+      // Keep the provider page populated when Kiro's live discovery is temporarily
+      // unavailable (for example account suspension / upstream 403). These are
+      // catalog entries only; the warning explicitly marks them unverified.
+      const staticModels = getProviderModels(PROVIDER_ID_TO_ALIAS.kiro || "kr");
+      if (staticModels.length) {
+        return {
+          models: staticModels.map((model) => ({ ...model })),
+          warning: warning || "Kiro live catalog unavailable; showing configured models as unverified.",
+          source: "static-fallback",
+          stale: true,
+        };
+      }
+      return { models: [], warning, source: "upstream", stale: false };
     }
   },
   qoder: {
@@ -733,7 +746,9 @@ export async function GET_handler(req, res, { params }) {
         provider: connection.provider,
         connectionId: connection.id,
         models: result.models,
-        ...(result.warning ? { warning: result.warning } : {})
+        ...(result.warning ? { warning: result.warning } : {}),
+        ...(result.source ? { source: result.source } : {}),
+        ...(typeof result.stale === "boolean" ? { stale: result.stale } : {})
       });
     }
 
