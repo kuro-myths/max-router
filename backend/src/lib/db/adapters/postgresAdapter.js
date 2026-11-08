@@ -189,7 +189,8 @@ export async function createPostgresAdapter(connectionString) {
   // Vercel runs many short-lived function instances. The pg default pool
   // (10 clients per instance) multiplies across instances and can exhaust the
   // Supabase project's global connection limit. Keep each instance deliberately small.
-  const configuredPoolMax = Number.parseInt(process.env.PG_POOL_MAX || "3", 10);
+  const defaultPoolMax = process.env.VERCEL ? "1" : "3";
+  const configuredPoolMax = Number.parseInt(process.env.PG_POOL_MAX || defaultPoolMax, 10);
   const poolMax = Number.isFinite(configuredPoolMax)
     ? Math.min(5, Math.max(1, configuredPoolMax))
     : 3;
