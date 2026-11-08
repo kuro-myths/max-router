@@ -55,7 +55,10 @@ async function getInternalHeaders() {
 // tests must call the same deployment over HTTPS. Keep localhost for local dev.
 function getInternalApiBaseUrl() {
   const vercelHost = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
-  if (vercelHost) return `https://${String(vercelHost).replace(/^https?:\\/\\//, "").replace(/\\/$/, "")}`;
+  if (vercelHost) {
+    const host = String(vercelHost).split("://").pop().split("/")[0];
+    return `https://${host}`;
+  }
   const port = process.env.PORT || 3001;
   return `http://127.0.0.1:${port}`;
 }
