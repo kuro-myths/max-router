@@ -360,13 +360,24 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
         const retryRes = await fetchWithConnectionProxy(retryUrl, retryOpts, effectiveProxy);
         const retryAccepted = retryRes.ok || (config.acceptStatuses && config.acceptStatuses.includes(retryRes.status));
         if (retryAccepted) return { valid: true, error: null, refreshed: true, newTokens: tokens };
+        return {
+          valid: false,
+          error: retryRes.status === 401
+            ? "Token tetap ditolak setelah refresh. Hubungkan ulang akun."
+            : `Pengujian ulang ditolak API (HTTP ${retryRes.status}).`,
+          statusCode: retryRes.status,
+          refreshed: false,
+        };
       }
-      return { valid: false, error: "Token invalid or revoked", refreshed: false };
+      return { valid: false, error: "Refresh token ditolak atau sudah dicabut. Hubungkan ulang akun.", statusCode: res.status, refreshed: false };
     }
 
-    if (res.status === 401) return { valid: false, error: "Token invalid or revoked", refreshed };
-    if (res.status === 403) return { valid: false, error: "Access denied", refreshed };
-    return { valid: false, error: `API returned ${res.status}`, refreshed };
+    if (res.status === 401) {
+      const detail = connection.provider === "github" ? await readResponseError(res) : "";
+      return { valid: false, error: connection.provider === "github" ? `GitHub menolak token: ${detail || "Bad credentials"}. Otorisasi ulang GitHub diperlukan.` : "Token tidak valid atau sudah dicabut.", statusCode: res.status, refreshed };
+    }
+    if (res.status === 403) return { valid: false, error: "Akses ditolak. Periksa izin OAuth, scope, atau batas rate limit provider.", statusCode: res.status, refreshed };
+    return { valid: false, error: `API mengembalikan HTTP ${res.status}`, statusCode: res.status, refreshed };
   } catch (err) {
     return { valid: false, error: err.message, refreshed };
   }
