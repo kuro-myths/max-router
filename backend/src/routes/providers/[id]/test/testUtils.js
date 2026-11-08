@@ -385,8 +385,12 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
       const detail = connection.provider === "github" ? await readResponseError(res) : "";
       return { valid: false, error: connection.provider === "github" ? `GitHub menolak token: ${detail || "Bad credentials"}. Otorisasi ulang GitHub diperlukan.` : "Token tidak valid atau sudah dicabut.", statusCode: res.status, refreshed };
     }
-    if (res.status === 403) return { valid: false, error: "Akses ditolak. Periksa izin OAuth, scope, atau batas rate limit provider.", statusCode: res.status, refreshed };
-    return { valid: false, error: `API mengembalikan HTTP ${res.status}`, statusCode: res.status, refreshed };
+    if (res.status === 403) {
+      const detail = (await readResponseError(res)).slice(0, 180);
+      return { valid: false, error: `Akses ditolak oleh provider (HTTP 403). Periksa scope, izin, kebijakan akun, atau kuota.${detail ? ` Detail: ${detail}` : ""}`, statusCode: res.status, refreshed };
+    }
+    const detail = (await readResponseError(res)).slice(0, 180);
+    return { valid: false, error: `Provider mengembalikan HTTP ${res.status}.${detail ? ` Detail: ${detail}` : ""}`, statusCode: res.status, refreshed };
   } catch (err) {
     return { valid: false, error: err.message, refreshed };
   }
