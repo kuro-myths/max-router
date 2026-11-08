@@ -5,7 +5,7 @@ import {
   isAnthropicCompatibleProvider,
   isOpenAICompatibleProvider,
 } from "../../../shared/constants/providers.js";
-import { getProviderConnections, getCombos, getCustomModels, getModelAliases } from "../../../lib/localDb.js";
+import { getProviderConnections, updateProviderConnection, getCombos, getCustomModels, getModelAliases } from "../../../lib/localDb.js";
 import { getDisabledModels } from "../../../lib/disabledModelsDb.js";
 import { getPricingForModel } from "../../../shared/constants/pricing.js";
 import { resolveKiroModels } from "../../../../open-sse/services/kiroModels.js";
@@ -20,7 +20,16 @@ const LIVE_MODEL_RESOLVERS = {
       accessToken: conn.accessToken,
       refreshToken: conn.refreshToken,
       providerSpecificData: conn.providerSpecificData || {}
-    }, { log: console });
+    }, {
+      log: console,
+      onCredentialsRefreshed: async (refreshed) => {
+        await updateProviderConnection(conn.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken || conn.refreshToken,
+          expiresIn: refreshed.expiresIn,
+        });
+      },
+    });
     return result?.models?.length ? { models: result.models } : null;
   },
   qoder: async (conn) => {
@@ -174,7 +183,7 @@ export async function buildModelsList(kindFilter) {
   let connections = [];
   try {
     connections = await getProviderConnections();
-    connections = connections.filter(c => c.isActive !== false && (isOpenAICompatibleProvider(c.provider) || isAnthropicCompatibleProvider(c.provider)));
+    connections = connections.filter(c => c.isActive !== false && (isOpenAICompatibleProvider(c.provider) || isAnthropicCompatibleProvider(c.provider) || Object.hasOwn(LIVE_MODEL_RESOLVERS, c.provider)));
   } catch (e) {
     console.log("Could not fetch providers, returning all models");
   }
@@ -285,7 +294,7 @@ export async function buildModelsList(kindFilter) {
       // -thinking/-agentic variants per account). On failure, fall back to
       // whatever rawModelIds already holds.
       const liveResolver = LIVE_MODEL_RESOLVERS[providerId];
-      if (liveResolver && !hasExplicitEnabledModels) {
+      if (liveResolver && (!hasExplicitEnabledModels || providerId === "kiro")) {
         try {
           const live = await liveResolver(conn);
           if (live?.models?.length) {
