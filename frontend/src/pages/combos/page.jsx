@@ -126,6 +126,26 @@ export default function CombosPage() {
     } catch (error) { console.error("Error updating Fusion judge:", error); alert("Judge model gagal disimpan."); }
   };
 
+  const handleChangeFusionConfig = async (comboName, key, value) => {
+    try {
+      const current = comboStrategies[comboName] || {};
+      const updated = {
+        ...comboStrategies,
+        [comboName]: { ...current, [key]: Number(value) },
+      };
+      const response = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comboStrategies: updated }),
+      });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      setComboStrategies(updated);
+    } catch (error) {
+      console.error("Error updating Fusion configuration:", error);
+      alert("Pengaturan Fusion gagal disimpan. Periksa koneksi lalu coba lagi.");
+    }
+  };
+
   const handleChangeStrategy = async (comboName, strategy) => {
     try {
       const updated = { ...comboStrategies, [comboName]: { ...(comboStrategies[comboName] || {}), fallbackStrategy: strategy } };
@@ -198,7 +218,11 @@ export default function CombosPage() {
               onHapus={() => handleHapus(combo.id)}
               strategy={comboStrategies[combo.name]?.fallbackStrategy || "fallback"}
               judgeModel={comboStrategies[combo.name]?.judgeModel || combo.models?.[0] || ""}
+              fusionMinPanel={comboStrategies[combo.name]?.fusionMinPanel ?? 2}
+              fusionGraceMs={comboStrategies[combo.name]?.fusionGraceMs ?? 5000}
+              fusionTimeoutMs={comboStrategies[combo.name]?.fusionTimeoutMs ?? 45000}
               onChangeJudgeModel={(model) => handleChangeJudgeModel(combo.name, model)}
+              onChangeFusionConfig={(key, value) => handleChangeFusionConfig(combo.name, key, value)}
               onChangeStrategy={(strategy) => handleChangeStrategy(combo.name, strategy)}
             />
           ))}
@@ -237,7 +261,7 @@ export default function CombosPage() {
   );
 }
 
-function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeModel, onChangeJudgeModel, onChangeStrategy }) {
+function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeModel, fusionMinPanel, fusionGraceMs, fusionTimeoutMs, onChangeJudgeModel, onChangeFusionConfig, onChangeStrategy }) {
   return (
     <Card padding="sm" className="group">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -287,6 +311,19 @@ function ComboCard({ combo, copied, onSalin, onUbah, onHapus, strategy, judgeMod
                 {combo.models.map((model) => <option key={model} value={model}>{model}</option>)}
               </select>
               <span className="text-[10px] text-text-muted">Dipilih dari model yang sudah terdaftar di combo.</span>
+              <label className="mt-1 text-[10px] font-semibold text-text-muted" htmlFor={"fusion-quorum-" + combo.id}>Minimal jawaban panel</label>
+              <select id={"fusion-quorum-" + combo.id} value={fusionMinPanel} onChange={(event) => onChangeFusionConfig("fusionMinPanel", event.target.value)} className="rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary">
+                {Array.from({ length: Math.max(1, Math.min(combo.models.length, 4)) }, (_, index) => index + 1).map((value) => <option key={value} value={value}>{value} model berhasil</option>)}
+              </select>
+              <label className="mt-1 text-[10px] font-semibold text-text-muted" htmlFor={"fusion-grace-" + combo.id}>Waktu tunggu tambahan</label>
+              <select id={"fusion-grace-" + combo.id} value={fusionGraceMs} onChange={(event) => onChangeFusionConfig("fusionGraceMs", event.target.value)} className="rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary">
+                <option value={1000}>1 detik · cepat</option><option value={3000}>3 detik</option><option value={5000}>5 detik · standar</option><option value={8000}>8 detik · lengkap</option><option value={12000}>12 detik</option>
+              </select>
+              <label className="mt-1 text-[10px] font-semibold text-text-muted" htmlFor={"fusion-timeout-" + combo.id}>Batas waktu panel</label>
+              <select id={"fusion-timeout-" + combo.id} value={fusionTimeoutMs} onChange={(event) => onChangeFusionConfig("fusionTimeoutMs", event.target.value)} className="rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary">
+                <option value={20000}>20 detik</option><option value={45000}>45 detik · standar</option><option value={60000}>60 detik</option><option value={90000}>90 detik</option>
+              </select>
+              <span className="text-[10px] text-text-muted">Konfigurasi disimpan per combo. Batas waktu maksimal 90 detik.</span>
             </div>
           )}
 
