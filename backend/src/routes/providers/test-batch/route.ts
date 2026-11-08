@@ -52,7 +52,11 @@ export async function POST_handler(req, res) {
       return res.status(400).json({ error: "mode is required" });
     }
 
-    const allConnections = await getProviderConnections({ isActive: true });
+    // "all" must use a stable complete inventory. Testing can deactivate rejected
+    // credentials (HTTP 401); filtering active rows here changes the offset pages
+    // between requests and silently skips the remaining accounts.
+    const allConnections = await getProviderConnections(mode === "all" ? {} : { isActive: true });
+    allConnections.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
     let connectionsToTest = [];
     if (mode === "provider" && providerId) {
