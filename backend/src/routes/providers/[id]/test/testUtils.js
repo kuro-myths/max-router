@@ -965,7 +965,7 @@ export async function testSingleConnection(id) {
               ? "Uji ulang nanti dan periksa status layanan provider."
               : /timeout|timed out|abort/i.test(String(result.error || ""))
                 ? "Periksa proxy, DNS, konektivitas, dan timeout; lalu uji satu akun."
-                : "Periksa detail respons provider dan konfigurasi endpoint/model.";
+                : "Periksa detail respons provider dan konfigurasi endpoint/model.",
     }),
     statusCode: result.statusCode || null,
     refreshed: !!result.refreshed,
