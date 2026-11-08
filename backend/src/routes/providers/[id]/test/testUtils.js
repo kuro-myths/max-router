@@ -315,9 +315,27 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
   }
 
   if (config.checkExpiry) {
-    if (refreshed) return { valid: true, error: null, refreshed, newTokens };
-    if (tokenExpired) return { valid: false, error: "Token expired", refreshed: false };
-    return { valid: true, error: null, refreshed: false, newTokens: null };
+    if (tokenExpired && !refreshed) {
+      return {
+        valid: false,
+        error: "Token kedaluwarsa dan tidak dapat diperbarui.",
+        diagnosis: { type: "reauth_required", message: "Token sudah kedaluwarsa. Hubungkan ulang akun melalui OAuth." },
+        refreshed: false,
+      };
+    }
+    return {
+      valid: true,
+      verified: false,
+      error: null,
+      diagnosis: {
+        type: refreshed ? "token_refresh_only" : "token_expiry_only",
+        message: refreshed
+          ? "Refresh token diterima oleh penyedia, tetapi endpoint model belum diuji."
+          : "Masa berlaku token belum habis. Ini bukan bukti bahwa endpoint model/inferensi masih menerima token.",
+      },
+      refreshed,
+      newTokens,
+    };
   }
 
   if (connection.provider === "cline") {
