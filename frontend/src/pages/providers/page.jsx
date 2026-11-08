@@ -1385,6 +1385,86 @@ function ProviderTestResultsView({ results }) {
   const [expanded, setExpanded] = useState({});
   const [deletedIds, setDeletedIds] = useState({});
   const [deletingIds, setDeletingIds] = useState({});
+  const [deletingAll, setDeletingAll] = useState(false);
+
+  // Keep a local, credential-free recovery copy of completed failed-test results.
+  useEffect(() => {
+    if (results.running || !Array.isArray(results.results)) return;
+    const failed = results.results.filter((item) => item && item.valid === false).map((item) => ({
+      id: String(item.connectionId || item.id || ""),
+      name: String(item.connectionName || "Koneksi tanpa nama"),
+      provider: String(item.provider || ""),
+      authType: String(item.authType || ""),
+      httpStatus: item.statusCode ?? null,
+      errorCode: item.errorCode || null,
+      reason: String(item.error || item.diagnosis?.message || "Uji layanan gagal"),
+      diagnosis: item.diagnosis?.type || null,
+      testedAt: item.testedAt || results.testedAt || new Date().toISOString(),
+    }));
+    if (!failed.length) return;
+    try {
+      const key = "max-router-failed-service-tests";
+      const previous = JSON.parse(window.localStorage.getItem(key) || "[]");
+      const merged = new Map();
+      for (const item of [...failed, ...(Array.isArray(previous) ? previous : [])]) {
+        const identity = item.id || [item.provider, item.name, item.testedAt].join("|");
+        if (!merged.has(identity)) merged.set(identity, item);
+      }
+      window.localStorage.setItem(key, JSON.stringify(Array.from(merged.values()).slice(0, 1000)));
+    } catch (error) {
+      console.warn("Local failed-account backup could not be saved:", error);
+    }
+  }, [results]);
+
+  const handleDeleteAllFailed = async () => {
+    const pending = items.filter((item) => item.valid === false && item.connectionId && !deletedIds[item.connectionId]);
+    if (!pending.length || deletingAll) return;
+    const confirmed = window.confirm(
+      `Hapus ${pending.length} akun yang gagal dari layanan aktif? Arsip JSON lokal tetap disimpan. Tindakan ini tidak dapat dibatalkan.`
+    );
+    if (!confirmed) return;
+    setDeletingAll(true);
+    const removed = [];
+    const failed = [];
+    try {
+      for (let start = 0; start < pending.length; start += 4) {
+        const chunk = pending.slice(start, start + 4);
+        const outcomes = await Promise.all(chunk.map(async (item) => {
+          const id = String(item.connectionId);
+          try {
+            const response = await fetch(`/api/providers/${encodeURIComponent(id)}`, { method: "DELETE" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return { id, ok: true };
+          } catch (error) {
+            return { id, ok: false, error: error.message };
+          }
+        }));
+        removed.push(...outcomes.filter((outcome) => outcome.ok).map((outcome) => outcome.id));
+        failed.push(...outcomes.filter((outcome) => !outcome.ok));
+      }
+      setDeletedIds((current) => ({
+        ...current,
+        ...Object.fromEntries(removed.map((id) => [id, true])),
+      }));
+      if (removed.length) {
+        try {
+          const key = "max-router-failed-service-tests";
+          const previous = JSON.parse(window.localStorage.getItem(key) || "[]");
+          const deletedSet = new Set(removed);
+          const next = (Array.isArray(previous) ? previous : []).map((item) => ({
+            ...item,
+            removedFromActiveServices: deletedSet.has(String(item.id)),
+          }));
+          window.localStorage.setItem(key, JSON.stringify(next.slice(0, 1000)));
+        } catch (error) {
+          console.warn("Could not update local archive deletion status:", error);
+        }
+      }
+      window.alert(`Selesai: ${removed.length} akun dihapus, ${failed.length} gagal dihapus. Arsip lokal tetap tersedia.`);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   const handleDeleteFailedAccount = async (item, rowId) => {
     const id = item.connectionId || item.id;
@@ -1464,6 +1544,23 @@ function ProviderTestResultsView({ results }) {
         </div>
       )}
       {results.error && <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-500">Batch berhenti: {results.error}. Hasil yang sudah selesai tetap ditampilkan.</div>}
+      {items.some((item) => item.valid === false && item.connectionId && !deletedIds[item.connectionId]) && (
+        <div className="flex flex-col gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-text-main">Kelola akun gagal</p>
+            <p className="text-xs text-text-muted">Akun gagal dapat dihapus sekaligus. Salinan metadata tersimpan otomatis di local storage browser ini.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleDeleteAllFailed}
+            disabled={deletingAll}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:cursor-wait disabled:opacity-60"
+          >
+            <span className="material-symbols-outlined text-base">delete_sweep</span>
+            {deletingAll ? "Menghapus bertahap..." : `Hapus semua akun gagal (${items.filter((item) => item.valid === false && item.connectionId && !deletedIds[item.connectionId]).length})`}
+          </button>
+        </div>
+      )}
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <label htmlFor="provider-test-search" className="sr-only">Cari hasil pengujian</label>
