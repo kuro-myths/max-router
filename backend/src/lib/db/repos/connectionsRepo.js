@@ -6,7 +6,7 @@ const OPTIONAL_FIELDS = [
   "displayName", "email", "globalPriority", "defaultModel",
   "accessToken", "refreshToken", "serviceToken", "expiresAt", "tokenType",
   "scope", "projectId", "apiKey", "testStatus",
-  "lastTested", "lastError", "lastErrorAt", "rateLimitedUntil", "expiresIn", "errorCode",
+  "lastTested", "lastError", "lastErrorAt", "lastStatusCode", "lastDiagnosis", "lastLatencyMs", "rateLimitedUntil", "expiresIn", "errorCode",
   "consecutiveUseCount",
   "cached_jwt", "jwt_expires_at", "last_balance", "fail_count", "cooling_until", "cookie",
 ];
