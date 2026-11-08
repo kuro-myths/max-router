@@ -4,6 +4,7 @@ import { testProxyUrl } from "@/lib/network/proxyTest";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
 import { PROVIDER_ENDPOINTS } from "@/shared/constants/config";
 import { getDefaultModel } from "open-sse/config/providerModels.js";
+import { resolveKiroModels } from "open-sse/services/kiroModels.js";
 import { resolveOllamaLocalHost } from "open-sse/config/providers.js";
 import {
   refreshProviderCredentials,
@@ -287,6 +288,62 @@ async function testOAuthConnection(connection, effectiveProxy = null) {
   let accessToken = connection.accessToken;
   let refreshed = false;
   let newTokens = null;
+
+  // Kiro's token-expiry check alone misses security suspensions: a token may
+  // look unexpired while the model catalog endpoint rejects the account.
+  if (connection.provider === "kiro") {
+    const credentials = {
+      accessToken,
+      refreshToken: connection.refreshToken,
+      providerSpecificData: connection.providerSpecificData || {},
+    };
+    const catalog = await resolveKiroModels(credentials, {
+      forceRefresh: true,
+      log: console,
+      onCredentialsRefreshed: async (tokens) => {
+        newTokens = tokens;
+        refreshed = true;
+      },
+    });
+    if (catalog?.models?.length) {
+      return {
+        valid: true,
+        verified: true,
+        error: null,
+        diagnosis: { type: "model_catalog_verified", message: "Endpoint katalog model Kiro berhasil diakses." },
+        refreshed,
+        newTokens,
+      };
+    }
+    const detail = String(catalog?.error || "Kiro tidak mengembalikan katalog model.");
+    const suspended = /temporarily\\s+(?:is\\s+)?suspended|account.{0,40}(?:suspended|locked)|locked.{0,40}account|security precaution|contact.{0,30}support/i.test(detail);
+    const statusCode = catalog?.statusCode || null;
+    return {
+      valid: false,
+      verified: false,
+      error: suspended
+        ? `Akun Kiro ditangguhkan/dikunci untuk pemeriksaan keamanan. ${detail}`
+        : detail,
+      statusCode,
+      diagnosis: {
+        type: suspended ? "account_suspended" : statusCode === 401 ? "reauth_required" : statusCode === 403 ? "access_denied" : "provider_error",
+        message: suspended
+          ? "Kiro mengunci akun sebagai tindakan keamanan; ini bukan kesalahan model atau API key."
+          : statusCode === 401
+            ? "Kiro menolak token. Refresh atau otorisasi ulang diperlukan."
+            : statusCode === 403
+              ? "Kiro menolak akses. Periksa izin, wilayah, dan status akun."
+              : "Endpoint katalog Kiro tidak dapat diverifikasi.",
+        action: suspended
+          ? "Jangan hapus akun atau mengulang pengujian. Hubungi dukungan Kiro untuk verifikasi/pemulihan akun."
+          : statusCode === 401
+            ? "Jalankan login OAuth ulang melalui alur resmi."
+            : "Periksa status akun dan konfigurasi provider sebelum mencoba lagi.",
+      },
+      refreshed,
+      newTokens,
+    };
+  }
 
   const tokenExpired = isTokenExpired(connection);
   if (config.refreshable && tokenExpired && connection.refreshToken) {
