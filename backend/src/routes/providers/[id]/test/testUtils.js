@@ -784,8 +784,8 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
           }),
         }, effectiveProxy);
         
-        let valid = res.status !== 401 && res.status !== 403;
-        let errorMessage = valid ? null : "Invalid CodeBuddy API key";
+        let valid = res.ok;
+        let errorMessage = valid ? null : responseFailure(res, "CodeBuddy menolak kredensial atau permintaan");
 
         if (res.status === 429) {
           const bodyText = await res.text().catch(() => "");
