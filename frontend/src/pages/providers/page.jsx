@@ -1323,6 +1323,19 @@ function ProviderTestResultsView({ results }) {
           </div>
         </div>
       )}
+      {results.progress && (
+        <div className="rounded-xl border border-border bg-surface p-3">
+          <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+            <span className="font-semibold text-text-main">{results.running ? "Pengujian sedang berjalan..." : "Pengujian selesai"}</span>
+            <span className="tabular-nums text-text-muted">{results.progress.completed} / {results.progress.total}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+            <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: (results.progress.total ? Math.min(100, (results.progress.completed / results.progress.total) * 100) : 0) + "%" }} />
+          </div>
+          {results.running && <p className="mt-2 text-[11px] text-text-muted">Koneksi diuji bertahap untuk mencegah timeout dan mengurangi tekanan pada database.</p>}
+        </div>
+      )}
+      {results.error && <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-500">Batch berhenti: {results.error}. Hasil yang sudah selesai tetap ditampilkan.</div>}
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <label htmlFor="provider-test-search" className="sr-only">Cari hasil pengujian</label>
