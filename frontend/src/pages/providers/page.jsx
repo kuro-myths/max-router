@@ -290,15 +290,24 @@ export default function ProvidersPage() {
         body: JSON.stringify({ mode, providerId }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Pengujian penyedia gagal");
       setTestResults(data);
+
+      // Reload persisted status so badges/cards immediately reflect test outcomes.
+      const refreshed = await fetch("/api/providers", { cache: "no-store" });
+      if (refreshed.ok) {
+        const refreshedData = await refreshed.json();
+        setConnections(refreshedData.connections || []);
+      }
+
       if (data.summary) {
         const { passed, failed, total } = data.summary;
         if (failed === 0) notify.success(`Semua ${total} pengujian berhasil`);
         else notify.warning(`${passed}/${total} berhasil, ${failed} gagal`);
       }
     } catch (error) {
-      setTestResults({ error: "Permintaan pengujian gagal" });
-      notify.error("Pengujian penyedia gagal");
+      setTestResults({ error: error?.message || "Permintaan pengujian gagal" });
+      notify.error(error?.message || "Pengujian penyedia gagal");
     } finally {
       setTestingMode(null);
     }
