@@ -1296,9 +1296,9 @@ function ProviderTestResultsView({ results }) {
           className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-xs dark:bg-white/[0.03] sm:flex-nowrap"
         >
           <span
-            className={`material-symbols-outlined text-[16px] ${r.valid ? "text-emerald-500" : "text-red-500"}`}
+            className={`material-symbols-outlined text-[16px] ${!r.valid ? "text-red-500" : r.verified === false ? "text-amber-500" : "text-emerald-500"}`}
           >
-            {r.valid ? "check_circle" : "error"}
+            {!r.valid ? "error" : r.verified === false ? "help" : "check_circle"}
           </span>
           <div className="min-w-0 flex-[1_1_160px]">
             <span className="block truncate font-medium sm:inline">
