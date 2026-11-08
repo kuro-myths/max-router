@@ -61,6 +61,11 @@ async function persistFailedArchive(archive) {
 // Queue is written before any destructive request. It survives refresh/reopen and retries
 // only explicitly verified authentication failures; transient 429/5xx/network errors stay.
 async function resumePendingFailedDeletes(notify, setConnections) {
+  // Never delete provider accounts automatically from an HTTP status. A 403 may
+  // mean suspension/security lock, and OAuth 401 may be refreshable/re-authorizable.
+  // Clear legacy destructive queues created by older versions.
+  writePendingFailedDeletes([]);
+  return;
   const pending = readPendingFailedDeletes();
   if (!pending.length) return;
   const completed = [];
@@ -506,7 +511,9 @@ export default function ProvidersPage() {
         };
       }).filter((item) => item.id);
 
-      const deletableRecords = failedRecords.filter((record) => [401, 403].includes(Number(record.httpStatus)));
+      // Keep failed accounts and credentials for diagnosis/recovery. HTTP 403
+      // includes suspended accounts; it must never trigger automatic deletion.
+      const deletableRecords = [];
       let deletedCount = 0;
       let deleteFailedCount = 0;
       if (failedRecords.length) {
@@ -561,7 +568,7 @@ export default function ProvidersPage() {
       }
 
       if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} akun selesai diuji dan berhasil diverifikasi.`, "Uji semua selesai");
-      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. ${deletedCount} akun 401/403 dihapus; ${deleteFailedCount} masih dalam antrean dan akan dicoba lagi setelah reload. Arsip JSON disimpan lokal dan disinkronkan ke database bila tersedia.`, "Hasil uji semua");
+      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. Akun gagal dipertahankan agar bisa diperbaiki; tidak ada penghapusan otomatis berdasarkan HTTP 401/403. Arsip JSON disimpan lokal dan disinkronkan ke database bila tersedia.`, "Hasil uji semua");
     } catch (error) {
       setTestResults((current) => ({
         ...(current || {}),
