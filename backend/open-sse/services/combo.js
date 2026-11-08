@@ -12,6 +12,64 @@ import { unavailableResponse } from "../utils/error.js";
 const comboRotationState = new Map();
 const comboUsageState = new Map();
 const comboLastGoodState = new Map();
+const comboSessionState = new Map();
+
+function requestSignals(body = {}) {
+  const messages = JSON.stringify(body?.messages || body?.input || body?.contents || []).toLowerCase();
+  const tools = Array.isArray(body?.tools) && body.tools.length > 0;
+  const hasImage = /image_url|"image"|inline_data|input_image/.test(messages);
+  const hasAudio = /input_audio|audio_url|speech|transcri|"audio"/.test(messages);
+  const hasVideo = /video_url|video_frame|"video"/.test(messages);
+  const hasPdf = /application\\/pdf|\\.pdf|"file"/.test(messages);
+  const effort = String(body?.reasoning_effort || body?.reasoning?.effort || body?.thinking?.level || "").toLowerCase();
+  return { hasImage, hasAudio, hasVideo, hasPdf, tools, estimatedTokens: Math.ceil(messages.length / 4),
+    reasoning: ["high", "xhigh", "max", "medium"].includes(effort) };
+}
+function modelHints(model) {
+  const id = String(model || "").toLowerCase();
+  return {
+    vision: /vision|omni|4o|gemini|claude|grok|llava|qwen.*vl|pixtral|internvl/.test(id),
+    audio: /audio|speech|whisper|transcri|tts|gemini|omni|4o/.test(id),
+    video: /video|veo|sora|kling|seedance|gemini/.test(id),
+    pdf: /claude|gemini|gpt-4|gpt-5|gpt-6|qwen|mistral/.test(id),
+    tools: !/embed|whisper|tts|image|video/.test(id),
+    context: /1m|1000k/.test(id) ? 1000000 : /200k/.test(id) ? 200000 : /128k/.test(id) ? 128000 : /32k/.test(id) ? 32000 : 0,
+    fast: /flash|mini|haiku|fast|turbo|instant/.test(id),
+    quality: /opus|pro|reason|thinking|sonnet/.test(id),
+    cheap: /free|flash|mini|nano|lite/.test(id),
+  };
+}
+function scoreSmartModel(model, signals, policy) {
+  const hints = modelHints(model);
+  let score = 0;
+  if (signals.hasImage) score += hints.vision ? 14 : -12;
+  if (signals.hasAudio) score += hints.audio ? 14 : -12;
+  if (signals.hasVideo) score += hints.video ? 14 : -12;
+  if (signals.hasPdf) score += hints.pdf ? 10 : -8;
+  if (signals.tools) score += hints.tools ? 5 : -10;
+  if (signals.estimatedTokens > 32000 && hints.context) score += hints.context >= signals.estimatedTokens ? 12 : -14;
+  if (signals.reasoning) score += hints.quality ? 8 : -2;
+  if (policy === "quality") score += hints.quality ? 12 : 0;
+  if (policy === "fast") score += hints.fast ? 12 : 0;
+  if (policy === "economy") score += hints.cheap ? 12 : 0;
+  return score;
+}
+function sessionStateKey(comboName, body, sessionKey) {
+  const id = sessionKey || body?.metadata?.session_id || body?.session_id || body?.conversation_id || body?.prompt_cache_key;
+  return id ? String(comboName || "combo") + ":" + String(id).slice(0, 256) : null;
+}
+function applySmartRouting(models, comboName, body, policy = "balanced", stickiness = "adaptive", sessionKey = null) {
+  const signals = requestSignals(body);
+  const ranked = [...models].sort((a, b) => scoreSmartModel(b, signals, policy) - scoreSmartModel(a, signals, policy));
+  const key = sessionStateKey(comboName, body, sessionKey);
+  if (!key || stickiness === "per-turn") return ranked;
+  const previous = comboSessionState.get(key);
+  if (!previous || !ranked.includes(previous)) return ranked;
+  const previousScore = scoreSmartModel(previous, signals, policy);
+  const bestScore = scoreSmartModel(ranked[0], signals, policy);
+  return stickiness === "strict" || previousScore >= bestScore - 5
+    ? [previous, ...ranked.filter(model => model !== previous)] : ranked;
+}
 
 function normalizeStickyLimit(stickyLimit) {
   const parsed = Number.parseInt(stickyLimit, 10);
@@ -34,6 +92,7 @@ function stableKey(comboName) { return comboName || "__default__"; }
 export function getRotatedModels(models, comboName, strategy, stickyLimit = 1, body = {}) {
   if (!Array.isArray(models) || models.length <= 1) return models || [];
   const key = stableKey(comboName);
+  if (strategy === "smart") return applySmartRouting(models, comboName, body, body?.__smartPolicy || "balanced", body?.__smartStickiness || "adaptive", body?.__sessionKey || null);
   switch (strategy || "fallback") {
     case "round-robin": {
       const limit = normalizeStickyLimit(stickyLimit);
@@ -81,8 +140,12 @@ export function getRotatedModels(models, comboName, strategy, stickyLimit = 1, b
  * @param {string} [comboName] - Combo name to reset; omit to clear all
  */
 export function resetComboRotation(comboName) {
-  if (comboName) { comboRotationState.delete(comboName); comboUsageState.delete(comboName); comboLastGoodState.delete(comboName); }
-  else { comboRotationState.clear(); comboUsageState.clear(); comboLastGoodState.clear(); }
+  if (comboName) {
+    comboRotationState.delete(comboName); comboUsageState.delete(comboName); comboLastGoodState.delete(comboName);
+    for (const key of comboSessionState.keys()) if (key.startsWith(comboName + ":")) comboSessionState.delete(key);
+  } else {
+    comboRotationState.clear(); comboUsageState.clear(); comboLastGoodState.clear(); comboSessionState.clear();
+  }
 }
 
 /**
@@ -255,9 +318,10 @@ function fusionCompletionResponse({ content, comboName, metadata, stream = false
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, judgeModel = null, fusionMinPanel = 2, fusionGraceMs = 5000, fusionTimeoutMs = 45000 }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, judgeModel = null, fusionMinPanel = 2, fusionGraceMs = 5000, fusionTimeoutMs = 45000, smartPolicy = "balanced", smartStickiness = "adaptive", sessionKey = null }) {
   // Apply rotation strategy if enabled
-  const rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit, body);
+  const routingBody = comboStrategy === "smart" ? { ...body, __smartPolicy: smartPolicy, __smartStickiness: smartStickiness, __sessionKey: sessionKey } : body;
+  const rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit, routingBody);
 
   // Fusion: fan out to panel models, then synthesize with the configured Judge.
   if (comboStrategy === "fusion") {
@@ -337,6 +401,13 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       // Success (2xx) - return response
       if (result.ok) {
         comboLastGoodState.set(stableKey(comboName), modelStr);
+        if (comboStrategy === "smart" && smartStickiness !== "per-turn") {
+          const key = sessionStateKey(comboName, body, sessionKey);
+          if (key) {
+            comboSessionState.set(key, modelStr);
+            if (comboSessionState.size > 5000) comboSessionState.delete(comboSessionState.keys().next().value);
+          }
+        }
         log.info("COMBO", `Model ${modelStr} succeeded`);
         return result;
       }
