@@ -329,6 +329,86 @@ export default function ProvidersPage() {
         throw new Error(`Pengujian belum lengkap: ${accumulated.length} dari ${total} akun menerima hasil. Jalankan ulang untuk melanjutkan pemeriksaan.`);
       }
 
+      // A failed test is archived as safe metadata before the account is removed.
+      // "Unverified" successes are intentionally retained; only valid=false is removed.
+      const failedResults = accumulated.filter((item) => item.valid === false);
+      let deletedCount = 0;
+      let deleteFailedCount = 0;
+      if (failedResults.length > 0) {
+        const currentById = new Map(connections.map((connection) => [String(connection.id), connection]));
+        const failedRecords = failedResults.map((item) => {
+          const id = String(item.connectionId || item.id || "");
+          const connection = currentById.get(id);
+          return {
+            id,
+            name: item.connectionName || connection?.name || connection?.email || "Layanan tanpa nama",
+            provider: item.provider || connection?.provider || null,
+            authType: connection?.authType || null,
+            endpoint: connection?.providerSpecificData?.baseUrl || null,
+            model: connection?.defaultModel || null,
+            result: "failed",
+            verified: item.verified === true,
+            httpStatus: item.statusCode ?? item.httpStatus ?? null,
+            errorCode: item.errorCode || null,
+            reason: item.error || item.message || item.reason || "Uji layanan gagal",
+            testedAt: item.testedAt || new Date().toISOString(),
+          };
+        }).filter((item) => item.id);
+
+        const deletions = await Promise.all(failedRecords.map(async (record) => {
+          try {
+            const response = await fetch(`/api/providers/${encodeURIComponent(record.id)}`, { method: "DELETE" });
+            return { id: record.id, ok: response.ok, status: response.status };
+          } catch {
+            return { id: record.id, ok: false, status: 0 };
+          }
+        }));
+        const deletedIds = new Set(deletions.filter((item) => item.ok).map((item) => item.id));
+        deletedCount = deletedIds.size;
+        deleteFailedCount = failedRecords.length - deletedCount;
+
+        const archive = {
+          schemaVersion: 1,
+          generatedAt: new Date().toISOString(),
+          source: "Max Router / Uji Semua Penyedia",
+          summary: {
+            tested: summary.total,
+            passed: summary.passed,
+            unverified: summary.unverified,
+            failed: failedRecords.length,
+            deletedFromActiveServices: deletedCount,
+            deleteFailed: deleteFailedCount,
+          },
+          failedServices: failedRecords.map((record) => ({
+            ...record,
+            removedFromActiveServices: deletedIds.has(record.id),
+            deleteHttpStatus: deletions.find((item) => item.id === record.id)?.status ?? null,
+          })),
+        };
+
+        try {
+          const previous = JSON.parse(window.localStorage.getItem("max-router-failed-service-tests") || "[]");
+          window.localStorage.setItem("max-router-failed-service-tests", JSON.stringify([...archive.failedServices, ...(Array.isArray(previous) ? previous : [])].slice(0, 1000)));
+        } catch (storageError) {
+          console.warn("Failed-service archive could not be saved in local storage:", storageError);
+        }
+
+        const blob = new Blob([JSON.stringify(archive, null, 2)], { type: "application/json;charset=utf-8" });
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `max-router-failed-services-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+
+        for (const item of accumulated) {
+          const id = String(item.connectionId || item.id || "");
+          if (deletedIds.has(id)) item.removedFromActiveServices = true;
+        }
+      }
+
       const refreshed = await fetch("/api/providers", { cache: "no-store" });
       if (refreshed.ok) {
         const refreshedData = await refreshed.json();
@@ -336,7 +416,7 @@ export default function ProvidersPage() {
       }
 
       if (summary.failed === 0 && summary.unverified === 0) notify.success(`Semua ${summary.total} akun selesai diuji dan berhasil diverifikasi.`, "Uji semua selesai");
-      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. Buka Detail & Log untuk tindakan perbaikan.`, "Hasil uji semua");
+      else notify.warning(`Selesai menguji ${summary.total} akun: ${summary.passed} berhasil, ${summary.unverified} belum terverifikasi, ${summary.failed} gagal. ${deletedCount} layanan gagal dihapus; arsip JSON otomatis diunduh.${deleteFailedCount ? ` ${deleteFailedCount} gagal dihapus dari server.` : ""}`, "Hasil uji semua");
     } catch (error) {
       setTestResults((current) => ({
         ...(current || {}),
