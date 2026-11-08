@@ -387,6 +387,13 @@ export default function ProvidersPage() {
     return true;
   });
   const hasAnyResult = savedProviderEntries.length > 0;
+  const oauthConnections = connections.filter((connection) => connection.authType === "oauth");
+  const oauthProviderGroups = [...oauthConnections.reduce((groups, connection) => {
+    const id = String(connection.provider || "unknown");
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(connection);
+    return groups;
+  }, new Map()).entries()].sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
@@ -436,6 +443,41 @@ export default function ProvidersPage() {
         </section>
       )}
 
+      {oauthConnections.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold">Akun OAuth tersimpan</h2>
+              <p className="text-sm text-text-muted">Akun hasil impor 9Router dan koneksi OAuth lainnya. Token tidak ditampilkan di halaman ini.</p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">{oauthConnections.length} akun</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {oauthProviderGroups.map(([providerId, accounts]) => (
+              <article key={providerId} className="rounded-xl border border-border bg-surface p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold capitalize text-text-main">{providerId.replace(/[-_]/g, " ")}</h3>
+                  <span className="rounded-full bg-surface-2 px-2 py-1 text-[11px] text-text-muted">{accounts.length} akun</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="rounded-lg bg-surface-2 p-3">
+                      <p className="truncate text-sm font-medium text-text-main">{account.name || account.email || "Akun tanpa nama"}</p>
+                      {account.email && <p className="mt-0.5 truncate text-xs text-text-muted">{account.email}</p>}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className={account.isActive === false ? "rounded-full bg-red-500/10 px-2 py-1 text-[10px] text-red-600" : "rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-600"}>{account.isActive === false ? "Dinonaktifkan" : "Aktif"}</span>
+                        <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] text-amber-600">{account.testStatus === "success" ? "Teruji" : account.testStatus === "error" ? "Perlu pemeriksaan" : "Belum diuji"}</span>
+                      </div>
+                      {account.expiresAt && <p className="mt-2 text-[10px] text-text-muted">Kedaluwarsa: {new Date(account.expiresAt).toLocaleString("id-ID")}</p>}
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Modal
         isOpen={isAddLoginServiceOpen}
         onClose={() => setIsAddLoginServiceOpen(false)}
@@ -467,7 +509,7 @@ export default function ProvidersPage() {
           <span className="material-symbols-outlined text-[32px] text-text-muted mb-2">
             cloud_off
           </span>
-          <p className="text-text-muted text-sm">Belum ada integrasi xKiro atau Atria yang tersimpan.</p>
+          <p className="text-text-muted text-sm">Belum ada API key atau penyedia kompatibel yang tersimpan. Akun OAuth ditampilkan pada bagian Akun OAuth tersimpan jika tersedia.</p>
         </div>
       )}
 
@@ -476,7 +518,7 @@ export default function ProvidersPage() {
           <div className="flex flex-col gap-1">
             <h2 className="text-lg sm:text-xl font-semibold">Integrasi Tersimpan</h2>
             <p className="text-sm text-text-muted">
-              Hanya koneksi xKiro dan Atria yang tersimpan di MAX Router.
+              Daftar API key dan penyedia kompatibel yang tersimpan di MAX Router.
             </p>
           </div>
 
