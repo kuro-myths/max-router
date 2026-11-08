@@ -255,7 +255,7 @@ function fusionCompletionResponse({ content, comboName, metadata, stream = false
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, judgeModel = null }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, judgeModel = null, fusionMinPanel = 2, fusionGraceMs = 5000, fusionTimeoutMs = 45000 }) {
   // Apply rotation strategy if enabled
   const rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit, body);
 
@@ -268,7 +268,9 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
     const settled = await collectFusionPanel(
       models.map(model => handleSingleModel(panelBody, model)),
-      Math.min(2, models.length),
+      Math.max(1, Math.min(Number(fusionMinPanel) || 2, models.length)),
+      Math.max(0, Math.min(Number(fusionGraceMs) || 5000, 15000)),
+      Math.max(5000, Math.min(Number(fusionTimeoutMs) || 45000, 90000)),
     );
     const outputs = [];
     let lastFailure = null;
