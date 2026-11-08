@@ -100,6 +100,7 @@ export async function POST_handler(req, res) {
             connectionName: conn.name || conn.email || conn.provider,
             authType: conn.authType || getAuthGroup(conn.provider, conn),
             valid: data.valid,
+            verified: data.verified !== false,
             latencyMs: data.latencyMs || 0,
             error: data.error || null,
             diagnosis: data.diagnosis || null,
@@ -132,7 +133,8 @@ export async function POST_handler(req, res) {
       testedAt: new Date().toISOString(),
       summary: {
         total: results.length,
-        passed: results.filter((r) => r.valid).length,
+        passed: results.filter((r) => r.valid && r.verified !== false).length,
+        unverified: results.filter((r) => r.valid && r.verified === false).length,
         failed: results.filter((r) => !r.valid).length,
       },
     });
