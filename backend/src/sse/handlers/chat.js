@@ -119,6 +119,10 @@ export async function handleChat(request, clientRawRequest = null) {
     const fusionMinPanel = comboConfig.fusionMinPanel ?? 2;
     const fusionGraceMs = comboConfig.fusionGraceMs ?? 5000;
     const fusionTimeoutMs = comboConfig.fusionTimeoutMs ?? 45000;
+    const smartPolicy = comboConfig.smartPolicy || "balanced";
+    const smartStickiness = comboConfig.smartStickiness || "adaptive";
+    const sessionKey = request.headers.get("x-session-id") || request.headers.get("x-conversation-id") ||
+      body?.metadata?.session_id || body?.session_id || body?.conversation_id || null;
     log.info("CHAT", `Combo "${modelStr}" with ${comboModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
     return handleComboChat({
       body,
@@ -131,7 +135,10 @@ export async function handleChat(request, clientRawRequest = null) {
       judgeModel,
       fusionMinPanel,
       fusionGraceMs,
-      fusionTimeoutMs
+      fusionTimeoutMs,
+      smartPolicy,
+      smartStickiness,
+      sessionKey
     });
   }
 
