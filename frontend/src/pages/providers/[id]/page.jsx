@@ -843,11 +843,13 @@ export default function ProviderDetailPage() {
   const isXkiroProvider = /xkiro/i.test(String(providerInfo?.name || "")) || /xkiro\.com/i.test(providerBaseHint) || providerId === "xkiro";
   const isAtriaProvider = /atria/i.test(String(providerInfo?.name || "")) || /atria-asi\.ai/i.test(providerBaseHint) || providerId === "atria";
   const officialProviderWebsite =
-    isXkiroProvider
-      ? "https://xkiro.com"
-      : isAtriaProvider
-        ? "https://api.atria-asi.ai/docs"
-        : providerInfo?.website || providerInfo?.notice?.signupUrl || "";
+    providerId === "kiro"
+      ? "https://kiro.dev/"
+      : isXkiroProvider
+        ? "https://xkiro.com"
+        : isAtriaProvider
+          ? "https://api.atria-asi.ai/docs"
+          : providerInfo?.website || providerInfo?.notice?.signupUrl || "";
 
   const officialProviderBaseUrl =
     isXkiroProvider
@@ -1744,6 +1746,12 @@ export default function ProviderDetailPage() {
             {officialProviderWebsite && (
               <a href={officialProviderWebsite} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold text-primary underline">
                 Buka situs resmi {providerInfo?.name || providerId}
+                <span className="material-symbols-outlined text-sm">open_in_new</span>
+              </a>
+            )}
+            {providerId === "kiro" && (
+              <a href="https://view.awsapps.com/start" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold text-amber-800 underline">
+                Login / daftar AWS Builder ID (portal resmi)
                 <span className="material-symbols-outlined text-sm">open_in_new</span>
               </a>
             )}
