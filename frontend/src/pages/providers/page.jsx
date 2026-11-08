@@ -453,36 +453,55 @@ export default function ProvidersPage() {
       )}
 
       {oauthConnections.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg sm:text-xl font-semibold">Akun OAuth tersimpan</h2>
-              <p className="text-sm text-text-muted">Akun hasil impor 9Router dan koneksi OAuth lainnya. Token tidak ditampilkan di halaman ini.</p>
+              <h2 className="text-lg sm:text-xl font-semibold">Integrasi OAuth</h2>
+              <p className="text-sm text-text-muted">Pilih penyedia untuk membuka halaman detail, mengelola akun, dan melihat status koneksi.</p>
             </div>
-            <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">{oauthConnections.length} akun</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">{oauthConnections.length} akun tersimpan</span>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {oauthProviderGroups.map(([providerId, accounts]) => (
-              <article key={providerId} className="rounded-xl border border-border bg-surface p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold capitalize text-text-main">{providerId.replace(/[-_]/g, " ")}</h3>
-                  <span className="rounded-full bg-surface-2 px-2 py-1 text-[11px] text-text-muted">{accounts.length} akun</span>
-                </div>
-                <div className="mt-3 space-y-2">
-                  {accounts.map((account) => (
-                    <div key={account.id} className="rounded-lg bg-surface-2 p-3">
-                      <p className="truncate text-sm font-medium text-text-main">{account.name || account.email || "Akun tanpa nama"}</p>
-                      {account.email && <p className="mt-0.5 truncate text-xs text-text-muted">{account.email}</p>}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className={account.isActive === false ? "rounded-full bg-red-500/10 px-2 py-1 text-[10px] text-red-600" : "rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-600"}>{account.isActive === false ? "Dinonaktifkan" : "Aktif"}</span>
-                        <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] text-amber-600">{account.testStatus === "success" ? "Teruji" : account.testStatus === "error" ? "Perlu pemeriksaan" : "Belum diuji"}</span>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {oauthProviderGroups.map(([providerId, accounts]) => {
+              const active = accounts.filter((account) => account.isActive !== false).length;
+              const tested = accounts.filter((account) => account.testStatus === "success").length;
+              const failed = accounts.filter((account) => ["error", "expired", "unavailable"].includes(account.testStatus)).length;
+              const displayName = providerId.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+              const iconProvider = {
+                id: providerId,
+                name: displayName,
+                color: "#7C3AED",
+                textIcon: displayName.slice(0, 2).toUpperCase(),
+              };
+              return (
+                <Link key={providerId} to={`/dashboard/providers/${encodeURIComponent(providerId)}`} className="group min-w-0">
+                  <Card padding="xs" className="h-full cursor-pointer transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                        <ProviderIcon
+                          src={`/providers/${providerId}.png`}
+                          alt={displayName}
+                          size={32}
+                          className="max-h-8 max-w-8 rounded-lg object-contain"
+                          fallbackText={iconProvider.textIcon}
+                          fallbackColor={iconProvider.color}
+                        />
                       </div>
-                      {account.expiresAt && <p className="mt-2 text-[10px] text-text-muted">Kedaluwarsa: {new Date(account.expiresAt).toLocaleString("id-ID")}</p>}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate font-semibold text-text-main">{displayName}</h3>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                          <Badge variant="default" size="sm">{accounts.length} akun</Badge>
+                          <Badge variant={active > 0 ? "success" : "default"} size="sm" dot>{active} aktif</Badge>
+                          {failed > 0 ? <Badge variant="error" size="sm" dot>{failed} gagal</Badge> : <Badge variant={tested === accounts.length ? "success" : "default"} size="sm">{tested}/{accounts.length} teruji</Badge>}
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined text-text-muted transition-transform group-hover:translate-x-1">chevron_right</span>
                     </div>
-                  ))}
-                </div>
-              </article>
-            ))}
+                    <p className="mt-3 text-xs text-text-muted">Klik untuk mengelola akun dan koneksi</p>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
