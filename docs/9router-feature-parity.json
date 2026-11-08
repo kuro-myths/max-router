@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "reference": {
+    "project": "9Router",
+    "repository": "https://github.com/decolua/9router",
+    "documentation": "https://docs.9router.com/",
+    "changelog": "https://github.com/decolua/9router/blob/master/CHANGELOG.md",
+    "reviewedVersion": "0.5.112",
+    "reviewedAt": "2026-11-08",
+    "latestChangelogEntry": "2026-10-28"
+  },
+  "features": [
+    {
+      "id": "smart-router",
+      "upstream": "Smart Router / System One",
+      "maxRouterStatus": "implemented",
+      "maxRouterModule": "Combos",
+      "details": "Request-signal scoring, Balanced/Quality/Fast/Economy policies, adaptive/strict/per-turn session stickiness, and normal fallback after the preferred model fails.",
+      "limitations": "Capability inference is best-effort from request shape and model identifiers; it is not a provider-certified capability guarantee. Session affinity is process-local on serverless instances."
+    },
+    {
+      "id": "fusion",
+      "upstream": "Combo Fusion",
+      "maxRouterStatus": "implemented",
+      "maxRouterModule": "Combos",
+      "details": "Parallel model panel, configurable quorum/grace/hard timeout, and Judge synthesis."
+    },
+    {
+      "id": "capacity-routing",
+      "upstream": "Capacity auto-switch",
+      "maxRouterStatus": "partial",
+      "maxRouterModule": "Combos",
+      "details": "Existing Capacity strategy uses request modality hints and model-name heuristics; Smart Router adds broader request scoring.",
+      "limitations": "Needs provider-sourced model capability metadata for exact guarantees."
+    },
+    {
+      "id": "quota-tracking",
+      "upstream": "Real-time Quota",
+      "maxRouterStatus": "existing",
+      "maxRouterModule": "Quota",
+      "details": "Provider quota retrieval, refresh, local cache, and account filters already exist."
+    },
+    {
+      "id": "format-translator",
+      "upstream": "Format Translator",
+      "maxRouterStatus": "existing",
+      "maxRouterModule": "Translator",
+      "details": "Existing request/response format translation."
+    },
+    {
+      "id": "proxy-pools",
+      "upstream": "Proxy Pools",
+      "maxRouterStatus": "existing",
+      "maxRouterModule": "Proxy Pools",
+      "details": "Existing outbound proxy pool management."
+    },
+    {
+      "id": "model-intelligence",
+      "upstream": "Model capabilities and live catalog",
+      "maxRouterStatus": "partial",
+      "maxRouterModule": "Model Detection",
+      "details": "Existing model scanner infers context, modalities, parameter counts, pricing and capabilities from available catalog metadata.",
+      "limitations": "Parameter counts, context limits, pricing and modalities remain unknown when the upstream provider does not publish them."
+    },
+    {
+      "id": "token-saver",
+      "upstream": "RTK / Headroom token saver",
+      "maxRouterStatus": "planned",
+      "maxRouterModule": "Translator / request pipeline",
+      "details": "Not enabled by this change; safe lossless compression requires format-specific handling and regression tests."
+    },
+    {
+      "id": "api-key-access-control",
+      "upstream": "Per-API-key model and combo access control",
+      "maxRouterStatus": "planned",
+      "maxRouterModule": "API Keys",
+      "details": "Not enabled by this change; requires persisted allow-lists and enforcement before provider routing."
+    },
+    {
+      "id": "thinking-levels",
+      "upstream": "Per-model thinking level picker",
+      "maxRouterStatus": "partial",
+      "maxRouterModule": "Parameters / Translator",
+      "details": "Existing parameter compatibility and reasoning detection; provider-specific level controls still need a model capability registry."
+    }
+  ]
+}
