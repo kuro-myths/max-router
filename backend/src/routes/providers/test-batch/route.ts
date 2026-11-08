@@ -85,7 +85,7 @@ export async function POST_handler(req, res) {
     // overwhelming provider APIs or the database connection pool.
     const results = new Array(connectionsToTest.length);
     let nextIndex = 0;
-    const concurrency = Math.min(3, connectionsToTest.length);
+    const concurrency = Math.min(2, connectionsToTest.length);
 
     async function worker() {
       while (true) {
