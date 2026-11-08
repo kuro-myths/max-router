@@ -1383,6 +1383,24 @@ function ProviderTestResultsView({ results }) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState({});
+  const [deletedIds, setDeletedIds] = useState({});
+  const [deletingIds, setDeletingIds] = useState({});
+
+  const handleDeleteFailedAccount = async (item, rowId) => {
+    const id = item.connectionId || item.id;
+    if (!id || deletingIds[rowId] || deletedIds[rowId]) return;
+    setDeletingIds((current) => ({ ...current, [rowId]: true }));
+    try {
+      const response = await fetch(`/api/providers/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+      setDeletedIds((current) => ({ ...current, [rowId]: true }));
+    } catch (error) {
+      window.alert(`Akun gagal dihapus: ${error.message}`);
+    } finally {
+      setDeletingIds((current) => ({ ...current, [rowId]: false }));
+    }
+  };
   if (results.error && !results.results) {
     return (
       <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
@@ -1484,7 +1502,19 @@ function ProviderTestResultsView({ results }) {
                   <span className="font-mono text-xs text-text-muted">{r.latencyMs ?? 0} ms</span>
                   <span className={`rounded px-2 py-1 text-[10px] font-bold ${statusClass}`}>{statusLabel}</span>
                 </div>
-                <button type="button" onClick={() => setExpanded((current) => ({ ...current, [rowId]: !current[rowId] }))} aria-expanded={isOpen} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-brand-500 hover:bg-surface-2">
+                {!r.valid && r.connectionId && (
+                  <button
+                    type="button"
+                    disabled={!!deletingIds[rowId] || !!deletedIds[rowId]}
+                    onClick={() => handleDeleteFailedAccount(r, rowId)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/25 px-2 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Hapus akun gagal dari layanan aktif"
+                  >
+                    <span className="material-symbols-outlined text-base">{deletedIds[rowId] ? "check_circle" : "delete"}</span>
+                    {deletedIds[rowId] ? "Terhapus" : deletingIds[rowId] ? "Menghapus..." : "Hapus akun"}
+                  </button>
+                )}
+                <button type="button" onClick={() => setExpanded((current) => ({ ...current, [rowId]: !current[rowId] }))} aria-expanded={isOpen} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-brand-500 hover:bg-surface-2">
                   <span>{isOpen ? "Tutup log" : "Detail & log"}</span>
                   <span className="material-symbols-outlined text-base">{isOpen ? "expand_less" : "expand_more"}</span>
                 </button>
