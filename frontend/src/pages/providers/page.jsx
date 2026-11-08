@@ -390,7 +390,7 @@ export default function ProvidersPage() {
   // kecuali hasil tes terakhir secara eksplisit menandainya error/expired.
   const getDeletableAuthErrors = () => connections.filter((connection) => {
     const status = String(connection.testStatus || "").toLowerCase();
-    return ["error", "expired"].includes(status);
+    return ["error", "expired", "unavailable"].includes(status);
   });
 
   const handleCleanupAuthErrors = async () => {
