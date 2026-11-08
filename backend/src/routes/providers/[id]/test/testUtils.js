@@ -950,7 +950,22 @@ export async function testSingleConnection(id) {
           ? "Akses ditolak (HTTP 403). Periksa izin, scope, atau kuota akun."
           : result.statusCode === 429
             ? "Provider membatasi permintaan. Tunggu sebelum menguji ulang."
-            : result.error || "Penyedia gagal merespons pengujian.",
+            : result.statusCode >= 500
+              ? "Server penyedia bermasalah. Coba ulang setelah layanan pulih."
+              : /timeout|timed out|abort/i.test(String(result.error || ""))
+                ? "Permintaan timeout. Periksa jaringan/proxy atau kurangi beban pengujian."
+                : result.error || "Penyedia gagal merespons pengujian.",
+      action: result.statusCode === 401
+        ? "Otorisasi ulang akun melalui alur OAuth resmi; jangan tempel token manual ke chat."
+        : result.statusCode === 403
+          ? "Periksa scope OAuth, izin organisasi, status akun, dan kebijakan provider."
+          : result.statusCode === 429
+            ? "Tunggu reset rate limit; jangan mengulang batch terus-menerus."
+            : result.statusCode >= 500
+              ? "Uji ulang nanti dan periksa status layanan provider."
+              : /timeout|timed out|abort/i.test(String(result.error || ""))
+                ? "Periksa proxy, DNS, konektivitas, dan timeout; lalu uji satu akun."
+                : "Periksa detail respons provider dan konfigurasi endpoint/model.";
     }),
     statusCode: result.statusCode || null,
     refreshed: !!result.refreshed,
