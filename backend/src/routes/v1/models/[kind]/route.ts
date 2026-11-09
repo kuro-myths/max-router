@@ -55,3 +55,35 @@ export async function GET(_request, { params }) {
     );
   }
 }
+
+/**
+ * Express adapter for the backend auto-router. The original GET above follows
+ * the Next.js App Router signature (request, { params }), while the Express
+ * auto-router invokes GET_handler(req, res, { params }). Without this adapter,
+ * /api/v1/models/:kind throws because Express Response is mistaken for context.
+ */
+export async function GET_handler(req, res) {
+  try {
+    const kind = req.params?.kind;
+    const kindFilter = KIND_SLUG_MAP[kind];
+
+    if (!kindFilter) {
+      return res.status(404).json({
+        error: {
+          message: `Unknown model kind: ${kind}. Supported: ${Object.keys(KIND_SLUG_MAP).join(", ")}`,
+          type: "invalid_request_error",
+        },
+      });
+    }
+
+    const data = await buildModelsList(kindFilter);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ object: "list", data });
+  } catch (error) {
+    console.log("Error fetching models by kind (Express adapter):", error);
+    return res.status(500).json({
+      error: { message: error.message, type: "server_error" },
+    });
+  }
+}
